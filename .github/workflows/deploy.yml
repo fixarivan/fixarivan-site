@@ -43,35 +43,56 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 "echo connected"
 
-      # Upload full checkout (includes .git) — не требует клона в /home/fixawcab/fixarivan-site на сервере.
-      # deploy.sh: backup → rsync (no --delete) → .deploy_revision → chmod
-      - name: Deploy on server (scp checkout + deploy.sh)
+      # Быстрый путь: клон в REPO → git fetch + deploy (обычно под 1 мин). Иначе: полный scp в tmp_deploy.
+      - name: Deploy on server (git fast path or scp fallback)
         env:
           GH_SHA: ${{ github.sha }}
         run: |
-          ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 "mkdir -p /home/fixawcab/tmp_deploy"
-          scp -r \
-            -i ~/.ssh/id_rsa \
-            -P 21098 \
-            -o BatchMode=yes \
-            . \
-            fixawcab@162.0.217.157:/home/fixawcab/tmp_deploy/
-          ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 \
-            "export GH_SHA=\"${GH_SHA}\"; bash -s" << 'REMOTE_EOF'
           set -euo pipefail
+          REPO="/home/fixawcab/fixarivan-site"
           BUNDLE="/home/fixawcab/tmp_deploy"
-          cd "${BUNDLE}"
-          if [[ ! -d .git ]]; then
-            echo "ERROR: ${BUNDLE} missing .git after scp (checkout incomplete?)" >&2
-            exit 1
-          fi
+
+          if ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 "test -d ${REPO}/.git"; then
+            echo ">>> Fast deploy: ${REPO}"
+            ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 \
+              "export GH_SHA=\"${GH_SHA}\"; bash -s" << 'FAST'
+          set -euo pipefail
+          cd "/home/fixawcab/fixarivan-site"
+          git fetch origin main
+          git checkout -f main
+          git reset --hard origin/main
           if [[ "$(git rev-parse HEAD)" != "${GH_SHA}" ]]; then
-            echo "ERROR: bundle HEAD $(git rev-parse HEAD) != workflow ${GH_SHA}" >&2
+            echo "ERROR: HEAD $(git rev-parse HEAD) != ${GH_SHA}" >&2
             exit 1
           fi
           export FIXARIVAN_DEPLOY_ON_SERVER=1
           bash ./deploy.sh
-          REMOTE_EOF
+          FAST
+          else
+            echo ">>> Slow deploy: scp to ${BUNDLE} (one-time: git clone ${REPO} + deploy key — see docs/GIT_DEPLOY_SAFE.md)"
+            ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 "mkdir -p ${BUNDLE}"
+            scp -r \
+              -i ~/.ssh/id_rsa \
+              -P 21098 \
+              -o BatchMode=yes \
+              . \
+              fixawcab@162.0.217.157:${BUNDLE}/
+            ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 \
+              "export GH_SHA=\"${GH_SHA}\"; bash -s" << 'SLOW'
+          set -euo pipefail
+          cd "/home/fixawcab/tmp_deploy"
+          if [[ ! -d .git ]]; then
+            echo "ERROR: tmp_deploy missing .git after scp" >&2
+            exit 1
+          fi
+          if [[ "$(git rev-parse HEAD)" != "${GH_SHA}" ]]; then
+            echo "ERROR: bundle HEAD $(git rev-parse HEAD) != ${GH_SHA}" >&2
+            exit 1
+          fi
+          export FIXARIVAN_DEPLOY_ON_SERVER=1
+          bash ./deploy.sh
+          SLOW
+          fi
 
       - name: Verify deployed revision on server
         env:
