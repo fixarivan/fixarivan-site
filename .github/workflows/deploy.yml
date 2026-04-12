@@ -43,9 +43,15 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_rsa -p 21098 fixawcab@162.0.217.157 "echo connected"
 
+      - name: Upload deploy.sh
+        run: |
+          scp -i ~/.ssh/id_rsa -P 21098 -o BatchMode=yes \
+            deploy.sh \
+            fixawcab@162.0.217.157:/home/fixawcab/public_html/fixarivan.space/deploy.sh
+
       - name: Run deploy.sh on server
         run: |
           ssh -i ~/.ssh/id_rsa -p 21098 fixawcab@162.0.217.157 "
             cd /home/fixawcab/public_html/fixarivan.space &&
-            ./deploy.sh
+            bash deploy.sh
           "
