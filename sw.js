@@ -1,10 +1,10 @@
 // FixariVan Service Worker — static/asset cache only; API is never cached.
-// Bump CACHE_VERSION after deploy so clients drop stale bundles.
+// Bump CACHE_VERSION (v2 → v3 → …) when changing frontend/CSS/JS so clients refresh bundles.
 
-const CACHE_VERSION = 'v1.12-dashboard-brand-logo-van-2026-04-13';
+const CACHE_VERSION = 'v2';
 const CACHE_NAME = 'fixarivan-' + CACHE_VERSION;
-const STATIC_CACHE = 'fixarivan-static-' + CACHE_VERSION;
-const DYNAMIC_CACHE = 'fixarivan-dynamic-' + CACHE_VERSION;
+const STATIC_CACHE = CACHE_NAME + '-static';
+const DYNAMIC_CACHE = CACHE_NAME + '-dynamic';
 
 const STATIC_FILES = [
     '/',
@@ -38,13 +38,13 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys()
-            .then((cacheNames) => Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (!cacheName.includes(CACHE_VERSION)) {
-                        return caches.delete(cacheName);
-                    }
-                })
-            ))
+            .then((keys) =>
+                Promise.all(
+                    keys
+                        .filter((k) => !k.includes(CACHE_VERSION))
+                        .map((k) => caches.delete(k))
+                )
+            )
             .then(() => self.clients.claim())
     );
 });

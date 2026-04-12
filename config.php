@@ -1,22 +1,28 @@
 <?php
 /**
  * Загрузка секретов из config.local.php (не в репозитории).
+ * При отсутствии — подключается config.example.php (плейсхолдеры), сайт не падает.
  *
  * Legacy MySQL helper getDatabaseConnection() — for deprecated endpoints only.
  * Production data path is SQLite (api/sqlite.php).
  */
 $fixarivanConfigLocal = __DIR__ . '/config.local.php';
-if (!is_readable($fixarivanConfigLocal)) {
+$fixarivanConfigExample = __DIR__ . '/config.example.php';
+
+if (is_readable($fixarivanConfigLocal)) {
+    require_once $fixarivanConfigLocal;
+} elseif (is_readable($fixarivanConfigExample)) {
+    error_log('FixariVan: config.local.php missing, using config.example.php fallback');
+    require_once $fixarivanConfigExample;
+} else {
     if (PHP_SAPI === 'cli' || PHP_SAPI === 'phpdbg') {
-        fwrite(STDERR, "FixariVan: создайте config.local.php на основе config.example.php\n");
+        fwrite(STDERR, "FixariVan: neither config.local.php nor config.example.php found\n");
         exit(1);
     }
     http_response_code(500);
     header('Content-Type: text/plain; charset=utf-8');
-    die('FixariVan: отсутствует config.local.php. Скопируйте config.example.php в config.local.php и заполните.');
+    die('FixariVan: configuration files missing.');
 }
-
-require_once $fixarivanConfigLocal;
 
 ini_set('log_errors', '1');
 
