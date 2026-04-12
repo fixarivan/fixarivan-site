@@ -43,25 +43,35 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 "echo connected"
 
-      - name: Upload repository to server (tmp_deploy)
+      # Git-based deploy: clone on server → fetch main → reset to origin/main (must match this push SHA)
+      # deploy.sh: backup → rsync (no --delete) → .deploy_revision → chmod
+      - name: Deploy on server (git fetch + deploy.sh)
+        env:
+          GH_SHA: ${{ github.sha }}
         run: |
-          ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 "mkdir -p /home/fixawcab/tmp_deploy"
-          scp -r \
-            -i ~/.ssh/id_rsa \
-            -P 21098 \
-            -o BatchMode=yes \
-            . \
-            fixawcab@162.0.217.157:/home/fixawcab/tmp_deploy/
+          ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 \
+            "export GH_SHA=\"${GH_SHA}\"; bash -s" << 'REMOTE_EOF'
+          set -euo pipefail
+          REPO="/home/fixawcab/fixarivan-site"
+          if [[ ! -d "${REPO}/.git" ]]; then
+            echo "ERROR: No git clone at ${REPO}. On the server once: git clone <your-repo-url> ${REPO} && cd ${REPO} && git checkout main" >&2
+            exit 1
+          fi
+          cd "${REPO}"
+          git fetch origin main
+          git checkout -f main
+          git reset --hard origin/main
+          if [[ "$(git rev-parse HEAD)" != "${GH_SHA}" ]]; then
+            echo "ERROR: Server HEAD $(git rev-parse HEAD) does not match workflow commit ${GH_SHA} (shallow clone? wrong remote?)" >&2
+            exit 1
+          fi
+          export FIXARIVAN_DEPLOY_ON_SERVER=1
+          bash ./deploy.sh
+          REMOTE_EOF
 
-      - name: Install into public_html and run deploy.sh
+      - name: Verify deployed revision on server
+        env:
+          GH_SHA: ${{ github.sha }}
         run: |
-          ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 '
-            set -euo pipefail
-            TARGET="/home/fixawcab/public_html/fixarivan.space"
-            SRC="/home/fixawcab/tmp_deploy"
-            mkdir -p "$TARGET"
-            rm -rf "${TARGET:?}"/*
-            cp -a "${SRC}/." "$TARGET/"
-            export FIXARIVAN_DEPLOY_ON_SERVER=1
-            bash "${TARGET}/deploy.sh"
-          '
+          ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 \
+            "test -f /home/fixawcab/public_html/fixarivan.space/.deploy_revision && grep -qxF \"${GH_SHA}\" /home/fixawcab/public_html/fixarivan.space/.deploy_revision"

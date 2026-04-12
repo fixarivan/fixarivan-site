@@ -23,6 +23,9 @@ TMP_RESTORE="/home/fixawcab/tmp_restore"
 SITE_PARENT="/home/fixawcab/public_html"
 SITE_NAME="fixarivan.space"
 
+# Git clone on the server (CI: git pull here, then sync to REMOTE_PATH). Must match server layout.
+GIT_REPO_PATH="/home/fixawcab/fixarivan-site"
+
 # Remote /tmp free space warning threshold (KB), ~100 MiB
 REMOTE_TMP_WARN_KB=102400
 
@@ -187,6 +190,110 @@ REMOTE_BACKUP
   )"
   backup_path="$(printf '%s' "$backup_path" | tail -n 1 | tr -d '\r')"
   ok "Backup created: ${backup_path}"
+}
+
+# -----------------------------------------------------------------------------
+# Server-side (FIXARIVAN_DEPLOY_ON_SERVER=1): same backup as backup() but local,
+# no SSH — ssh_run would fail on the server (wrong key path / self-SSH).
+# -----------------------------------------------------------------------------
+backup_local() {
+  step "Creating backup (on-server)..."
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    step "[dry-run] would create: ${BACKUP_PATH}/fixarivan_YYYY-MM-DD_HH-MM-SS.tar.gz (full ${SITE_NAME})"
+    return 0
+  fi
+
+  validate_remote_dir_constant
+  [[ "$BACKUP_PATH" == "/home/fixawcab/backups" ]] || {
+    err "Refusing: BACKUP_PATH safety check failed."
+    return 1
+  }
+  [[ "$SITE_PARENT" == "/home/fixawcab/public_html" ]] || {
+    err "Refusing: SITE_PARENT safety check failed."
+    return 1
+  }
+
+  mkdir -p "$BACKUP_PATH"
+  local ts out
+  ts="$(date +%Y-%m-%d_%H-%M-%S)"
+  out="${BACKUP_PATH}/fixarivan_${ts}.tar.gz"
+  if [[ ! -d "${SITE_PARENT}/${SITE_NAME}" ]]; then
+    err "Site directory missing: ${SITE_PARENT}/${SITE_NAME}"
+    return 1
+  fi
+  tar -czf "$out" -C "$SITE_PARENT" "$SITE_NAME"
+  ok "Backup created: ${out}"
+}
+
+sync_clone_to_live() {
+  step "Syncing git tree to live site (rsync without --delete; preserves .env & storage)..."
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    step "[dry-run] would rsync from clone to ${REMOTE_PATH} (excludes .git, .env, storage)"
+    return 0
+  fi
+
+  validate_remote_dir_constant
+  mkdir -p "$REMOTE_PATH"
+
+  if ! git -C "$SCRIPT_DIR" rev-parse HEAD &>/dev/null; then
+    err "Not a git repo: ${SCRIPT_DIR} (run deploy from ${GIT_REPO_PATH})"
+    return 1
+  fi
+
+  local -a rsync_args=(
+    -a
+    --exclude='.git'
+    --exclude='.github'
+    --exclude='node_modules'
+    --exclude='.env'
+    --exclude='storage'
+  )
+
+  if command -v rsync >/dev/null 2>&1; then
+    rsync "${rsync_args[@]}" "${SCRIPT_DIR}/" "${REMOTE_PATH}/"
+  else
+    step "rsync not found; using tar stream (same excludes, no --delete)"
+    tar -C "$SCRIPT_DIR" -cf - \
+      --exclude='.git' \
+      --exclude='.github' \
+      --exclude='node_modules' \
+      --exclude='.env' \
+      --exclude='storage' \
+      . | tar -C "$REMOTE_PATH" -xf -
+  fi
+}
+
+write_deploy_revision() {
+  step "Writing deploy revision marker..."
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    step "[dry-run] would write ${REMOTE_PATH}/.deploy_revision"
+    return 0
+  fi
+  validate_remote_dir_constant
+  local rev
+  rev="$(git -C "$SCRIPT_DIR" rev-parse HEAD 2>/dev/null || echo unknown)"
+  printf '%s\n' "$rev" > "${REMOTE_PATH}/.deploy_revision"
+  ok "Revision recorded: ${rev}"
+}
+
+finalize_local() {
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    step "[dry-run] would: chmod dirs 755, files 644, storage 755"
+    return 0
+  fi
+
+  validate_remote_dir_constant
+  local target="$REMOTE_PATH"
+  [[ -d "$target" ]] || {
+    err "Missing ${target}"
+    return 1
+  }
+  find "$target" -type d -exec chmod 755 {} +
+  find "$target" -type f -exec chmod 644 {} +
+  if [[ -d "${target}/storage" ]]; then
+    chmod 755 "${target}/storage"
+  fi
+  ok "Deploy completed successfully"
 }
 
 clean() {
@@ -359,10 +466,18 @@ main() {
     step "DRY RUN MODE"
   fi
 
-  # GitHub Actions (or similar) already copied the tree to REMOTE_PATH; only chmod/permissions.
+  # GitHub Actions: git pull in GIT_REPO_PATH, then run this script from the clone.
+  # Backup → rsync (no --delete) → revision file → chmod — live site is never wiped before sync.
   if [[ "${FIXARIVAN_DEPLOY_ON_SERVER:-}" == "1" ]]; then
-    step "Server-side deploy: skipping SSH backup/upload (files already on host)"
-    finalize
+    step "Server-side deploy (git clone → live site)"
+    if [[ ! -d "${SCRIPT_DIR}/.git" ]]; then
+      err "Server deploy must run from the git clone (e.g. cd ${GIT_REPO_PATH} && bash deploy.sh); missing .git in ${SCRIPT_DIR}"
+      return 1
+    fi
+    backup_local
+    sync_clone_to_live
+    write_deploy_revision
+    finalize_local
     if [[ "$DRY_RUN" -eq 1 ]]; then
       ok "Dry run finished (no remote changes)."
     fi
