@@ -21,10 +21,8 @@
         text-align: center;
     }
     
-    .logo-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 16px;
+    .logo-wordmark {
+        font-size: clamp(1.5rem, 6vw, 2rem) !important;
     }
     
     /* Form optimizations */
@@ -211,7 +209,7 @@
         padding: 10px;
     }
     
-    .logo h1 {
+    .logo .logo-wordmark {
         font-size: 1.5rem;
     }
     

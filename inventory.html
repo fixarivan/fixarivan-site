@@ -150,9 +150,11 @@
             animation: float 3s ease-in-out infinite;
         }
 
-        .logo-icon {
-            font-size: 36px;
-            filter: drop-shadow(0 0 10px var(--glow));
+        .logo-wordmark {
+            font-size: clamp(1.15rem, 4vw, 1.5rem);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--highlight);
         }
 
         .nav-links {
@@ -935,9 +937,8 @@
 <body class="inventory-page">
     <div class="header">
         <a href="index.php" class="logo">
-            <span class="logo-icon">🔧</span>
+            <span class="logo-wordmark">FixariVan</span>
             <div>
-                <div style="font-size: 24px;">FixariVan</div>
                 <div style="font-size: 12px; color: var(--text-secondary);">Космический склад</div>
             </div>
         </a>
