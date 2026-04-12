@@ -11,17 +11,13 @@ define('DB_USER', 'your_user');
 define('DB_PASS', 'your_password');
 define('DB_CHARSET', 'utf8mb4');
 
-// Админ-панель (admin/login.php) — только в config.local.php.
-// Важно: вход в /admin/ проверяет именно ADMIN_*, не AUTH_* (старый index.html).
-define('ADMIN_USERNAME', 'admin');
-define('ADMIN_PASSWORD', 'change_this_strong_password');
-
-// После смены пароля в admin/settings.php создаётся storage/admin_auth.json (bcrypt);
-// тогда используются только он + логин из файла, а не эти константы.
+// Админ-панель (admin/login.php). Если есть storage/admin_auth.json — приоритет у него (см. tools/reset_admin_password.php).
+define('ADMIN_USERNAME', 'spacefix');
+define('ADMIN_PASSWORD', 'FORD_HP_2026');
 
 // Совместимость со старым checkAuth() в PHP / клиентским index (если используется)
 define('AUTH_USERNAME', 'spacefix');
-define('AUTH_PASSWORD', 'change_legacy_if_used');
+define('AUTH_PASSWORD', 'FORD_HP_2026');
 
 define('API_KEY', 'generate_random_api_key_if_needed');
 define('ALLOWED_ORIGINS', ['https://your-domain.example', 'https://www.your-domain.example']);
