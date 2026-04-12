@@ -1,0 +1,11 @@
+<?php
+header('Content-Type: text/plain; charset=utf-8');
+
+echo "PHP_VERSION=" . PHP_VERSION . PHP_EOL;
+echo "PHP_BINARY=" . PHP_BINARY . PHP_EOL;
+echo "PHP_SAPI=" . PHP_SAPI . PHP_EOL;
+echo "Loaded php.ini=" . php_ini_loaded_file() . PHP_EOL;
+echo "pdo_sqlite=" . (extension_loaded('pdo_sqlite') ? 'yes' : 'no') . PHP_EOL;
+echo "sqlite3=" . (extension_loaded('sqlite3') ? 'yes' : 'no') . PHP_EOL;
+echo "__FILE__=" . FILE . PHP_EOL;
+echo "__DIR__=" . DIR . PHP_EOL;

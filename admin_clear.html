@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixariVan - Очистка базы данных</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗑️</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .warning-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .warning-icon {
+            font-size: 4rem;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .warning-title {
+            font-size: 1.5rem;
+            color: #dc3545;
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .warning-text {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .stats-container {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .stats-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .confirm-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .confirm-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+
+        .confirm-input:focus {
+            outline: none;
+            border-color: #dc3545;
+        }
+
+        .danger-button {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .danger-button:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .danger-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .back-button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .back-button:hover {
+            background: #5a6268;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            background: #dc3545;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(102, 126, 234, 0.3);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.php" class="back-button">← Назад к панели</a>
+        
+        <div class="header">
+            <h1>🗑️ Очистка базы данных</h1>
+            <p>Удаление всех документов и обнуление статистики</p>
+        </div>
+
+        <div class="warning-container">
+            <div class="warning-icon">⚠️</div>
+            <div class="warning-title">ВНИМАНИЕ! НЕОБРАТИМАЯ ОПЕРАЦИЯ</div>
+            <div class="warning-text">
+                <p><strong>Эта операция удалит ВСЕ ДОКУМЕНТЫ из системы:</strong></p>
+                <ul style="margin: 15px 0; padding-left: 20px;">
+                    <li>📝 Все акты приёма устройств</li>
+                    <li>🧾 Все квитанции об оплате</li>
+                    <li>📋 Все диагностические отчёты</li>
+                    <li>🔗 Все реферальные ссылки</li>
+                    <li>📊 Всю историю изменений документов</li>
+                </ul>
+                <div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 6px; padding: 10px; margin: 10px 0;">
+                    <strong>✅ НЕ затрагивается:</strong>
+                    <ul style="margin: 5px 0; padding-left: 20px;">
+                        <li>📦 Склад и инвентарь</li>
+                        <li>⚙️ Системные настройки</li>
+                        <li>👥 Пользователи и права доступа</li>
+                    </ul>
+                </div>
+                <p><strong>Документы будут удалены НАВСЕГДА и их нельзя будет восстановить!</strong></p>
+            </div>
+        </div>
+
+        <div class="stats-container">
+            <div class="stats-title">📊 Текущая статистика базы данных:</div>
+            <div class="stats-grid" id="statsGrid">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Загрузка статистики...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="confirm-section">
+            <h3 style="color: #dc3545; margin-bottom: 15px;">🔒 ДВОЙНОЕ ПОДТВЕРЖДЕНИЕ</h3>
+            <p><strong>Шаг 1:</strong> Для подтверждения удаления всех данных введите:</p>
+            <input type="text" id="confirmInput" class="confirm-input" placeholder="Введите: УДАЛИТЬ ВСЕ ДАННЫЕ">
+            
+            <div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                <p><strong>⚠️ Дополнительная защита:</strong></p>
+                <p>После ввода текста выше, вам нужно будет:</p>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>Подтвердить действие в диалоговом окне</li>
+                    <li>Ввести код подтверждения: <strong id="confirmationCode">----</strong></li>
+                </ul>
+            </div>
+            
+            <button id="clearButton" class="danger-button" disabled>
+                🗑️ УДАЛИТЬ ВСЕ ДАННЫЕ
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let currentStats = {};
+        let confirmationCode = '';
+
+        // Генерируем случайный код подтверждения
+        function generateConfirmationCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < 6; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        // Загружаем статистику при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDatabaseStats();
+            confirmationCode = generateConfirmationCode();
+            document.getElementById('confirmationCode').textContent = confirmationCode;
+        });
+
+        // Функция загрузки статистики
+        async function loadDatabaseStats() {
+            try {
+                const response = await fetch('./api/db_status.php', { credentials: 'same-origin', cache: 'no-store' });
+                const result = await response.json();
+                if (result.status === 'connected') {
+                    currentStats = {
+                        success: true,
+                        counts: {
+                            orders: result.orders_count || 0,
+                            receipts: result.receipts_count || 0,
+                            reports: result.reports_count || 0
+                        },
+                        total_documents: result.total_documents || 0
+                    };
+                    displayStats(currentStats);
+                } else {
+                    document.getElementById('statsGrid').innerHTML = `
+                        <div style="text-align: center; color: #dc3545;">
+                            <p>❌ Ошибка загрузки статистики</p>
+                            <p>${result.message || 'SQLite недоступна'}</p>
+                            <p style="font-size:0.9rem;opacity:0.9;">Войдите в админку (admin/login.php), если сессия истекла.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('statsGrid').innerHTML = `
+                    <div style="text-align: center; color: #dc3545;">
+                        <p>❌ Ошибка подключения к серверу</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Отображение статистики
+        function displayStats(stats) {
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-label">📝 Акты приёма</div>
+                    <div class="stat-value">${stats.counts.orders || 0}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">🧾 Квитанции</div>
+                    <div class="stat-value">${stats.counts.receipts || 0}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">📋 Отчёты</div>
+                    <div class="stat-value">${stats.counts.reports || 0}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">📄 Всего документов</div>
+                    <div class="stat-value">${stats.total_documents || 0}</div>
+                </div>
+            `;
+        }
+
+        // Проверка подтверждения
+        document.getElementById('confirmInput').addEventListener('input', function() {
+            const confirmText = this.value;
+            const clearButton = document.getElementById('clearButton');
+            
+            if (confirmText === 'УДАЛИТЬ ВСЕ ДАННЫЕ') {
+                clearButton.disabled = false;
+                clearButton.style.background = '#dc3545';
+            } else {
+                clearButton.disabled = true;
+                clearButton.style.background = '#6c757d';
+            }
+        });
+
+        // Обработка очистки базы данных с двойным подтверждением
+        document.getElementById('clearButton').addEventListener('click', async function() {
+            // ПЕРВОЕ ПОДТВЕРЖДЕНИЕ: Диалоговое окно
+            if (!confirm('⚠️ ВНИМАНИЕ! Вы собираетесь удалить ВСЕ данные из базы данных.\n\nЭто действие НЕОБРАТИМО!\n\nПродолжить?')) {
+                return;
+            }
+
+            // ВТОРОЕ ПОДТВЕРЖДЕНИЕ: Ввод кода
+            const userCode = prompt(`🔒 ВВЕДИТЕ КОД ПОДТВЕРЖДЕНИЯ:\n\nКод: ${confirmationCode}\n\nВведите код для подтверждения удаления всех данных:`);
+            
+            if (userCode !== confirmationCode) {
+                showNotification('❌ Неверный код подтверждения! Операция отменена.', 'error');
+                return;
+            }
+
+            // ТРЕТЬЕ ПОДТВЕРЖДЕНИЕ: Финальное предупреждение
+            if (!confirm('🚨 ПОСЛЕДНЕЕ ПРЕДУПРЕЖДЕНИЕ!\n\nВы действительно хотите удалить ВСЕ ДОКУМЕНТЫ?\n\n• 📝 Все акты приёма\n• 🧾 Все квитанции\n• 📋 Все отчёты\n• 🔗 Все реферальные ссылки\n\n✅ СКЛАД И ИНВЕНТАРЬ НЕ ЗАТРАГИВАЮТСЯ!\n\nНажмите OK для продолжения или Отмена для отмены.')) {
+                showNotification('✅ Операция отменена пользователем', 'success');
+                return;
+            }
+
+            const button = this;
+            const originalText = button.innerHTML;
+            
+            button.innerHTML = '⏳ Удаление...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('./api/clear_database.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        confirm: 'YES_DELETE_ALL'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(`✅ База данных очищена! Удалено ${result.total_deleted} записей`, 'success');
+                    // Генерируем новый код для следующего использования
+                    confirmationCode = generateConfirmationCode();
+                    document.getElementById('confirmationCode').textContent = confirmationCode;
+                    // Перезагружаем статистику
+                    setTimeout(() => {
+                        loadDatabaseStats();
+                    }, 2000);
+                } else {
+                    showNotification(`❌ Ошибка очистки: ${result.message}`, 'error');
+                }
+                
+            } catch (error) {
+                showNotification('❌ Ошибка при очистке базы данных', 'error');
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        });
+
+        // Функция уведомлений
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

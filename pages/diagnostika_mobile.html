@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixariVan - Диагностика мобильных устройств</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="shortcut icon" href="../favicon.svg">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Form Styles */
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* Star Rating */
+        .star-rating {
+            display: flex;
+            gap: 5px;
+            margin: 10px 0;
+        }
+
+        .star {
+            font-size: 24px;
+            color: #ddd;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .star:hover,
+        .star.active {
+            color: #ffc107;
+        }
+
+        /* Component Tests */
+        .component-tests {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .component-btn {
+            padding: 10px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .component-btn:hover {
+            border-color: #667eea;
+            background: #f8f9fa;
+        }
+
+        .component-btn.green {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .component-btn.red {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        /* Battery Section */
+        .battery-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .battery-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+        }
+
+        .battery-warning strong {
+            color: #856404;
+        }
+
+        /* Language Switcher */
+        .language-switcher {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 25px;
+            padding: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .language-switcher button {
+            background: none;
+            border: none;
+            padding: 8px 12px;
+            margin: 0 2px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .language-switcher button.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .language-switcher button:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Admin Dashboard Button */
+        .admin-dashboard-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .admin-dashboard-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Submit Button */
+        .submit-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Success Message */
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+            display: none;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .component-tests {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+            
+            .language-switcher {
+                top: 10px;
+                right: 10px;
+                padding: 5px;
+            }
+            
+            .admin-dashboard-btn {
+                top: 10px;
+                left: 10px;
+                padding: 8px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Language Switcher -->
+    <div class="language-switcher">
+        <button onclick="switchLanguage('ru')" class="lang-btn active" data-lang="ru">RU</button>
+        <button onclick="switchLanguage('en')" class="lang-btn" data-lang="en">EN</button>
+        <button onclick="switchLanguage('fi')" class="lang-btn" data-lang="fi">FI</button>
+    </div>
+
+    <!-- Admin Dashboard Button -->
+    <button class="admin-dashboard-btn" onclick="goToDashboard()" style="display: none;">
+        🔧 Админ панель
+    </button>
+
+    <div class="container">
+        <div class="header">
+            <h1 data-lang="title">Диагностика мобильных устройств</h1>
+            <p data-lang="subtitle">FixariVan - Профессиональный сервис по ремонту техники</p>
+        </div>
+
+        <div class="form-container">
+            <form id="mobileReportForm">
+                <input type="hidden" id="documentId" name="documentId" value="">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="clientName" data-lang="client_name">ФИО клиента *</label>
+                        <input type="text" id="clientName" name="clientName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="clientPhone" data-lang="client_phone">Телефон *</label>
+                        <input type="tel" id="clientPhone" name="clientPhone" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="clientEmail" data-lang="client_email">Email</label>
+                    <input type="email" id="clientEmail" name="clientEmail">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="deviceModel" data-lang="device_model">Модель устройства *</label>
+                        <input type="text" id="deviceModel" name="deviceModel" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="deviceSerial" data-lang="device_serial">Серийный номер / IMEI</label>
+                        <input type="text" id="deviceSerial" name="deviceSerial">
+                    </div>
+                </div>
+
+                <!-- Overall Device Assessment -->
+                <div class="form-group">
+                    <label data-lang="overall_assessment">Общая оценка устройства *</label>
+                    <div class="star-rating" id="deviceRating">
+                        <span class="star" data-rating="1">★</span>
+                        <span class="star" data-rating="2">★</span>
+                        <span class="star" data-rating="3">★</span>
+                        <span class="star" data-rating="4">★</span>
+                        <span class="star" data-rating="5">★</span>
+                        <span class="star" data-rating="6">★</span>
+                        <span class="star" data-rating="7">★</span>
+                        <span class="star" data-rating="8">★</span>
+                        <span class="star" data-rating="9">★</span>
+                        <span class="star" data-rating="10">★</span>
+                    </div>
+                    <input type="hidden" id="deviceRatingValue" name="deviceRating" value="0">
+                    <div id="ratingText" style="margin-top: 10px; font-weight: 500; color: #667eea;"></div>
+                </div>
+
+                <!-- External Condition Assessment -->
+                <div class="form-group">
+                    <label data-lang="external_condition">Оценка внешнего состояния *</label>
+                    <div class="star-rating" id="conditionRating">
+                        <span class="star" data-rating="1">★</span>
+                        <span class="star" data-rating="2">★</span>
+                        <span class="star" data-rating="3">★</span>
+                        <span class="star" data-rating="4">★</span>
+                        <span class="star" data-rating="5">★</span>
+                        <span class="star" data-rating="6">★</span>
+                        <span class="star" data-rating="7">★</span>
+                        <span class="star" data-rating="8">★</span>
+                        <span class="star" data-rating="9">★</span>
+                        <span class="star" data-rating="10">★</span>
+                    </div>
+                    <input type="hidden" id="conditionRatingValue" name="conditionRating" value="0">
+                    <div id="conditionRatingText" style="margin-top: 10px; font-weight: 500; color: #667eea;"></div>
+                </div>
+
+                <!-- Device Appearance -->
+                <div class="form-group">
+                    <label data-lang="device_appearance">Внешний вид устройства</label>
+                    <div class="component-tests" id="appearanceTests">
+                        <div class="component-btn" data-component="screen">Экран</div>
+                        <div class="component-btn" data-component="body">Корпус</div>
+                        <div class="component-btn" data-component="buttons">Кнопки</div>
+                        <div class="component-btn" data-component="camera">Камера</div>
+                        <div class="component-btn" data-component="speaker">Динамик</div>
+                        <div class="component-btn" data-component="microphone">Микрофон</div>
+                        <div class="component-btn" data-component="charging">Зарядка</div>
+                        <div class="component-btn" data-component="other">Другое</div>
+                    </div>
+                    <input type="hidden" id="appearanceResults" name="appearanceResults">
+                </div>
+
+                <!-- Component Tests -->
+                <div class="form-group">
+                    <label data-lang="component_tests">Тесты компонентов</label>
+                    <div class="component-tests" id="componentTests">
+                        <div class="component-btn" data-component="wifi">Wi-Fi</div>
+                        <div class="component-btn" data-component="bluetooth">Bluetooth</div>
+                        <div class="component-btn" data-component="gps">GPS</div>
+                        <div class="component-btn" data-component="sensors">Датчики</div>
+                        <div class="component-btn" data-component="vibration">Вибрация</div>
+                        <div class="component-btn" data-component="flashlight">Фонарик</div>
+                        <div class="component-btn" data-component="storage">Память</div>
+                        <div class="component-btn" data-component="performance">Производительность</div>
+                    </div>
+                    <input type="hidden" id="componentResults" name="componentResults">
+                </div>
+
+                <!-- Battery Section -->
+                <div class="battery-section">
+                    <h3 data-lang="battery_status">Состояние аккумулятора</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="batteryCapacity" data-lang="battery_capacity">Ёмкость аккумулятора (%)</label>
+                            <input type="number" id="batteryCapacity" name="batteryCapacity" min="0" max="100" placeholder="Введите процент">
+                        </div>
+                        <div class="form-group">
+                            <label for="batteryCondition" data-lang="battery_condition">Состояние аккумулятора</label>
+                            <select id="batteryCondition" name="batteryCondition">
+                                <option value="" data-lang="select_condition">Выберите состояние</option>
+                                <option value="excellent" data-lang="excellent">Отличное</option>
+                                <option value="good" data-lang="good">Хорошее</option>
+                                <option value="satisfactory" data-lang="satisfactory">Удовлетворительное</option>
+                                <option value="poor" data-lang="poor">Плохое</option>
+                                <option value="critical" data-lang="critical">Критическое</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="battery-warning" id="batteryWarning" style="display: none;">
+                        <strong data-lang="battery_replacement">⚠️ Требуется замена аккумулятора!</strong>
+                        <p data-lang="battery_replacement_note">При остаточной ёмкости ниже 85% рекомендуется замена аккумулятора для оптимальной работы устройства.</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="batteryNotes" data-lang="battery_notes">Примечания по аккумулятору</label>
+                        <textarea id="batteryNotes" name="batteryNotes" rows="3" placeholder="Дополнительная информация об аккумуляторе"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="diagnosis" data-lang="diagnosis">Диагностика *</label>
+                    <textarea id="diagnosis" name="diagnosis" rows="4" required placeholder="Опишите результаты диагностики"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="recommendations" data-lang="recommendations">Рекомендации</label>
+                    <textarea id="recommendations" name="recommendations" rows="3" placeholder="Рекомендации по ремонту или обслуживанию"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="estimatedCost" data-lang="estimated_cost">Примерная стоимость работ</label>
+                        <input type="text" id="estimatedCost" name="estimatedCost" placeholder="Укажите стоимость">
+                    </div>
+                    <div class="form-group">
+                        <label for="workDate" data-lang="work_date">Дата проведения работ *</label>
+                        <input type="date" id="workDate" name="workDate" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn" data-lang="submit_btn">Создать отчёт</button>
+            </form>
+
+            <div id="successMessage" class="success-message">
+                <strong data-lang="success_title">Отчёт успешно создан!</strong>
+                <p data-lang="success_text">Документ сохранён и отправлен на обработку.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Language translations
+        const translations = {
+            ru: {
+                title: "Диагностика мобильных устройств",
+                subtitle: "FixariVan - Профессиональный сервис по ремонту техники",
+                client_name: "ФИО клиента",
+                client_phone: "Телефон",
+                client_email: "Email",
+                device_model: "Модель устройства",
+                device_serial: "Серийный номер / IMEI",
+                overall_assessment: "Общая оценка устройства",
+                external_condition: "Оценка внешнего состояния",
+                device_appearance: "Внешний вид устройства",
+                component_tests: "Тесты компонентов",
+                battery_status: "Состояние аккумулятора",
+                battery_capacity: "Ёмкость аккумулятора (%)",
+                battery_condition: "Состояние аккумулятора",
+                select_condition: "Выберите состояние",
+                excellent: "Отличное",
+                good: "Хорошее",
+                satisfactory: "Удовлетворительное",
+                poor: "Плохое",
+                critical: "Критическое",
+                battery_replacement: "⚠️ Требуется замена аккумулятора!",
+                battery_replacement_note: "При остаточной ёмкости ниже 85% рекомендуется замена аккумулятора для оптимальной работы устройства.",
+                battery_notes: "Примечания по аккумулятору",
+                diagnosis: "Диагностика",
+                recommendations: "Рекомендации",
+                estimated_cost: "Примерная стоимость работ",
+                work_date: "Дата проведения работ",
+                submit_btn: "Создать отчёт",
+                success_title: "Отчёт успешно создан!",
+                success_text: "Документ сохранён и отправлен на обработку.",
+                rating_poor: "Плохо",
+                rating_satisfactory: "Удовлетворительно",
+                rating_good: "Хорошо",
+                rating_very_good: "Очень хорошо",
+                rating_excellent: "Отлично"
+            },
+            en: {
+                title: "Mobile Device Diagnostics",
+                subtitle: "FixariVan - Professional Equipment Repair Service",
+                client_name: "Client Name",
+                client_phone: "Phone",
+                client_email: "Email",
+                device_model: "Device Model",
+                device_serial: "Serial Number / IMEI",
+                overall_assessment: "Overall Device Assessment",
+                external_condition: "External Condition Assessment",
+                device_appearance: "Device Appearance",
+                component_tests: "Component Tests",
+                battery_status: "Battery Status",
+                battery_capacity: "Battery Capacity (%)",
+                battery_condition: "Battery Condition",
+                select_condition: "Select Condition",
+                excellent: "Excellent",
+                good: "Good",
+                satisfactory: "Satisfactory",
+                poor: "Poor",
+                critical: "Critical",
+                battery_replacement: "⚠️ Battery Replacement Required!",
+                battery_replacement_note: "For optimal device performance, battery replacement is recommended when capacity is below 85%.",
+                battery_notes: "Battery Notes",
+                diagnosis: "Diagnosis",
+                recommendations: "Recommendations",
+                estimated_cost: "Estimated Cost",
+                work_date: "Work Date",
+                submit_btn: "Create Report",
+                success_title: "Report Successfully Created!",
+                success_text: "Document saved and sent for processing.",
+                rating_poor: "Poor",
+                rating_satisfactory: "Satisfactory",
+                rating_good: "Good",
+                rating_very_good: "Very Good",
+                rating_excellent: "Excellent"
+            },
+            fi: {
+                title: "Mobiililaitteiden Diagnostiikka",
+                subtitle: "FixariVan - Ammattimainen Laitteiden Korjauspalvelu",
+                client_name: "Asiakkaan Nimi",
+                client_phone: "Puhelin",
+                client_email: "Sähköposti",
+                device_model: "Laitteen Malli",
+                device_serial: "Sarjanumero / IMEI",
+                overall_assessment: "Laitteen Kokonaisarvio",
+                external_condition: "Ulkoisen Kunnon Arvio",
+                device_appearance: "Laitteen Ulkonäkö",
+                component_tests: "Komponenttitestit",
+                battery_status: "Akkun Tila",
+                battery_capacity: "Akkun Kapasiteetti (%)",
+                battery_condition: "Akkun Kunto",
+                select_condition: "Valitse Kunto",
+                excellent: "Erinomainen",
+                good: "Hyvä",
+                satisfactory: "Tyydyttävä",
+                poor: "Huono",
+                critical: "Kriittinen",
+                battery_replacement: "⚠️ Akkun Vaihto Vaaditaan!",
+                battery_replacement_note: "Optimaalisen laitteen suorituskyvyn vuoksi akkun vaihto suositellaan, kun kapasiteetti on alle 85%.",
+                battery_notes: "Akkun Huomautukset",
+                diagnosis: "Diagnostiikka",
+                recommendations: "Suositukset",
+                estimated_cost: "Arvioitu Hinta",
+                work_date: "Työpäivä",
+                submit_btn: "Luo Raportti",
+                success_title: "Raportti Luotu Onnistuneesti!",
+                success_text: "Asiakirja tallennettu ja lähetetty käsittelyyn.",
+                rating_poor: "Huono",
+                rating_satisfactory: "Tyydyttävä",
+                rating_good: "Hyvä",
+                rating_very_good: "Hyvä",
+                rating_excellent: "Erinomainen"
+            }
+        };
+
+        let currentLanguage = 'ru';
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAdminStatus();
+            loadTranslations();
+            generateDocumentId();
+            setCurrentDate();
+            initializeStarRatings();
+            initializeComponentTests();
+            initializeBatterySection();
+        });
+
+        function generateDocumentId() {
+            const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+            const rnd = Math.random().toString(36).substring(2, 6).toUpperCase();
+            const el = document.getElementById('documentId');
+            if (el) el.value = 'RPT-' + ts + '-' + rnd;
+        }
+
+        // Set current date
+        function setCurrentDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('workDate').value = today;
+        }
+
+        // Language switching
+        function switchLanguage(lang) {
+            currentLanguage = lang;
+            
+            // Update active button
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-lang="${lang}"]`).classList.add('active');
+            
+            loadTranslations();
+        }
+
+        // Load translations
+        function loadTranslations() {
+            const elements = document.querySelectorAll('[data-lang]');
+            elements.forEach(element => {
+                const key = element.getAttribute('data-lang');
+                if (translations[currentLanguage] && translations[currentLanguage][key]) {
+                    element.textContent = translations[currentLanguage][key];
+                }
+            });
+        }
+
+        // Check if user is admin
+        function checkAdminStatus() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAdmin = urlParams.get('admin') === 'true';
+            
+            if (isAdmin) {
+                document.querySelector('.admin-dashboard-btn').style.display = 'block';
+            }
+        }
+
+        // Go to admin dashboard
+        function goToDashboard() {
+            window.location.href = '../index.php';
+        }
+
+        // Initialize star ratings
+        function initializeStarRatings() {
+            // Device rating
+            const deviceStars = document.querySelectorAll('#deviceRating .star');
+            deviceStars.forEach((star, index) => {
+                star.addEventListener('click', () => {
+                    const rating = index + 1;
+                    setRating('#deviceRating', rating);
+                    document.getElementById('deviceRatingValue').value = rating;
+                    setRatingText('#ratingText', rating);
+                });
+            });
+
+            // Condition rating
+            const conditionStars = document.querySelectorAll('#conditionRating .star');
+            conditionStars.forEach((star, index) => {
+                star.addEventListener('click', () => {
+                    const rating = index + 1;
+                    setRating('#conditionRating', rating);
+                    document.getElementById('conditionRatingValue').value = rating;
+                    setRatingText('#conditionRatingText', rating);
+                });
+            });
+        }
+
+        // Set star rating
+        function setRating(container, rating) {
+            const stars = document.querySelectorAll(`${container} .star`);
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+        }
+
+        // Set rating text
+        function setRatingText(element, rating) {
+            const ratingTexts = {
+                ru: {
+                    1: 'Плохо', 2: 'Плохо', 3: 'Плохо',
+                    4: 'Удовлетворительно', 5: 'Удовлетворительно',
+                    6: 'Хорошо', 7: 'Хорошо',
+                    8: 'Очень хорошо', 9: 'Очень хорошо',
+                    10: 'Отлично'
+                },
+                en: {
+                    1: 'Poor', 2: 'Poor', 3: 'Poor',
+                    4: 'Satisfactory', 5: 'Satisfactory',
+                    6: 'Good', 7: 'Good',
+                    8: 'Very Good', 9: 'Very Good',
+                    10: 'Excellent'
+                },
+                fi: {
+                    1: 'Huono', 2: 'Huono', 3: 'Huono',
+                    4: 'Tyydyttävä', 5: 'Tyydyttävä',
+                    6: 'Hyvä', 7: 'Hyvä',
+                    8: 'Hyvä', 9: 'Hyvä',
+                    10: 'Erinomainen'
+                }
+            };
+            
+            const text = ratingTexts[currentLanguage][rating] || '';
+            document.querySelector(element).textContent = text;
+        }
+
+        // Initialize component tests
+        function initializeComponentTests() {
+            // Appearance tests
+            const appearanceBtns = document.querySelectorAll('#appearanceTests .component-btn');
+            appearanceBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    toggleComponent(btn);
+                    updateComponentResults('#appearanceResults', '#appearanceTests');
+                });
+            });
+
+            // Component tests
+            const componentBtns = document.querySelectorAll('#componentTests .component-btn');
+            componentBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    toggleComponent(btn);
+                    updateComponentResults('#componentResults', '#componentTests');
+                });
+            });
+        }
+
+        // Toggle component status
+        function toggleComponent(btn) {
+            if (btn.classList.contains('green')) {
+                btn.classList.remove('green');
+                btn.classList.add('red');
+            } else if (btn.classList.contains('red')) {
+                btn.classList.remove('red');
+            } else {
+                btn.classList.add('green');
+            }
+        }
+
+        // Update component results
+        function updateComponentResults(inputId, containerId) {
+            const results = {};
+            const buttons = document.querySelectorAll(`${containerId} .component-btn`);
+            
+            buttons.forEach(btn => {
+                const component = btn.getAttribute('data-component');
+                if (btn.classList.contains('green')) {
+                    results[component] = 'good';
+                } else if (btn.classList.contains('red')) {
+                    results[component] = 'bad';
+                }
+            });
+            
+            document.querySelector(inputId).value = JSON.stringify(results);
+        }
+
+        // Initialize battery section
+        function initializeBatterySection() {
+            const batteryCapacity = document.getElementById('batteryCapacity');
+            const batteryWarning = document.getElementById('batteryWarning');
+            
+            batteryCapacity.addEventListener('input', () => {
+                const capacity = parseInt(batteryCapacity.value);
+                if (capacity < 85) {
+                    batteryWarning.style.display = 'block';
+                } else {
+                    batteryWarning.style.display = 'none';
+                }
+            });
+        }
+
+        async function fetchJson(url, options) {
+            const response = await fetch(url, options);
+            const text = await response.text();
+            if (!response.ok) {
+                throw new Error((text || '').trim().slice(0, 200) || ('HTTP ' + response.status));
+            }
+            try {
+                return JSON.parse(text);
+            } catch (err) {
+                throw new Error((text || '').trim().slice(0, 200) || 'Некорректный JSON');
+            }
+        }
+
+        // Form submission → SQLite (как diagnostic_mobile.html), чтобы track / последние документы совпадали
+        document.getElementById('mobileReportForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const dr = parseInt(document.getElementById('deviceRatingValue').value, 10) || 0;
+            const cr = parseInt(document.getElementById('conditionRatingValue').value, 10) || 0;
+            if (dr < 1) {
+                alert('Укажите общую оценку устройства (звёзды).');
+                return;
+            }
+            if (cr < 1) {
+                alert('Укажите оценку внешнего состояния (звёзды).');
+                return;
+            }
+
+            let appearanceObj = {};
+            let componentsObj = {};
+            try {
+                appearanceObj = JSON.parse(document.getElementById('appearanceResults').value || '{}');
+            } catch (err) { appearanceObj = {}; }
+            try {
+                componentsObj = JSON.parse(document.getElementById('componentResults').value || '{}');
+            } catch (err) { componentsObj = {}; }
+
+            const cap = document.getElementById('batteryCapacity').value;
+            const capNum = cap === '' ? null : parseInt(cap, 10);
+            const batteryReplacement = capNum !== null && !Number.isNaN(capNum) && capNum < 85;
+
+            const payload = {
+                documentId: document.getElementById('documentId').value.trim(),
+                clientName: document.getElementById('clientName').value.trim(),
+                clientPhone: document.getElementById('clientPhone').value.trim(),
+                clientEmail: document.getElementById('clientEmail').value.trim(),
+                deviceType: 'mobile',
+                deviceModel: document.getElementById('deviceModel').value.trim(),
+                deviceSerial: document.getElementById('deviceSerial').value.trim(),
+                componentTests: JSON.stringify({ appearance: appearanceObj, components: componentsObj }),
+                batteryCapacity: cap,
+                batteryStatus: document.getElementById('batteryCondition').value,
+                batteryReplacement: batteryReplacement,
+                batteryNotes: document.getElementById('batteryNotes').value,
+                deviceRating: String(dr),
+                conditionRating: String(cr),
+                diagnosis: document.getElementById('diagnosis').value.trim(),
+                recommendations: document.getElementById('recommendations').value.trim(),
+                repairCost: document.getElementById('estimatedCost').value.trim(),
+                repairTime: '',
+                warranty: '',
+                technicianName: '',
+                workDate: document.getElementById('workDate').value,
+                uniqueCode: '',
+                placeOfAcceptance: 'FixariVan, Turku',
+                dateOfAcceptance: new Date().toISOString().split('T')[0],
+                language: currentLanguage,
+                reportType: 'mobile'
+            };
+
+            try {
+                const result = await fetchJson('../api/save_report_fixed.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (result.success) {
+                    document.getElementById('successMessage').style.display = 'block';
+                    if (result.token) {
+                        window.location.href = '../report_view.php?token=' + encodeURIComponent(result.token);
+                        return;
+                    }
+                    this.reset();
+                    generateDocumentId();
+                    setCurrentDate();
+                    generatePDF();
+                } else {
+                    alert('Ошибка при сохранении: ' + (result.message || ''));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Произошла ошибка при отправке формы: ' + error.message);
+            }
+        });
+
+        // Generate PDF
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(20);
+            doc.text('Отчёт диагностики мобильного устройства', 20, 30);
+            
+            // Add form data
+            const formData = new FormData(document.getElementById('mobileReportForm'));
+            let y = 50;
+            
+            for (let [key, value] of formData.entries()) {
+                if (value && key !== 'reportType') {
+                    doc.text(`${key}: ${value}`, 20, y);
+                    y += 10;
+                }
+            }
+            
+            // Save PDF
+            doc.save('otchet_diagnostiki_mobilnogo.pdf');
+        }
+    </script>
+</body>
+</html>

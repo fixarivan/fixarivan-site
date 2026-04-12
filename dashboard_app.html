@@ -1,0 +1,2619 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>FixariVan — рабочий стол</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#070b14">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>">
+    <!-- Рабочий стол: только с админ-сессией (см. index.php) -->
+    <script>window.FIXARIVAN_REQUIRE_ADMIN_SESSION = true;</script>
+    <script src="auth_check.js"></script>
+    <script src="js/ui_helpers.js"></script>
+    <!-- Склад на SQLite: автосинхронизация с MySQL (inventory_auto_sync.js) на дашборде отключена -->
+    <script src="js/document_manager.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        /* body + .nebula: см. css/fixarivan-theme.css (body.fv-dashboard) */
+        body.fv-dashboard {
+            background:
+                radial-gradient(circle at center top, #1A1F3A 0%, #0B0F1A 60%),
+                #0B0F1A;
+        }
+
+        /* Animated Background */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.1;
+            animation: twinkle 2s infinite;
+        }
+
+        .star:nth-child(odd) { animation-delay: 1s; }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.06; }
+            50% { opacity: 0.28; }
+        }
+
+        /* .nebula: фон и анимация в css/fixarivan-theme.css */
+        .nebula {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+            position: relative;
+            padding-top: 48px;
+            padding-bottom: 28px;
+            animation: headerFadeIn 0.35s ease;
+        }
+
+        @keyframes headerFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .notification-icon {
+            position: absolute;
+            top: 0;
+            right: 20px;
+            font-size: 32px;
+            cursor: pointer;
+            padding: 8px;
+            transition: transform 0.3s ease;
+        }
+        
+        .notification-icon:hover {
+            transform: scale(1.1);
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            animation: pulse-badge 2s infinite;
+        }
+        
+        @keyframes pulse-badge {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 20px;
+        }
+
+        .logo-icon {
+            width: 84px;
+            height: 84px;
+            background:
+                radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.18), transparent 46%),
+                linear-gradient(135deg, #6C5CE7, #5A67D8, #4C51BF);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow:
+                0 10px 30px rgba(108, 92, 231, 0.35),
+                0 0 20px rgba(108, 92, 231, 0.32);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            transition: box-shadow 0.3s ease;
+        }
+
+        .logo-icon:hover {
+            box-shadow:
+                0 12px 34px rgba(108, 92, 231, 0.4),
+                0 0 24px rgba(108, 92, 231, 0.38);
+        }
+
+        .logo-glyph {
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            color: #e0e7ff;
+            text-shadow: 0 2px 10px rgba(108,92,231,0.3);
+        }
+
+        .header h1 {
+            font-size: clamp(2.2rem, 4.2vw, 3.25rem);
+            margin-bottom: 8px;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(108,92,231,0.3);
+            background: linear-gradient(90deg, #E0E7FF, #C7D2FE);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: clamp(0.95rem, 2vw, 1.15rem);
+            color: rgba(255,255,255,0.62);
+            letter-spacing: 0.01em;
+        }
+
+        /* Statistics Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .stat-number {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px currentColor;
+        }
+
+        .stat-card.pending .stat-number { color: #fbbf24; }
+        .stat-card.in-progress .stat-number { color: #60a5fa; }
+        .stat-card.completed .stat-number { color: #34d399; }
+        .stat-card.total .stat-number { color: #a78bfa; }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* Navigation Cards */
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .nav-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 35px;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .nav-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 50px rgba(102, 126, 234, 0.5);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .nav-card-icon {
+            font-size: 3.5rem;
+            margin-bottom: 14px;
+            display: block;
+        }
+
+        .nav-card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0;
+        }
+
+        .nav-card-desc {
+            display: none;
+        }
+
+        /*
+         * Компактный мобильный режим навигации:
+         * сетка .dashboard-grid и карточки .dashboard-card — основные правила в @media (max-width: 768px).
+         */
+
+        /* Recent Documents */
+        .recent-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 35px;
+            margin-bottom: 50px;
+        }
+
+        .section-title {
+            color: white;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .document-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .document-list-toggle {
+            margin-top: 12px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .document-list-toggle button {
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.86);
+            cursor: pointer;
+            font-size: 0.88rem;
+            transition: background 0.18s ease, border-color 0.18s ease;
+        }
+
+        .document-list-toggle button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .document-item {
+            background: rgba(22, 29, 47, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .document-item-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .document-item:hover {
+            background: rgba(31, 40, 63, 0.86);
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+        }
+
+        .document-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .document-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .document-icon.order { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .document-icon.receipt { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .document-icon.report { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .document-icon.invoice { background: linear-gradient(135deg, #f6d365, #fda085); }
+
+        .document-details h4 {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .document-details p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+
+        .document-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-view {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .btn-view:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-download {
+            background: #34d399;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background: #10b981;
+        }
+
+        .btn-edit {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #d97706;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #dc2626;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        .spinner.small {
+            width: 18px;
+            height: 18px;
+            border-width: 2px;
+            margin: 0;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .metrics-section {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 22px;
+            padding: 26px;
+            margin-bottom: 40px;
+        }
+
+        .metrics-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .metrics-title {
+            color: #ffffff;
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .metrics-meta {
+            color: rgba(255, 255, 255, 0.65);
+            font-size: 0.9rem;
+            margin-top: 6px;
+        }
+
+        .metrics-meta .metrics-source {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 10px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.35);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            font-size: 0.75rem;
+            color: rgba(226, 232, 240, 0.85);
+        }
+
+        .metrics-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .metrics-refresh {
+            padding: 10px 18px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: rgba(15, 23, 42, 0.65);
+            color: #e2e8f0;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .metrics-refresh:hover {
+            background: rgba(59, 130, 246, 0.25);
+            border-color: rgba(96, 165, 250, 0.6);
+            transform: translateY(-1px);
+        }
+
+        .metrics-refresh:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .metrics-loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.85rem;
+        }
+
+        .metrics-loading[hidden] {
+            display: none;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+
+        .metric-card {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 18px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 255, 255, 0.35);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.35);
+        }
+
+        .metric-value {
+            font-size: 2.6rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+            color: #ffffff;
+            text-shadow: 0 0 18px currentColor;
+        }
+
+        .metric-label {
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .metric-card.pending .metric-value { color: #fbbf24; }
+        .metric-card.in-progress .metric-value { color: #60a5fa; }
+        .metric-card.completed .metric-value { color: #34d399; }
+        .metric-card.total .metric-value { color: #a78bfa; }
+        .metric-card.inventory-value .metric-value { color: #f472b6; }
+
+        #inventoryMetricsSection .metrics-grid.inventory-grid {
+            grid-template-columns: repeat(4, minmax(150px, 1fr));
+        }
+        #inventoryMetricsSection .metric-card.inventory-total .metric-value { color: #a78bfa; }
+        #inventoryMetricsSection .metric-card.inventory-instock .metric-value { color: #34d399; }
+        #inventoryMetricsSection .metric-card.inventory-out .metric-value { color: #f87171; }
+        #inventoryMetricsSection .metric-card.inventory-margin .metric-value {
+            color: #f472b6;
+            text-shadow: 0 0 20px rgba(244, 114, 182, 0.55);
+        }
+        .metric-subtext {
+            margin-top: 6px;
+            color: rgba(226, 232, 240, 0.68);
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-height: 1.1em;
+        }
+
+        .metrics-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .metrics-badge.warning {
+            background: rgba(245, 158, 11, 0.18);
+            border-color: rgba(245, 158, 11, 0.35);
+            color: #fbbf24;
+        }
+
+        .fixarivan-toast-container {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 4000;
+            max-width: 360px;
+        }
+
+        .fixarivan-toast {
+            position: relative;
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 16px;
+            padding: 16px 20px 14px 20px;
+            color: #e2e8f0;
+            border-left: 4px solid #38bdf8;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.45);
+            overflow: hidden;
+            animation: toastIn 0.25s ease;
+        }
+
+        .fixarivan-toast.success { border-left-color: #34d399; }
+        .fixarivan-toast.error { border-left-color: #f87171; }
+        .fixarivan-toast.warning { border-left-color: #fbbf24; }
+
+        .fixarivan-toast.hide {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .toast-message {
+            font-size: 0.95rem;
+            line-height: 1.45;
+        }
+
+        .toast-close {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            background: transparent;
+            border: none;
+            color: rgba(226, 232, 240, 0.6);
+            font-size: 18px;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .toast-close:hover {
+            color: #fff;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .notification-panel {
+            position: absolute;
+            top: 60px;
+            right: 0;
+            width: 320px;
+            background: rgba(15, 23, 42, 0.94);
+            border-radius: 20px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            box-shadow: 0 24px 45px rgba(15, 23, 42, 0.5);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1500;
+        }
+
+        .notification-panel.open {
+            display: flex;
+        }
+
+        .notification-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        }
+
+        .notification-panel-header h3 {
+            margin: 0;
+            color: #f8fafc;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .notification-panel-header button {
+            background: transparent;
+            border: none;
+            color: rgba(226, 232, 240, 0.65);
+            font-size: 22px;
+            cursor: pointer;
+        }
+
+        .notification-panel-header button:hover {
+            color: #fbbf24;
+        }
+
+        .notification-list {
+            max-height: 320px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notification-item {
+            padding: 14px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+        }
+
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+
+        .notification-item strong {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        .notification-item span {
+            font-size: 0.85rem;
+            color: rgba(226, 232, 240, 0.75);
+            line-height: 1.4;
+        }
+
+        .notification-item.info { border-left: 4px solid #38bdf8; }
+        .notification-item.warning { border-left: 4px solid #fbbf24; }
+        .notification-item.success { border-left: 4px solid #34d399; }
+        .notification-item.error { border-left: 4px solid #f87171; }
+
+        .notification-empty {
+            padding: 24px;
+            text-align: center;
+            color: rgba(226, 232, 240, 0.6);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 28px 14px 36px;
+            }
+            .header { padding-top: 36px; padding-bottom: 16px; margin-bottom: 28px; }
+            .header h1 { font-size: 1.85rem; }
+            .header p { font-size: 0.92rem; }
+            .logo { gap: 12px; margin-bottom: 14px; }
+            .logo-icon { width: 64px; height: 64px; border-radius: 16px; }
+            .logo-glyph { font-size: 1.25rem; }
+            .metrics-section { padding: 14px 12px; margin-bottom: 18px; }
+            .metrics-header { flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 14px; }
+            .metrics-title { font-size: 1.05rem; }
+            .metrics-meta { font-size: 0.78rem; line-height: 1.35; }
+            .metrics-actions { width: 100%; justify-content: space-between; }
+            /* Плитка 2×2: перебиваем #inventoryMetricsSection с 4 колонками и узкий auto-fit */
+            #ordersMetrics .metrics-grid,
+            #inventoryMetricsSection .metrics-grid.inventory-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 12px;
+            }
+            .metrics-grid { grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 12px; }
+            /* Навигация: две колонки, компактные карточки (только .dashboard-page) */
+            .dashboard-page .dashboard-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                margin-bottom: 22px;
+            }
+            .dashboard-page .dashboard-card {
+                padding: 12px;
+                min-height: 0;
+                border-radius: 14px;
+            }
+            .dashboard-page .dashboard-card:hover {
+                transform: translateY(-2px) scale(1.01);
+            }
+            .dashboard-page .dashboard-card .nav-card-icon {
+                width: 36px;
+                height: 36px;
+                margin: 0 auto 8px;
+                font-size: 1.35rem;
+                line-height: 36px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .dashboard-page .dashboard-card .nav-card-title {
+                font-size: 0.9rem;
+                font-weight: 700;
+                line-height: 1.25;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+                word-break: break-word;
+                hyphens: auto;
+            }
+            .metric-card { padding: 14px 12px; }
+            .metric-value { font-size: 1.75rem; }
+            .metric-label { font-size: 0.82rem; }
+            .metric-subtext { font-size: 0.72rem; margin-top: 4px; }
+            .document-item { flex-direction: column; align-items: stretch; gap: 12px; padding: 14px 12px; }
+            .document-info { flex-direction: row; align-items: flex-start; gap: 12px; }
+            .document-details h4 { font-size: 0.95rem; }
+            .document-details p { font-size: 0.8rem; line-height: 1.35; }
+            .document-actions { width: 100%; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
+            .document-actions .btn { flex: 1 1 calc(50% - 8px); text-align: center; padding: 10px 12px; font-size: 0.85rem; }
+            .document-actions .btn.btn-delete { flex-basis: 100%; }
+            .recent-section { padding: 14px 12px; margin-bottom: 20px; }
+            .section-title { font-size: 1.2rem; margin-bottom: 12px; gap: 8px; line-height: 1.25; }
+            .document-list { gap: 10px; }
+            .document-icon { width: 44px; height: 44px; font-size: 1.25rem; }
+            .fixarivan-toast-container { right: 16px; left: 16px; bottom: 16px; }
+            .notification-panel { left: 20px; right: 20px; width: auto; max-width: none; }
+
+            /* События: без «пустых коробок» 120px — на телефоне три колонки иначе дают огромную высоту */
+            .dashboard-page .dash-calendar-section {
+                margin-bottom: 12px;
+            }
+            .dashboard-page .dash-calendar-head {
+                margin-bottom: 10px;
+            }
+            .dashboard-page .dash-calendar-head h2 {
+                font-size: 1.05rem;
+            }
+            .dashboard-page .dash-calendar-cols {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            .dashboard-page .dash-cal-col {
+                min-height: 0;
+                padding: 10px 12px;
+            }
+            .dashboard-page .dash-cal-col h3 {
+                margin-bottom: 6px;
+                font-size: 0.88rem;
+            }
+            .dashboard-page .db-status-wrap {
+                margin-bottom: 10px;
+            }
+            .dashboard-page .dashboard-grid {
+                margin-top: 0;
+            }
+        }
+
+        @media (max-width: 520px) {
+            /* Не схлопывать метрики в одну колонку — оставляем сетку 2×2 */
+            #ordersMetrics .metrics-grid,
+            #inventoryMetricsSection .metrics-grid.inventory-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 10px;
+            }
+            .metric-card { text-align: center; padding: 12px 10px; }
+            .metric-value { font-size: 1.55rem; }
+            .metrics-title { font-size: 1rem; }
+            .metrics-meta { font-size: 0.75rem; }
+            .metrics-actions { flex-direction: column; align-items: stretch; gap: 10px; }
+            .metrics-refresh { width: 100%; text-align: center; }
+            .metrics-loading { justify-content: center; }
+            .document-actions .btn { flex: 1 1 100%; }
+            .document-icon { width: 40px; height: 40px; font-size: 1.1rem; }
+            .recent-section { padding: 14px 12px; margin-bottom: 22px; }
+            .section-title { font-size: 1.2rem; margin-bottom: 12px; }
+            .document-item { padding: 12px 10px; gap: 10px; }
+            .document-details p { font-size: 0.78rem; }
+        }
+
+        /* Модальное окно авторизации */
+        .auth-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .auth-modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auth-modal-content {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 0;
+            width: 90%;
+            max-width: 450px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            animation: slideIn 0.3s ease;
+            position: relative;
+        }
+
+        .auth-modal-header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .auth-logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .auth-logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .auth-logo h2 {
+            color: white;
+            font-size: 1.8rem;
+            margin: 0;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .auth-logo p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .auth-close-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .auth-close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .auth-modal-body {
+            padding: 30px;
+        }
+
+        .auth-form-group {
+            margin-bottom: 20px;
+        }
+
+        .auth-form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .auth-form-group input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .auth-form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .auth-form-group input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+
+        .auth-login-btn {
+            width: 100%;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(52, 211, 153, 0.4);
+        }
+
+        .auth-login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .auth-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        .auth-error-message {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fecaca;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            display: none;
+            font-size: 0.9rem;
+        }
+
+        .auth-success-message {
+            background: rgba(52, 211, 153, 0.2);
+            color: #a7f3d0;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            display: none;
+            font-size: 0.9rem;
+        }
+
+        .auth-footer {
+            text-align: center;
+            margin-top: 20px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.8rem;
+        }
+
+        /* Анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* Календарь на дашборде */
+        .system-actions-section {
+            margin-top: 16px;
+            margin-bottom: 28px;
+            background: rgba(15, 23, 42, 0.38);
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 14px;
+            padding: 14px 16px;
+        }
+        .system-actions-head {
+            color: rgba(226, 232, 240, 0.86);
+            font-size: 0.88rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .system-actions-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .system-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(239, 68, 68, 0.45);
+            background: rgba(239, 68, 68, 0.16);
+            color: #fee2e2;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s ease, transform 0.15s ease;
+        }
+        .system-btn:hover {
+            background: rgba(239, 68, 68, 0.26);
+            transform: translateY(-1px);
+        }
+        .dash-calendar-section {
+            margin-bottom: 28px;
+        }
+        .dash-calendar-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .dash-calendar-head h2 {
+            color: #fff;
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        .dash-cal-link {
+            color: #a5b4fc;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .dash-cal-link:hover { text-decoration: underline; }
+        .dash-calendar-cols {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+        }
+
+        /* Змейка (дашборд) */
+        .snake-section {
+            margin-bottom: 28px;
+            background: rgba(15, 23, 42, 0.45);
+            border: 1px solid rgba(99, 102, 241, 0.28);
+            border-radius: 16px;
+            padding: 16px 18px 20px;
+        }
+        .snake-head-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .snake-section-title {
+            margin: 0;
+            color: rgba(248, 250, 252, 0.95);
+            font-size: 1.05rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .snake-stats {
+            display: flex;
+            gap: 14px;
+            font-size: 0.88rem;
+            color: rgba(226, 232, 240, 0.88);
+        }
+        .snake-stats strong {
+            color: #a5b4fc;
+            font-weight: 700;
+        }
+        .snake-speed-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 14px;
+            margin-bottom: 12px;
+        }
+        .snake-speed-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: rgba(203, 213, 225, 0.92);
+        }
+        .snake-speed-select {
+            min-height: 40px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(99, 102, 241, 0.45);
+            background: rgba(15, 23, 42, 0.65);
+            color: #e2e8f0;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            max-width: 100%;
+        }
+        .snake-speed-select:focus {
+            outline: 2px solid rgba(99, 102, 241, 0.55);
+            outline-offset: 2px;
+        }
+        .snake-canvas-wrap {
+            position: relative;
+            width: 100%;
+            max-width: min(100%, 440px);
+            margin: 0 auto;
+            aspect-ratio: 1 / 1;
+            max-height: min(72vh, 440px);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+            background: #0b1220;
+        }
+        .snake-canvas-wrap canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            vertical-align: top;
+        }
+        .snake-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 16px;
+            background: rgba(11, 18, 32, 0.72);
+            color: #e2e8f0;
+            font-size: 0.95rem;
+            font-weight: 600;
+            line-height: 1.4;
+            pointer-events: none;
+        }
+        .snake-overlay.is-hidden {
+            display: none;
+        }
+        .snake-dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            max-width: min(100%, 280px);
+            margin: 14px auto 0;
+            user-select: none;
+        }
+        .snake-dpad-spacer {
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .snake-dir-btn {
+            min-height: 48px;
+            border-radius: 12px;
+            border: 1px solid rgba(99, 102, 241, 0.45);
+            background: rgba(99, 102, 241, 0.2);
+            color: #e0e7ff;
+            font-size: 1.35rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.1s ease;
+        }
+        .snake-dir-btn:hover:not(:disabled) {
+            background: rgba(99, 102, 241, 0.35);
+        }
+        .snake-dir-btn:active:not(:disabled) {
+            transform: scale(0.96);
+        }
+        .snake-dir-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+        .snake-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .snake-action-btn {
+            min-height: 44px;
+            padding: 0 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(34, 197, 94, 0.45);
+            background: rgba(34, 197, 94, 0.18);
+            color: #dcfce7;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .snake-action-btn:hover:not(:disabled) {
+            background: rgba(34, 197, 94, 0.28);
+        }
+        .snake-action-btn.secondary {
+            border-color: rgba(148, 163, 184, 0.4);
+            background: rgba(148, 163, 184, 0.12);
+            color: #e2e8f0;
+        }
+        .snake-action-btn.secondary:hover:not(:disabled) {
+            background: rgba(148, 163, 184, 0.22);
+        }
+        .snake-hint {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 0.78rem;
+            color: rgba(148, 163, 184, 0.85);
+        }
+        .dash-cal-col {
+            background: rgba(22, 29, 47, 0.82);
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.04);
+            border-radius: 14px;
+            padding: 14px 16px;
+            min-height: 120px;
+            transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .dash-cal-col:hover {
+            background: rgba(31, 40, 63, 0.9);
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.06);
+        }
+        .dash-cal-col h3 {
+            color: rgba(255,255,255,0.9);
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        .dash-cal-col.overdue h3 { color: rgba(255,255,255,0.9); }
+        .dash-cal-col.today h3 { color: rgba(255,255,255,0.9); }
+        .dash-cal-col.upcoming h3 { color: rgba(255,255,255,0.9); }
+        .dash-event-mini {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            font-size: 0.88rem;
+            color: rgba(255,255,255,0.92);
+            padding: 8px 6px;
+            margin: 0 -6px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            line-height: 1.35;
+            border-radius: 6px;
+        }
+        .dash-event-mini:hover { background: rgba(255,255,255,0.08); }
+        .dash-event-mini:last-child { border-bottom: none; }
+        .dash-event-mini time { color: rgba(255,255,255,0.6); font-size: 0.8rem; display: block; margin-top: 4px; }
+        .dash-cal-empty { color: rgba(255,255,255,0.6); font-size: 0.88rem; }
+
+        .db-status-wrap {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .db-status-pill {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 10px 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Мобильная адаптация */
+        @media (max-width: 768px) {
+            .auth-modal-content {
+                width: 95%;
+                margin: 20px;
+            }
+            
+            .auth-modal-header {
+                padding: 20px;
+            }
+            
+            .auth-modal-body {
+                padding: 20px;
+            }
+            
+            .auth-logo h2 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="css/fixarivan-theme.css">
+    <link rel="stylesheet" href="mobile_fixes.css">
+</head>
+<body class="fv-dashboard dashboard-page">
+    <div class="stars" id="stars"></div>
+    <div class="nebula"></div>
+
+    <div class="container">
+        <div class="header">
+            <div class="notification-icon" onclick="showNotifications()">
+                🔔
+                <span class="notification-badge" id="notifCount" hidden>0</span>
+            </div>
+            <div class="notification-panel" id="notificationPanel">
+                <div class="notification-panel-header">
+                    <h3>Уведомления</h3>
+                    <button type="button" onclick="showNotifications(false)">&times;</button>
+                </div>
+                <div class="notification-list" id="notificationList"></div>
+                <div class="notification-empty" id="notificationEmpty">Пока новых уведомлений нет</div>
+            </div>
+            <div class="logo">
+                <div class="logo-icon">
+                    <span class="logo-glyph">FV</span>
+                </div>
+                <div>
+                    <h1>FixariVan</h1>
+                    <p>Mobile Repair &amp; Tech Service</p>
+                </div>
+            </div>
+        </div>
+
+        <section class="metrics-section" id="ordersMetrics">
+            <div class="metrics-header">
+                <div>
+                    <div class="metrics-title">📋 Заказы и документы</div>
+                    <div class="metrics-meta" id="ordersMeta">Источник: SQLite • обновление не выполнялось</div>
+            </div>
+                <div class="metrics-actions">
+                    <div class="metrics-loading" id="statsLoading" hidden>
+                        <div class="spinner small"></div>
+                        <span>Обновляем данные...</span>
+            </div>
+                    <button class="metrics-refresh" id="refreshStatsBtn">Обновить</button>
+            </div>
+            </div>
+            <div class="metrics-grid">
+                <div class="metric-card pending">
+                    <div class="metric-value" id="pendingCount">-</div>
+                    <div class="metric-label">⏳ Ожидают</div>
+        </div>
+                <div class="metric-card in-progress">
+                    <div class="metric-value" id="inProgressCount">-</div>
+                    <div class="metric-label">🔧 В работе</div>
+                </div>
+                <div class="metric-card completed">
+                    <div class="metric-value" id="completedCount">-</div>
+                    <div class="metric-label">✅ Готово</div>
+                </div>
+                <div class="metric-card total">
+                    <div class="metric-value" id="totalCount">-</div>
+                    <div class="metric-label">📊 Всего</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="metrics-section" id="inventoryMetricsSection">
+            <div class="metrics-header">
+                <div>
+                    <div class="metrics-title">📦 Склад</div>
+                    <div class="metrics-meta" id="inventoryMeta">Обновление не выполнялось</div>
+            </div>
+                <div class="metrics-actions">
+                    <span class="metrics-badge warning" id="inventorySourceBadge" hidden>Данные из кэша</span>
+            </div>
+            </div>
+            <div class="metrics-grid inventory-grid">
+                <div class="metric-card inventory-total">
+                    <div class="metric-value" id="inventoryTotal">-</div>
+                    <div class="metric-label">📦 Всего позиций</div>
+                </div>
+                <div class="metric-card inventory-instock">
+                    <div class="metric-value" id="inventoryInStock">-</div>
+                    <div class="metric-label">✅ В наличии</div>
+                </div>
+                <div class="metric-card inventory-out">
+                    <div class="metric-value" id="inventoryOutOfStock">-</div>
+                    <div class="metric-label">❌ Нет</div>
+                </div>
+                <div class="metric-card inventory-margin">
+                    <div class="metric-value" id="inventoryMargin">-</div>
+                    <div class="metric-label">💰 Маржа (€)</div>
+                    <div class="metric-subtext" id="inventoryPurchaseToSale">- € → - €</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="dash-calendar-section" id="dashboardCalendarSection">
+            <div class="dash-calendar-head">
+                <h2>📅 События</h2>
+                <a class="dash-cal-link" href="calendar.html">Открыть календарь →</a>
+            </div>
+            <div class="dash-calendar-cols">
+                <div class="dash-cal-col overdue">
+                    <h3>Просроченные</h3>
+                    <div id="dashEventsOverdue"><div class="dash-cal-empty">Загрузка…</div></div>
+                </div>
+                <div class="dash-cal-col today">
+                    <h3>Сегодня</h3>
+                    <div id="dashEventsToday"><div class="dash-cal-empty">Загрузка…</div></div>
+                </div>
+                <div class="dash-cal-col upcoming">
+                    <h3>Ближайшие (7 дней)</h3>
+                    <div id="dashEventsUpcoming"><div class="dash-cal-empty">Загрузка…</div></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Database Status Light -->
+        <div id="dbStatus" class="db-status-wrap">
+            <div class="db-status-pill">
+                <div id="statusLight" style="width: 12px; height: 12px; border-radius: 50%; background: #ff6b6b; margin-right: 10px; animation: pulse 2s infinite;"></div>
+                <span id="statusText" style="color: white; font-size: 14px;">Проверка БД...</span>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="nav-grid dashboard-grid">
+            <a href="inventory.html" class="nav-card dashboard-card">
+                <span class="nav-card-icon">📦</span>
+                <div class="nav-card-title">Космический Склад</div>
+                <div class="nav-card-desc">Остатки и цены в SQLite: закупка, продажа, движения</div>
+            </a>
+            
+            <a href="track.html" class="nav-card dashboard-card">
+                <span class="nav-card-icon">🔍</span>
+                <div class="nav-card-title">Track — заказ и документы</div>
+                <div class="nav-card-desc">Центр: клиент → заказ → квитанция, счёт, отчёт (mobile / PC) с текущим order_id</div>
+            </a>
+
+            <a href="order_new.html" class="nav-card dashboard-card">
+                <span class="nav-card-icon">🧾</span>
+                <div class="nav-card-title">Новый заказ</div>
+                <div class="nav-card-desc">Ремонт / продажа / нестандарт — позиции и публичные поля для клиента</div>
+            </a>
+
+            <a href="invoice.html" class="nav-card dashboard-card">
+                <span class="nav-card-icon">📄</span>
+                <div class="nav-card-title">Счёт на оплату</div>
+                <div class="nav-card-desc">Счета с реквизитами; привязка к заказу — из Track (рекомендуется)</div>
+            </a>
+
+            <a href="receipt.html" class="nav-card dashboard-card">
+                <span class="nav-card-icon">🧾</span>
+                <div class="nav-card-title">Квитанция</div>
+                <div class="nav-card-desc">Оплата и PDF; привязка к заказу — из Track (рекомендуется)</div>
+            </a>
+
+            <a href="master_form.html" class="nav-card dashboard-card">
+                <span class="nav-card-icon">🔧</span>
+                <div class="nav-card-title">Акт приёма (мастер)</div>
+                <div class="nav-card-desc">Приём техники, ссылки и токены для клиента из одной формы</div>
+            </a>
+
+            <a href="clients.html" class="nav-card dashboard-card">
+                <span class="nav-card-icon">👥</span>
+                <div class="nav-card-title">Клиенты</div>
+                <div class="nav-card-desc">Карточки клиентов, поиск и история заказов/документов</div>
+            </a>
+
+            <a href="finance.html" class="nav-card dashboard-card">
+                <span class="nav-card-icon">💶</span>
+                <div class="nav-card-title">Финансы и отчёты</div>
+                <div class="nav-card-desc">Выручка, оплаты, счета, запчасти, налоговая сводка и экспорт CSV</div>
+            </a>
+
+            <a href="diagnostic_mobile.html" class="nav-card dashboard-card">
+                <span class="nav-card-icon">📱</span>
+                <div class="nav-card-title">Отчёт (mobile)</div>
+                <div class="nav-card-desc">Диагностика смартфонов и планшетов; только с существующим заказом (ссылка из Track)</div>
+            </a>
+            
+            <a href="diagnostic_pc.html" class="nav-card dashboard-card">
+                <span class="nav-card-icon">💻</span>
+                <div class="nav-card-title">Отчёт (PC)</div>
+                <div class="nav-card-desc">Диагностика ПК/ноутбуков; только с существующим заказом (ссылка из Track)</div>
+            </a>
+
+            <a href="notes.html" class="nav-card dashboard-card">
+                <span class="nav-card-icon">📝</span>
+                <div class="nav-card-title">Заметки</div>
+                <div class="nav-card-desc">Быстрые заметки в стиле iPhone: поиск, список и текст в SQLite</div>
+            </a>
+
+            <a href="admin/settings.php" class="nav-card dashboard-card">
+                <span class="nav-card-icon">🔐</span>
+                <div class="nav-card-title">Настройки безопасности</div>
+                <div class="nav-card-desc">Смена логина и пароля администратора (без дублирования рабочего стола)</div>
+            </a>
+        </div>
+
+        <section class="system-actions-section">
+            <div class="system-actions-head">Настройки безопасности и системные действия</div>
+            <div class="system-actions-row">
+                <a href="admin/settings.php" class="system-btn">🔐 Настройки безопасности</a>
+                <button type="button" class="system-btn" onclick="window.location.href='admin/logout.php'">🚪 Выйти из системы</button>
+                <button type="button" class="system-btn" onclick="clearAllDocuments()">🗑️ Очистить все документы</button>
+            </div>
+        </section>
+
+        <section class="snake-section" id="snakeSection" aria-label="Мини-игра змейка">
+            <div class="snake-head-row">
+                <h2 class="snake-section-title"><span aria-hidden="true">🐍</span> Змейка</h2>
+                <div class="snake-stats">
+                    <span>Очки: <strong id="snakeScoreEl">0</strong></span>
+                    <span>Рекорд: <strong id="snakeBestEl">0</strong></span>
+                </div>
+            </div>
+            <div class="snake-speed-row">
+                <label class="snake-speed-label" for="snakeSpeedSelect">Скорость</label>
+                <select id="snakeSpeedSelect" class="snake-speed-select" aria-label="Скорость игры">
+                    <option value="slow">Медленно</option>
+                    <option value="normal" selected>Норма</option>
+                    <option value="fast">Быстро</option>
+                </select>
+            </div>
+            <div class="snake-canvas-wrap" id="snakeCanvasWrap">
+                <canvas id="snakeCanvas" width="400" height="400" aria-label="Игровое поле змейки"></canvas>
+                <div class="snake-overlay" id="snakeOverlay" role="status">Нажмите «Старт» или стрелку</div>
+            </div>
+            <div class="snake-dpad" id="snakeDpad">
+                <span class="snake-dpad-spacer" aria-hidden="true"></span>
+                <button type="button" class="snake-dir-btn" id="snakeBtnUp" aria-label="Вверх">↑</button>
+                <span class="snake-dpad-spacer" aria-hidden="true"></span>
+                <button type="button" class="snake-dir-btn" id="snakeBtnLeft" aria-label="Влево">←</button>
+                <span class="snake-dpad-spacer" aria-hidden="true"></span>
+                <button type="button" class="snake-dir-btn" id="snakeBtnRight" aria-label="Вправо">→</button>
+                <span class="snake-dpad-spacer" aria-hidden="true"></span>
+                <button type="button" class="snake-dir-btn" id="snakeBtnDown" aria-label="Вниз">↓</button>
+                <span class="snake-dpad-spacer" aria-hidden="true"></span>
+            </div>
+            <div class="snake-actions">
+                <button type="button" class="snake-action-btn" id="snakeBtnStart">Старт</button>
+                <button type="button" class="snake-action-btn secondary" id="snakeBtnPause" disabled>Пауза</button>
+            </div>
+            <p class="snake-hint">Управление — четыре кнопки. Собирайте фишки FixariVan. Скорость можно сменить до старта или во время паузы.</p>
+        </section>
+
+        <!-- Recent Documents -->
+        <div class="recent-section">
+            <h2 class="section-title">
+                <span>📄</span>
+                <span>Последние документы (SQLite)</span>
+            </h2>
+            <div id="recentDocuments" class="document-list">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Загрузка документов...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно авторизации -->
+    <div id="authModal" class="auth-modal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">
+                <div class="auth-logo">
+                    <div class="auth-logo-icon">🔐</div>
+                    <div>
+                        <h2>Авторизация</h2>
+                        <p>Войдите в систему FixariVan</p>
+                    </div>
+                </div>
+                <button class="auth-close-btn" onclick="closeAuthModal()">&times;</button>
+            </div>
+            
+            <div class="auth-modal-body">
+                <div class="auth-error-message" id="authErrorMessage"></div>
+                <div class="auth-success-message" id="authSuccessMessage"></div>
+                
+                <form id="authForm">
+                    <div class="auth-form-group">
+                        <label for="authUsername">Имя пользователя</label>
+                        <input type="text" id="authUsername" name="username" required placeholder="spacefix" autocomplete="username">
+                    </div>
+                    
+                    <div class="auth-form-group">
+                        <label for="authPassword">Пароль</label>
+                        <input type="password" id="authPassword" name="password" required placeholder="Введите пароль" autocomplete="current-password">
+                    </div>
+                    
+                    <button type="submit" class="auth-login-btn" id="authLoginBtn">
+                        <span class="auth-btn-text">Войти в систему</span>
+                        <div class="auth-spinner" style="display: none;"></div>
+                    </button>
+                </form>
+                
+                <div class="auth-footer">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fetchJson = (window.FixariVan && window.FixariVan.http && typeof window.FixariVan.http.fetchJson === 'function')
+            ? window.FixariVan.http.fetchJson
+            : async function(url, options = {}) {
+                const response = await fetch(url, options);
+                const text = await response.text();
+                if (!response.ok) {
+                    const snippet = (text || '').trim().slice(0, 200);
+                    throw new Error(snippet || `HTTP ${response.status}`);
+                }
+                try {
+                    return JSON.parse(text);
+                } catch (error) {
+                    const snippet = (text || '').trim().slice(0, 200);
+                    throw new Error(snippet || 'Сервер вернул некорректный ответ');
+                }
+            };
+
+        const showToast = (window.FixariVan && window.FixariVan.ui && typeof window.FixariVan.ui.showToast === 'function')
+            ? window.FixariVan.ui.showToast
+            : function(message, type) {
+                if (type === 'error') {
+                    console.error(message);
+                } else {
+                    console.log(message);
+                }
+            };
+
+        const dashboardState = {
+            statsLoading: false,
+            lastStats: null,
+            lastOrdersUpdate: null,
+            lastInventoryUpdate: null,
+            inventorySource: 'unknown',
+            statsIntervalId: null,
+            recentIntervalId: null,
+            dbIntervalId: null,
+            cacheToastShown: false,
+            notifications: [],
+            recentDocuments: [],
+            allRecentDocuments: [],
+            recentDocumentsExpanded: false,
+            dbStatusToastShown: false,
+            sqliteDegradedNotified: false,
+            calendarSummary: null
+        };
+
+        function createStars() {
+            const starsContainer = document.getElementById('stars');
+            if (!starsContainer) return;
+            starsContainer.innerHTML = '';
+            const starCount = 100;
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.width = Math.random() * 3 + 'px';
+                star.style.height = star.style.width;
+                star.style.animationDelay = Math.random() * 2 + 's';
+                starsContainer.appendChild(star);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if ('serviceWorker' in navigator) {
+                const host = window.location.hostname;
+                const isLocal = host === 'localhost' || host === '127.0.0.1';
+                if (isLocal) {
+                    navigator.serviceWorker.getRegistrations().then((regs) => {
+                        regs.forEach((r) => r.unregister());
+                    }).catch(() => {});
+                    if (window.caches && typeof window.caches.keys === 'function') {
+                        window.caches.keys().then((keys) => Promise.all(keys.map((k) => window.caches.delete(k)))).catch(() => {});
+                    }
+                } else {
+                    navigator.serviceWorker.register('./sw.js').catch(() => {});
+                }
+            }
+            createStars();
+            initializeDashboard();
+        });
+
+        function initializeDashboard() {
+            bindRefreshButton();
+            setupNotificationHandlers();
+            loadStatistics(true);
+            loadRecentDocuments();
+            loadDashboardCalendar();
+            checkDatabaseStatus();
+            startAutoRefresh();
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+        }
+
+        function bindRefreshButton() {
+            const button = document.getElementById('refreshStatsBtn');
+            if (button) {
+                button.addEventListener('click', () => loadStatistics(true));
+            }
+        }
+
+        function setupNotificationHandlers() {
+            document.addEventListener('click', (event) => {
+                const panel = document.getElementById('notificationPanel');
+                const icon = document.querySelector('.notification-icon');
+                if (!panel || !icon) return;
+                if (panel.contains(event.target) || icon.contains(event.target)) {
+                    return;
+                }
+                panel.classList.remove('open');
+            });
+        }
+
+        function handleVisibilityChange() {
+            if (document.hidden) {
+                return;
+            }
+            loadStatistics();
+            loadRecentDocuments();
+            loadDashboardCalendar();
+            checkDatabaseStatus();
+        }
+
+        function startAutoRefresh() {
+            if (dashboardState.statsIntervalId) clearInterval(dashboardState.statsIntervalId);
+            if (dashboardState.recentIntervalId) clearInterval(dashboardState.recentIntervalId);
+            if (dashboardState.dbIntervalId) clearInterval(dashboardState.dbIntervalId);
+
+            dashboardState.statsIntervalId = setInterval(() => {
+                if (!document.hidden) {
+                    loadStatistics();
+                }
+            }, 30000);
+
+            dashboardState.recentIntervalId = setInterval(() => {
+                if (!document.hidden) {
+                    loadRecentDocuments();
+                    loadDashboardCalendar();
+                }
+            }, 60000);
+
+            dashboardState.dbIntervalId = setInterval(() => {
+                if (!document.hidden) {
+                    checkDatabaseStatus();
+                }
+            }, 30000);
+        }
+
+        function setStatisticsLoading(isLoading) {
+            dashboardState.statsLoading = isLoading;
+            const loader = document.getElementById('statsLoading');
+            const button = document.getElementById('refreshStatsBtn');
+            if (loader) loader.hidden = !isLoading;
+            if (button) button.disabled = isLoading;
+        }
+
+        function formatTimestamp(date) {
+            if (!(date instanceof Date)) return '—';
+            return date.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function updateOrdersMeta() {
+            const metaEl = document.getElementById('ordersMeta');
+            if (!metaEl) return;
+            if (!dashboardState.lastOrdersUpdate) {
+                metaEl.textContent = 'Источник: SQLite • обновление не выполнялось';
+                return;
+            }
+            metaEl.textContent = `Источник: SQLite • обновлено ${formatTimestamp(dashboardState.lastOrdersUpdate)}`;
+        }
+
+        function formatEuro(amount) {
+            const value = Number(amount) || 0;
+            return new Intl.NumberFormat('ru-RU', {
+                style: 'currency',
+                currency: 'EUR',
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+
+        function updateInventoryMeta() {
+            const metaEl = document.getElementById('inventoryMeta');
+            const badgeEl = document.getElementById('inventorySourceBadge');
+            const sourceLabel = dashboardState.inventorySource === 'cache'
+                ? 'Кэш браузера'
+                : dashboardState.inventorySource === 'db'
+                    ? 'База данных'
+                    : '—';
+
+            if (badgeEl) {
+                badgeEl.hidden = dashboardState.inventorySource !== 'cache';
+            }
+
+            if (!metaEl) return;
+
+            if (!dashboardState.lastInventoryUpdate) {
+                metaEl.textContent = `Источник: ${sourceLabel}`;
+                return;
+            }
+
+            metaEl.textContent = `Обновлено ${formatTimestamp(dashboardState.lastInventoryUpdate)} • Источник: ${sourceLabel}`;
+        }
+
+        async function loadStatistics(force = false) {
+            if (dashboardState.statsLoading && !force) {
+                return;
+            }
+
+            setStatisticsLoading(true);
+
+            try {
+                const result = await fetchJson('./api/get_fast_stats.php');
+                if (!result.success) {
+                    throw new Error(result.message || 'Не удалось загрузить статистику');
+                }
+
+                const stats = result.stats || {};
+                dashboardState.lastStats = stats;
+                dashboardState.lastOrdersUpdate = new Date();
+
+                if (stats.sqlite_degraded && !dashboardState.sqliteDegradedNotified) {
+                    showToast('Режим ограничения: SQLite недоступна или ответ неполный. Проверьте pdo_sqlite и каталог storage/.', 'warning');
+                    dashboardState.sqliteDegradedNotified = true;
+                } else if (!stats.sqlite_degraded) {
+                    dashboardState.sqliteDegradedNotified = false;
+                }
+
+                updateOrderCards(stats);
+                updateOrdersMeta();
+
+                let inventoryUpdated = false;
+
+                if (stats.inventory) {
+                    updateInventoryCards(stats.inventory, 'db');
+                    inventoryUpdated = true;
+                } else {
+                    inventoryUpdated = await loadInventoryStatsFromApi();
+                }
+
+                if (!inventoryUpdated) {
+                    loadInventoryFromCache();
+                }
+
+                refreshNotifications();
+            } catch (error) {
+                showToast('Ошибка загрузки статистики: ' + error.message, 'error');
+                loadInventoryFromCache();
+            } finally {
+                setStatisticsLoading(false);
+            }
+        }
+
+        function updateOrderCards(stats) {
+            const pending = document.getElementById('pendingCount');
+            const inProgress = document.getElementById('inProgressCount');
+            const completed = document.getElementById('completedCount');
+            const total = document.getElementById('totalCount');
+
+            if (pending) pending.textContent = stats?.pending ?? 0;
+            if (inProgress) inProgress.textContent = stats?.in_progress ?? 0;
+            if (completed) completed.textContent = stats?.completed ?? 0;
+            if (total) total.textContent = stats?.total ?? 0;
+        }
+
+        async function loadInventoryStatsFromApi() {
+            try {
+                const result = await fetchJson('./api/get_inventory_stats.php');
+                if (result.success && result.data) {
+                    updateInventoryCards(result.data, 'db');
+                    return true;
+                }
+            } catch (error) {
+                showToast('Ошибка загрузки данных склада: ' + error.message, 'warning');
+            }
+            return false;
+        }
+
+        function loadInventoryFromCache() {
+            const metrics = getInventoryCacheMetrics();
+            updateInventoryCards(metrics, 'cache');
+            if (!dashboardState.cacheToastShown) {
+                showToast('Показаны данные склада из кэша браузера', 'warning');
+                dashboardState.cacheToastShown = true;
+            }
+        }
+
+        function getInventoryCacheMetrics() {
+            const inventory = JSON.parse(localStorage.getItem('fixarivan_inventory') || '[]');
+            const total = inventory.length;
+            const inStock = inventory.filter(item => (item.quantity || 0) > (item.minStock || 0)).length;
+            const lowStock = inventory.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= (item.minStock || 5)).length;
+            const purchaseValue = inventory.reduce((sum, item) => {
+                const price = Number(item.costPrice ?? item.cost_price ?? 0);
+                const quantity = Number(item.quantity ?? 0);
+                return sum + price * quantity;
+            }, 0);
+            const saleValue = inventory.reduce((sum, item) => {
+                const price = Number(item.sellPrice ?? item.sale_price ?? item.sellingPrice ?? 0);
+                const quantity = Number(item.quantity ?? 0);
+                return sum + price * quantity;
+            }, 0);
+            const outOfStock = Math.max(0, total - inStock);
+
+            return {
+                total,
+                in_stock: inStock,
+                low_stock: lowStock,
+                out_of_stock: outOfStock,
+                value: purchaseValue,
+                purchase_value: purchaseValue,
+                sale_value: saleValue,
+                profit_potential: saleValue - purchaseValue
+            };
+        }
+
+        function updateInventoryCards(data, source) {
+            const totalEl = document.getElementById('inventoryTotal');
+            const inStockEl = document.getElementById('inventoryInStock');
+            const outStockEl = document.getElementById('inventoryOutOfStock');
+            const marginEl = document.getElementById('inventoryMargin');
+            const purchaseToSaleEl = document.getElementById('inventoryPurchaseToSale');
+
+            const total = Number(data?.total ?? 0);
+            const inStock = Number(data?.in_stock ?? 0);
+            const outOfStock = Number(
+                data?.out_of_stock != null
+                    ? data.out_of_stock
+                    : Math.max(0, total - inStock)
+            );
+            const purchaseValue = Number(data?.purchase_value ?? data?.value ?? 0);
+            const saleValue = Number(data?.sale_value ?? 0);
+            const margin = Number(data?.profit_potential ?? (saleValue - purchaseValue));
+
+            if (totalEl) totalEl.textContent = total;
+            if (inStockEl) inStockEl.textContent = inStock;
+            if (outStockEl) outStockEl.textContent = outOfStock;
+            if (marginEl) {
+                marginEl.textContent = formatEuro(margin);
+            }
+            if (purchaseToSaleEl) {
+                purchaseToSaleEl.textContent = `${formatEuro(purchaseValue)} → ${formatEuro(saleValue)}`;
+            }
+
+            dashboardState.lastInventoryUpdate = new Date();
+            dashboardState.inventorySource = source;
+            if (source === 'db') {
+                dashboardState.cacheToastShown = false;
+            }
+            updateInventoryMeta();
+        }
+
+        function refreshNotifications() {
+            const notifications = [];
+            const stats = dashboardState.lastStats || {};
+            const inventory = stats.inventory || {};
+
+            if (stats.sqlite_degraded) {
+                notifications.push({
+                    type: 'warning',
+                    title: 'База данных',
+                    message: 'SQLite недоступна или ответ неполный — цифры и списки могут быть пустыми.'
+                });
+            }
+
+            const pending = Number(stats.pending ?? 0);
+            if (pending > 0) {
+                notifications.push({
+                    type: 'warning',
+                    title: 'Ожидают обработки',
+                    message: `${pending} заказ(ов) ждут начала работы.`
+                });
+            }
+
+            const lowStock = Number(inventory.low_stock ?? 0);
+            if (lowStock > 0) {
+                notifications.push({
+                    type: 'warning',
+                    title: 'Низкий остаток на складе',
+                    message: `${lowStock} позици${lowStock === 1 ? 'я' : lowStock < 5 ? 'и' : 'й'} требуют пополнения.`
+                });
+            }
+
+            const calOv = dashboardState.calendarSummary && Number(dashboardState.calendarSummary.overdueCount ?? 0);
+            if (calOv > 0) {
+                notifications.push({
+                    type: 'warning',
+                    title: 'Просроченные события',
+                    message: `${calOv} в календаре — проверьте блок «События» ниже или откройте календарь.`
+                });
+            }
+
+            if (dashboardState.inventorySource === 'cache') {
+                notifications.push({
+                    type: 'warning',
+                    title: 'Оффлайн данные склада',
+                    message: 'Показаны данные из браузерного кэша — синхронизация с сервером недоступна.'
+                });
+            }
+
+            const recent = dashboardState.recentDocuments[0];
+            if (recent) {
+                notifications.push({
+                    type: 'info',
+                    title: 'Последний документ',
+                    message: `${recent.display_id || recent.document_id} для ${recent.client_name || 'клиента'} — ${formatDate(recent.date_created)}.`
+                });
+            }
+
+            dashboardState.notifications = notifications;
+            renderNotificationPanel();
+        }
+
+        function renderNotificationPanel() {
+            const listEl = document.getElementById('notificationList');
+            const emptyEl = document.getElementById('notificationEmpty');
+            const badgeEl = document.getElementById('notifCount');
+            const notifications = dashboardState.notifications || [];
+            const count = notifications.length;
+
+            if (badgeEl) {
+                if (count > 0) {
+                    badgeEl.hidden = false;
+                    badgeEl.textContent = count;
+                } else {
+                    badgeEl.hidden = true;
+                }
+            }
+
+            if (!listEl || !emptyEl) return;
+
+            if (count === 0) {
+                listEl.innerHTML = '';
+                emptyEl.style.display = 'block';
+                return;
+            }
+
+            emptyEl.style.display = 'none';
+            listEl.innerHTML = notifications.map(item => `
+                <div class="notification-item ${item.type || 'info'}">
+                    <strong>${item.title}</strong>
+                    <span>${item.message}</span>
+                </div>
+            `).join('');
+        }
+
+        function showNotifications(force) {
+            const panel = document.getElementById('notificationPanel');
+            if (!panel) return;
+
+            if (force === false) {
+                panel.classList.remove('open');
+                return;
+            }
+            if (force === true) {
+                panel.classList.add('open');
+                return;
+            }
+            panel.classList.toggle('open');
+        }
+
+        function renderRecentDocumentsList(docList) {
+            const container = document.getElementById('recentDocuments');
+            if (!container) return;
+            const limit = 5;
+            const expanded = dashboardState.recentDocumentsExpanded === true;
+            const visibleDocs = expanded ? docList : docList.slice(0, limit);
+            container.innerHTML = visibleDocs.map(doc => {
+                const safeId = String(doc.document_id || '').replace(/'/g, "\\'");
+                const safeType = String(doc.type || 'order').replace(/'/g, "\\'");
+                const st = doc.status_label || doc.status || '';
+                const paymentInfo = doc.type === 'receipt'
+                    ? `${doc.payment_method ? ' • 💳 ' + doc.payment_method : ''}${doc.payment_status ? ' • 📌 ' + doc.payment_status : ''}`
+                    : '';
+                return `
+                    <div class="document-item">
+                        <div class="document-info">
+                            <div class="document-icon ${doc.type || 'order'}">
+                                ${getDocumentIcon(doc.type || 'order')}
+                            </div>
+                            <div class="document-details">
+                                <h4>${doc.display_id || doc.document_id} — ${doc.client_name || 'Без имени'}</h4>
+                                <p>${doc.device_model || '—'} • ${st ? '<span style="opacity:0.9;">' + st + '</span> • ' : ''}${doc.order_id ? '<span style="opacity:0.85;">Заказ: ' + doc.order_id + '</span> • ' : ''}${formatDate(doc.date_created)}${paymentInfo}</p>
+                            </div>
+                        </div>
+                        <div class="document-actions">
+                            ${doc.viewer_url ? `<button type="button" class="btn btn-view" data-viewer-url="${doc.viewer_url.replace(/"/g, '&quot;')}" onclick="copyViewerLinkFromData(this)">🔗 Копировать ссылку</button>` : ''}
+                            <button class="btn btn-view" onclick="viewDocument('${safeId}', '${safeType}')">👁️ Просмотр</button>
+                            ${String(doc.type || '').toLowerCase() === 'report' ? '' : `<button class="btn btn-download" onclick="downloadDocument('${safeId}', '${safeType}', this)">📄 PDF</button>`}
+                            <button class="btn btn-edit" onclick="editDocument('${safeId}', '${safeType}')">✏️ Редактировать</button>
+                            <button class="btn btn-delete" onclick="deleteDocument('${safeId}', '${safeType}')">🗑️ Удалить</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            if (docList.length > limit) {
+                container.innerHTML += `
+                    <div class="document-list-toggle">
+                        <button type="button" onclick="toggleRecentDocumentsExpanded()">${expanded ? 'Свернуть список' : 'Показать все документы'}</button>
+                    </div>
+                `;
+            }
+        }
+
+        function toggleRecentDocumentsExpanded() {
+            dashboardState.recentDocumentsExpanded = !dashboardState.recentDocumentsExpanded;
+            renderRecentDocumentsList(dashboardState.allRecentDocuments || []);
+        }
+
+        async function loadRecentDocuments() {
+            const container = document.getElementById('recentDocuments');
+            if (!container) return;
+
+            try {
+                const result = await fetchJson('./api/get_recent_documents.php');
+                const dataBlock = result.data && typeof result.data === 'object' ? result.data : {};
+                const docList = Array.isArray(result.documents)
+                    ? result.documents
+                    : (Array.isArray(dataBlock.documents) ? dataBlock.documents : []);
+                const sqliteUnavailable = dataBlock.sqlite_available === false;
+
+                if (sqliteUnavailable && docList.length === 0) {
+                    dashboardState.recentDocuments = [];
+                    dashboardState.allRecentDocuments = [];
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 32px; color: rgba(255, 255, 255, 0.75);">
+                            <h3 style="margin-bottom: 10px;">Нет доступа к SQLite</h3>
+                            <p>Убедитесь, что на сервере включён pdo_sqlite и доступна запись в каталог <code style="background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:6px;">storage/</code></p>
+                        </div>
+                    `;
+                    refreshNotifications();
+                    return;
+                }
+
+                if (result.success && docList.length) {
+                    dashboardState.allRecentDocuments = docList;
+                    dashboardState.recentDocuments = docList.slice(0, 5);
+                    renderRecentDocumentsList(docList);
+                } else {
+                    dashboardState.recentDocuments = [];
+                    dashboardState.allRecentDocuments = [];
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.6);">
+                            <h3 style="margin-bottom: 10px;">Документов пока нет</h3>
+                            <p>Создайте первый документ используя формы выше</p>
+                        </div>
+                    `;
+                }
+                refreshNotifications();
+            } catch (error) {
+                console.error('Error loading recent documents:', error);
+                showToast('Ошибка загрузки документов: ' + error.message, 'error');
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.6);">
+                        <h3>Нет соединения</h3>
+                        <p>Попробуйте обновить страницу позже</p>
+                    </div>
+                `;
+            }
+        }
+
+        function dashEscapeHtml(str) {
+            if (str == null) return '';
+            const d = document.createElement('div');
+            d.textContent = String(str);
+            return d.innerHTML;
+        }
+
+        function formatDashEventTime(iso, allDay) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            if (Number.isNaN(d.getTime())) return String(iso);
+            if (allDay === 1 || allDay === true || allDay === '1') {
+                return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' });
+            }
+            return d.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function renderDashEventList(el, items) {
+            if (!el) return;
+            if (!items || !items.length) {
+                el.innerHTML = '<div class="dash-cal-empty">Нет событий</div>';
+                return;
+            }
+            el.innerHTML = items.map((ev) => {
+                const eid = encodeURIComponent(ev.event_id || '');
+                const day = (ev.starts_at || '').slice(0, 10);
+                const href = day ? `calendar.html?date=${encodeURIComponent(day)}&event=${eid}` : `calendar.html?event=${eid}`;
+                const when = formatDashEventTime(ev.starts_at, ev.all_day);
+                const title = dashEscapeHtml(ev.title || 'Без названия');
+                return `<a class="dash-event-mini" href="${href}"><strong>${title}</strong><time>${dashEscapeHtml(when)}</time></a>`;
+            }).join('');
+        }
+
+        function pickCalendarSummaryPayload(result) {
+            const block = result && result.data && typeof result.data === 'object' && !Array.isArray(result.data)
+                ? result.data
+                : {};
+            const today = Array.isArray(block.today) ? block.today : (Array.isArray(result.today) ? result.today : []);
+            const upcoming = Array.isArray(block.upcoming) ? block.upcoming : (Array.isArray(result.upcoming) ? result.upcoming : []);
+            const overdue = Array.isArray(block.overdue) ? block.overdue : (Array.isArray(result.overdue) ? result.overdue : []);
+            return { today, upcoming, overdue };
+        }
+
+        async function loadDashboardCalendar() {
+            const overdueEl = document.getElementById('dashEventsOverdue');
+            const todayEl = document.getElementById('dashEventsToday');
+            const upcomingEl = document.getElementById('dashEventsUpcoming');
+            if (!overdueEl || !todayEl || !upcomingEl) return;
+
+            try {
+                const result = await fetchJson('./api/calendar_events.php?summary=1', { credentials: 'same-origin' });
+                const { today, upcoming, overdue } = pickCalendarSummaryPayload(result);
+                renderDashEventList(overdueEl, overdue);
+                renderDashEventList(todayEl, today);
+                renderDashEventList(upcomingEl, upcoming);
+                dashboardState.calendarSummary = { overdueCount: overdue.length };
+                refreshNotifications();
+            } catch (error) {
+                console.error('Error loading calendar summary:', error);
+                const msg = dashEscapeHtml(error.message || 'Ошибка');
+                const errHtml = `<div class="dash-cal-empty">Не удалось загрузить: ${msg}</div>`;
+                overdueEl.innerHTML = errHtml;
+                todayEl.innerHTML = errHtml;
+                upcomingEl.innerHTML = errHtml;
+                dashboardState.calendarSummary = null;
+                refreshNotifications();
+            }
+        }
+
+        function getDocumentIcon(type) {
+            const icons = {
+                order: '📝',
+                receipt: '🧾',
+                report: '📋',
+                invoice: '📄'
+            };
+            return icons[type] || '📄';
+        }
+
+        function copyViewerLinkFromData(btn) {
+            const url = btn && btn.getAttribute ? btn.getAttribute('data-viewer-url') : '';
+            if (!url) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(function() {
+                    showToast('Ссылка для клиента скопирована', 'success');
+                }).catch(function() {
+                    window.prompt('Скопируйте ссылку:', url);
+                });
+            } else {
+                window.prompt('Скопируйте ссылку:', url);
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '—';
+            const date = new Date(dateString);
+            if (Number.isNaN(date.getTime())) return '—';
+            return date.toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        async function viewDocument(documentId, documentType) {
+            try {
+                const data = await FixariVanDocuments.fetchDocument(documentId, documentType);
+                FixariVanDocuments.showViewModal(data, documentType);
+            } catch (error) {
+                showToast('Ошибка при загрузке документа: ' + error.message, 'error');
+            }
+        }
+
+        async function downloadDocument(documentId, documentType, button) {
+            try {
+                await FixariVanDocuments.exportDocument(documentId, documentType, button instanceof HTMLElement ? button : null);
+            } catch (error) {
+                showToast('Ошибка при генерации PDF: ' + error.message, 'error');
+            }
+        }
+
+        async function editDocument(documentId, documentType) {
+            if (documentType === 'invoice') {
+                window.location.href = `invoice.html?document_id=${encodeURIComponent(documentId)}`;
+                return;
+            }
+            try {
+                const data = await FixariVanDocuments.fetchDocument(documentId, documentType);
+                FixariVanDocuments.showEditModal(data, documentType, () => {
+                    loadRecentDocuments();
+                    loadStatistics();
+                });
+            } catch (error) {
+                showToast('Ошибка при загрузке документа: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteDocument(documentId, documentType) {
+            if (!confirm(`Удалить документ ${documentId}? Это действие нельзя отменить.`)) {
+                return;
+            }
+
+            try {
+                const del = await FixariVanDocuments.deleteDocument(documentId, documentType);
+                if (del && del.cancelled) {
+                    return;
+                }
+                showToast('Документ удалён', 'success');
+                loadRecentDocuments();
+                loadStatistics(true);
+                } catch (error) {
+                showToast('Ошибка при удалении: ' + error.message, 'error');
+            }
+        }
+
+        async function clearAllDocuments() {
+            if (!confirm('⚠️ ВНИМАНИЕ!\n\nВы собираетесь удалить ВСЕ ДОКУМЕНТЫ из системы:\n\n• 📝 Все акты приёма\n• 🧾 Все квитанции\n• 📋 Все отчёты\n• 🔗 Все реферальные ссылки\n\nЭто действие НЕОБРАТИМО!\n\nПродолжить?')) {
+                return;
+            }
+
+            const password = prompt('🔒 Введите пароль для подтверждения очистки всех документов:');
+            if (password === null || password === '') {
+                showToast('Операция отменена.', 'info');
+                return;
+            }
+
+            if (!confirm('🚨 ПОСЛЕДНЕЕ ПРЕДУПРЕЖДЕНИЕ!\n\nВы действительно хотите удалить ВСЕ ДОКУМЕНТЫ?\n\n• 📝 Все акты приёма\n• 🧾 Все квитанции\n• 📋 Все отчёты\n• 🔗 Все реферальные ссылки\n\n✅ СКЛАД И ИНВЕНТАРЬ НЕ ЗАТРАГИВАЮТСЯ!\n\nНажмите OK для продолжения или Отмена для отмены.')) {
+                showToast('Операция отменена пользователем', 'info');
+                return;
+            }
+
+            try {
+                const result = await fetchJson('./api/clear_database.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirm: 'YES_DELETE_ALL', delete_password: password })
+                });
+
+                if (!result.success) {
+                    throw new Error(result.message || 'Не удалось очистить документы');
+                }
+
+                showToast(`Все документы очищены (удалено: ${result.total_deleted})`, 'success');
+                loadStatistics(true);
+                loadRecentDocuments();
+            } catch (error) {
+                showToast('Ошибка при очистке: ' + error.message, 'error');
+            }
+        }
+
+        async function checkDatabaseStatus() {
+            const statusLight = document.getElementById('statusLight');
+            const statusText = document.getElementById('statusText');
+            if (!statusLight || !statusText) return;
+
+            try {
+                const data = await fetchJson('./api/db_status.php');
+                if (data.status === 'connected') {
+                    statusLight.style.background = '#51cf66';
+                    const total = typeof data.total_documents === 'number' ? data.total_documents : null;
+                    const orders = typeof data.orders_count === 'number' ? data.orders_count : 0;
+                    statusText.textContent = total !== null
+                        ? `✅ SQLite · документов: ${total} (актов: ${orders})`
+                        : `✅ SQLite · актов: ${orders}`;
+                    dashboardState.dbStatusToastShown = false;
+                } else {
+                    statusLight.style.background = '#ff6b6b';
+                    statusText.textContent = `❌ ${data.message || 'SQLite недоступна'}`;
+                    if (!dashboardState.dbStatusToastShown) {
+                        showToast(data.message || 'Проверьте SQLite и каталог storage/', 'error');
+                        dashboardState.dbStatusToastShown = true;
+                    }
+                }
+            } catch (error) {
+                statusLight.style.background = '#ffd43b';
+                statusText.textContent = '⚠️ Ошибка проверки БД';
+                if (!dashboardState.dbStatusToastShown) {
+                    showToast('Не удалось проверить подключение к базе данных', 'warning');
+                    dashboardState.dbStatusToastShown = true;
+                }
+            }
+        }
+
+        // ===== ФУНКЦИИ МОДАЛЬНОГО ОКНА АВТОРИЗАЦИИ =====
+        
+        function showAuthModal() {
+            const modal = document.getElementById('authModal');
+            modal.classList.add('show');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('authUsername').focus();
+            }, 300);
+        }
+        
+        function closeAuthModal() {
+            const modal = document.getElementById('authModal');
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+            document.getElementById('authForm').reset();
+            hideAuthMessages();
+        }
+        
+        function showAuthError(message) {
+            const errorDiv = document.getElementById('authErrorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                hideAuthMessages();
+            }, 5000);
+        }
+        
+        function showAuthSuccess(message) {
+            const successDiv = document.getElementById('authSuccessMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+        }
+        
+        function hideAuthMessages() {
+            document.getElementById('authErrorMessage').style.display = 'none';
+            document.getElementById('authSuccessMessage').style.display = 'none';
+        }
+        
+        function toggleAuthSpinner(show) {
+            const btn = document.getElementById('authLoginBtn');
+            const btnText = btn.querySelector('.auth-btn-text');
+            const spinner = btn.querySelector('.auth-spinner');
+            
+            if (show) {
+                btn.disabled = true;
+                btnText.style.display = 'none';
+                spinner.style.display = 'block';
+            } else {
+                btn.disabled = false;
+                btnText.style.display = 'block';
+                spinner.style.display = 'none';
+            }
+        }
+        
+        document.getElementById('authForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const next = encodeURIComponent('index.php');
+            window.location.href = 'admin/login.php?next=' + next;
+        });
+        
+        function updateUIAfterLogin() {
+            console.log('User logged in successfully:', AuthManager.getUsername());
+            loadStatistics(true);
+            loadRecentDocuments();
+        }
+        
+        document.getElementById('authModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAuthModal();
+            }
+        });
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('authModal');
+                if (modal.classList.contains('show')) {
+                    closeAuthModal();
+                }
+                const panel = document.getElementById('notificationPanel');
+                if (panel && panel.classList.contains('open')) {
+                    panel.classList.remove('open');
+                }
+            }
+        });
+    </script>
+    <script src="js/dashboard_snake.js"></script>
+</body>
+</html>

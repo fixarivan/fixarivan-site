@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixariVan - Администрирование</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .admin-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .admin-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .admin-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .admin-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+            display: block;
+        }
+
+        .admin-button:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .danger-button {
+            background: #dc3545;
+        }
+
+        .danger-button:hover {
+            background: #c82333;
+        }
+
+        .back-button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .back-button:hover {
+            background: #5a6268;
+        }
+
+        .warning-text {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.php" class="back-button">← Назад к главной</a>
+        
+        <div class="header">
+            <h1>⚙️ Администрирование</h1>
+            <p>Управление системой FixariVan</p>
+        </div>
+
+        <div class="admin-panel">
+            <div class="admin-title">🔧 Инструменты администратора</div>
+            
+            <div class="warning-text">
+                <strong>⚠️ Внимание!</strong> Следующие действия могут повлиять на работу всей системы. 
+                Используйте их с осторожностью.
+            </div>
+            
+            <div class="admin-actions">
+                <a href="track.html" class="admin-button">
+                    🔍 Поиск и отслеживание документов
+                </a>
+                
+                <a href="admin_clear.html" class="admin-button danger-button">
+                    🗑️ Очистка базы данных
+                </a>
+                
+                <button onclick="testSystem()" class="admin-button">
+                    🔧 Тестирование системы
+                </button>
+                
+                <button onclick="checkDatabase()" class="admin-button">
+                    📊 Проверка базы данных
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function testSystem() {
+            try {
+                const response = await fetch('./api/health.php', { cache: 'no-store' });
+                const result = await response.json();
+                const d = result.data || {};
+                if (result.success && d.sqlite_file && d.sqlite_file.reachable) {
+                    alert('✅ Система в порядке: SQLite отвечает, хранилище доступно.');
+                } else {
+                    alert('❌ Проблема: ' + (result.message || (d.sqlite_file && d.sqlite_file.error) || 'проверьте storage/'));
+                }
+            } catch (error) {
+                alert('❌ Ошибка подключения к серверу');
+            }
+        }
+
+        async function checkDatabase() {
+            try {
+                const response = await fetch('./api/db_status.php', { credentials: 'same-origin', cache: 'no-store' });
+                if (response.status === 401) {
+                    alert('📊 Войдите в админку (admin/login.php), затем откройте эту страницу снова — нужна сессия для подсчёта документов.');
+                    return;
+                }
+                const result = await response.json();
+                if (result.status === 'connected') {
+                    alert(`📊 SQLite\n\nАкты: ${result.orders_count}\nКвитанции: ${result.receipts_count}\nОтчёты: ${result.reports_count}\nВсего документов: ${result.total_documents}`);
+                } else {
+                    alert('❌ ' + (result.message || 'База недоступна'));
+                }
+            } catch (error) {
+                alert('❌ Ошибка подключения к базе данных');
+            }
+        }
+    </script>
+</body>
+</html>

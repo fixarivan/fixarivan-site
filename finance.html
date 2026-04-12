@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Финансы — FixariVan</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0b1120">
+    <script>window.FIXARIVAN_REQUIRE_ADMIN_SESSION = true;</script>
+    <script src="auth_check.js"></script>
+    <style>
+        :root {
+            --bg: #0b1220;
+            --card: #1a2332;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --accent: #38bdf8;
+            --good: #4ade80;
+            --warn: #fbbf24;
+            --bad: #f87171;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.45;
+        }
+        .wrap { max-width: 960px; margin: 0 auto; padding: 16px; padding-bottom: 48px; }
+        h1 { font-size: 1.35rem; margin: 0 0 6px; font-weight: 700; }
+        .sub { color: var(--muted); font-size: 0.88rem; margin-bottom: 16px; }
+        .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .topbar a { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+        .chip {
+            border: 1px solid #334155;
+            background: #0c1222;
+            color: var(--text);
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .chip[aria-pressed="true"] { border-color: var(--accent); background: #172554; }
+        .custom-range { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+        .custom-range label { font-size: 0.8rem; color: var(--muted); }
+        .custom-range input[type="date"] {
+            background: var(--card);
+            border: 1px solid #334155;
+            color: var(--text);
+            border-radius: 8px;
+            padding: 8px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        @media (min-width: 640px) {
+            .grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        section.block { background: var(--card); border-radius: 14px; padding: 14px 16px; border: 1px solid #334155; }
+        section.block h2 { margin: 0 0 10px; font-size: 0.95rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+        .big { font-size: 1.65rem; font-weight: 700; letter-spacing: -0.02em; }
+        .rowline .click-val.big { font-size: 1.65rem; font-weight: 700; }
+        .rowline { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid #334155; font-size: 0.92rem; }
+        .rowline:last-child { border-bottom: 0; }
+        .rowline span:last-child { font-variant-numeric: tabular-nums; }
+        .muted { color: var(--muted); font-size: 0.82rem; margin-top: 8px; }
+        .tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .tools a, .tools button {
+            display: inline-block;
+            background: #0c1222;
+            border: 1px solid #475569;
+            color: var(--text);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .tools a:hover, .tools button:hover { border-color: var(--accent); }
+        .err { background: #450a0a; border: 1px solid #991b1b; color: #fecaca; padding: 10px 12px; border-radius: 10px; font-size: 0.9rem; }
+        .panel { margin-top: 10px; max-height: 220px; overflow: auto; font-size: 0.82rem; background: #0c1222; border-radius: 8px; padding: 8px; }
+        .panel pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
+        .linkish { color: var(--accent); cursor: pointer; text-decoration: underline; font-size: 0.85rem; }
+        .kpi-hero {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        @media (min-width: 720px) {
+            .kpi-hero { grid-template-columns: repeat(4, 1fr); }
+        }
+        .kpi-cell {
+            background: var(--card);
+            border: 1px solid #334155;
+            border-radius: 14px;
+            padding: 14px 12px;
+            text-align: center;
+        }
+        .kpi-label {
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .kpi-num {
+            font-size: clamp(1.15rem, 4vw, 1.55rem);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+            color: var(--text);
+        }
+        .kpi-num.kpi-profit { color: var(--good); }
+        .kpi-num.kpi-debt { color: var(--bad); }
+        button.kpi-num {
+            display: block;
+            width: 100%;
+            cursor: pointer;
+            background: transparent;
+            border: 0;
+            padding: 0;
+            font: inherit;
+            text-align: center;
+            transition: opacity 0.15s ease;
+        }
+        button.kpi-num:hover { opacity: 0.88; text-decoration: underline; text-underline-offset: 3px; }
+        button.kpi-num:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 3px;
+            border-radius: 4px;
+        }
+        .click-val {
+            cursor: pointer;
+            text-decoration: underline dotted;
+            text-underline-offset: 3px;
+        }
+        .click-val:hover { opacity: 0.9; }
+        .val-profit { color: var(--good); font-weight: 600; }
+        .val-debt { color: var(--bad); font-weight: 600; }
+    </style>
+    <link rel="stylesheet" href="css/fixarivan-theme.css">
+</head>
+<body class="fv-finance">
+<div class="wrap">
+    <div class="topbar">
+        <a href="dashboard_app.html">← Рабочий стол</a>
+    </div>
+    <h1>Финансы и отчёты</h1>
+    <p class="sub" id="periodLabel">Загрузка…</p>
+
+    <div class="chips" id="presetChips" role="group" aria-label="Период">
+        <button type="button" class="chip" data-preset="today">Сегодня</button>
+        <button type="button" class="chip" data-preset="7d">7 дней</button>
+        <button type="button" class="chip" data-preset="month">Месяц</button>
+        <button type="button" class="chip" data-preset="quarter">Квартал</button>
+        <button type="button" class="chip" data-preset="year">Год</button>
+        <button type="button" class="chip" data-preset="custom" id="chipCustom">Свой период</button>
+    </div>
+    <div class="custom-range" id="customRange" hidden>
+        <label>С <input type="date" id="dateFrom" /></label>
+        <label>по <input type="date" id="dateTo" /></label>
+        <button type="button" class="chip" id="applyCustom">Применить</button>
+    </div>
+    <div id="loadErr" class="err" style="display:none;"></div>
+
+    <section class="kpi-hero" id="kpiHero" aria-label="Ключевые показатели">
+        <div class="kpi-cell">
+            <div class="kpi-label">Доход</div>
+            <button type="button" class="kpi-num kpi-click" data-drill="income" aria-label="Доход: детализация">—</button>
+        </div>
+        <div class="kpi-cell">
+            <div class="kpi-label">Расход</div>
+            <button type="button" class="kpi-num kpi-click" data-drill="expense" aria-label="Расход: детализация">—</button>
+        </div>
+        <div class="kpi-cell">
+            <div class="kpi-label">Прибыль</div>
+            <button type="button" class="kpi-num kpi-click kpi-profit" data-drill="profit" aria-label="Прибыль: детализация">—</button>
+        </div>
+        <div class="kpi-cell">
+            <div class="kpi-label">Неоплачено</div>
+            <button type="button" class="kpi-num kpi-click kpi-debt" data-drill="unpaid" aria-label="Неоплачено: детализация">—</button>
+        </div>
+    </section>
+
+    <div class="grid" id="mainGrid"></div>
+
+    <section class="block" id="taxSection" style="margin-top:14px;">
+        <h2>Налоговая сводка (касса)</h2>
+        <div id="taxBlock"></div>
+        <p class="muted" id="taxNote"></p>
+    </section>
+
+    <section class="block" style="margin-top:14px;">
+        <h2>Экспорт</h2>
+        <p class="muted">CSV с разделителем «;», Excel открывает напрямую.</p>
+        <div class="tools" id="exportTools"></div>
+    </section>
+
+    <section class="block" style="margin-top:14px;">
+        <h2>Детализация</h2>
+        <p class="muted">Нажмите сумму в блоке выше или ссылку ниже — список документов из SQLite.</p>
+        <div class="tools" id="drillLinks"></div>
+        <div id="drillPanel" class="panel" style="display:none;"><pre id="drillPre"></pre></div>
+    </section>
+</div>
+<script>
+(function () {
+    const eur = new Intl.NumberFormat('fi-FI', { style: 'currency', currency: 'EUR' });
+    let currentPreset = 'month';
+    let lastMeta = null;
+
+    function money(n) {
+        const x = Number(n);
+        if (!isFinite(x)) return '—';
+        return eur.format(x);
+    }
+
+    function qs(sel) { return document.querySelector(sel); }
+    function showErr(msg) {
+        const el = qs('#loadErr');
+        el.style.display = msg ? 'block' : 'none';
+        el.textContent = msg || '';
+    }
+
+    function periodQuery() {
+        if (currentPreset === 'custom') {
+            const a = qs('#dateFrom').value;
+            const b = qs('#dateTo').value;
+            if (!a || !b) return 'preset=month';
+            return 'from=' + encodeURIComponent(a) + '&to=' + encodeURIComponent(b);
+        }
+        return 'preset=' + encodeURIComponent(currentPreset);
+    }
+
+    function setChips() {
+        document.querySelectorAll('#presetChips .chip').forEach((btn) => {
+            const p = btn.getAttribute('data-preset');
+            btn.setAttribute('aria-pressed', p === currentPreset ? 'true' : 'false');
+        });
+    }
+
+    function card(title, innerHtml) {
+        return '<section class="block"><h2>' + title + '</h2>' + innerHtml + '</section>';
+    }
+
+    function row(label, val, extraClass) {
+        return '<div class="rowline"><span>' + label + '</span><span class="' + (extraClass || '') + '">' + val + '</span></div>';
+    }
+
+    /** Сумма кликабельна → drilldown (kind или составной: income, expense, profit, unpaid). */
+    function rowDrill(label, val, drillKind, valExtraClass) {
+        const extra = (valExtraClass || '').trim();
+        let inner;
+        if (drillKind) {
+            inner = '<span class="click-val' + (extra ? ' ' + extra : '') + '" data-drill="' + drillKind + '" role="button" tabindex="0">' + val + '</span>';
+        } else {
+            inner = '<span class="' + extra + '">' + val + '</span>';
+        }
+        return '<div class="rowline"><span>' + label + '</span><span>' + inner + '</span></div>';
+    }
+
+    function render(data, meta) {
+        lastMeta = meta;
+        qs('#periodLabel').textContent = (meta && meta.label ? meta.label + ' · ' : '') +
+            (data.period.start + ' — ' + data.period.end);
+
+        const rv = data.revenue || {};
+        const pr = data.payment_receipts || {};
+        const inv = data.invoices || {};
+        const ord = data.orders || {};
+        const parts = data.parts || {};
+        const sum = data.summary || {};
+
+        const unpaidTotal = (Number(pr.unpaid_sum) || 0) + (Number(inv.unpaid_open_sum) || 0);
+
+        const hIncome = qs('#kpiHero [data-drill="income"]');
+        const hExpense = qs('#kpiHero [data-drill="expense"]');
+        const hProfit = qs('#kpiHero [data-drill="profit"]');
+        const hUnpaid = qs('#kpiHero [data-drill="unpaid"]');
+        if (hIncome) hIncome.textContent = money(sum.income);
+        if (hExpense) hExpense.textContent = money(sum.expense_parts_manual);
+        if (hProfit) hProfit.textContent = money(sum.approx_profit);
+        if (hUnpaid) hUnpaid.textContent = money(unpaidTotal);
+
+        let html = '';
+        html += card('Выручка (касса за период)', ''
+            + rowDrill('Квитанции', money(rv.receipts_cash), 'receipts_paid')
+            + rowDrill('Счета оплаченные', money(rv.invoices_paid_cash), 'invoices_paid')
+            + rowDrill('Всего', money(rv.total), 'income', 'big'));
+
+        html += card('Оплата · квитанции', ''
+            + row('Оплачено в периоде (шт.)', String(pr.paid_in_period_count))
+            + rowDrill('Сумма оплат в периоде', money(pr.paid_in_period_sum), 'receipts_paid')
+            + rowDrill('Не оплачено (сумма)', money(pr.unpaid_sum), 'receipts_unpaid', 'val-debt')
+            + row('Не оплачено (шт.)', String(pr.unpaid_count)));
+
+        html += card('Счета', ''
+            + row('Документов (не черновик)', String(inv.documents_count || 0))
+            + row('Оплачено в периоде (шт.)', String(inv.paid_in_period_count))
+            + rowDrill('Оплачено в периоде', money(inv.paid_in_period_sum), 'invoices_paid')
+            + rowDrill('Открытая задолженность', money(inv.unpaid_open_sum), 'invoices_unpaid', 'val-debt')
+            + row('Просрочено (шт.)', String(inv.overdue_count))
+            + rowDrill('Просрочено (сумма)', money(inv.overdue_sum), 'invoices_overdue', 'val-debt'));
+
+        html += card('Запчасти по заказам', ''
+            + rowDrill('Закупка', money(parts.purchase), 'expense')
+            + rowDrill('Продажа', money(parts.sale), 'orders_period')
+            + rowDrill('Прибыль', money(parts.profit), 'orders_period', 'val-profit'));
+
+        html += card('Заказы (по дате приёма в периоде)', ''
+            + rowDrill('Всего', String(ord.in_period), 'orders_period')
+            + row('Завершённые', String(ord.completed))
+            + row('В работе', String(ord.in_progress))
+            + row('Оценка работ (сумма)', money(ord.estimated_labor_sum || 0)));
+
+        html += card('Сводка', ''
+            + rowDrill('Доход (касса)', money(sum.income), 'income')
+            + rowDrill('Расход (запчасти, вручную)', money(sum.expense_parts_manual), 'expense')
+            + rowDrill('Ориентировочная прибыль', money(sum.approx_profit), 'profit', 'val-profit')
+            + row('Оценка выручки по заказам (позиции + работа)', money(sum.orders_income_estimate || 0))
+            + row('Оценка прибыли по заказам', money(sum.orders_profit_estimate || 0)));
+
+        qs('#mainGrid').innerHTML = html;
+
+        const tax = data.tax || {};
+        qs('#taxBlock').innerHTML = ''
+            + rowDrill('Квитанции оплаченные', money(tax.receipts_paid_total), 'receipts_paid')
+            + rowDrill('Счета оплаченные', money(tax.invoices_paid_total), 'invoices_paid')
+            + rowDrill('Доход всего', money(tax.total_income), 'income')
+            + rowDrill('Расход (закупка запчастей по заказам)', money(tax.expense_parts_orders), 'expense')
+            + rowDrill('Итог ориентировочно', money(tax.approx_profit), 'profit', 'val-profit');
+        const notes = data.notes || {};
+        qs('#taxNote').textContent = [notes.revenue_basis, notes.expense_basis, notes.parts_sync, notes.orders_income_estimate].filter(Boolean).join(' ');
+
+        const q = periodQuery();
+        qs('#exportTools').innerHTML = ''
+            + '<a href="api/finance.php?action=export&kind=management&format=csv&' + q + '">Управленческий CSV</a>'
+            + '<a href="api/finance.php?action=export&kind=tax&format=csv&' + q + '">Налоговый CSV</a>'
+            + '<a href="api/finance.php?action=export&kind=management&format=json&' + q + '">JSON сводка</a>'
+            + '<a href="api/finance.php?action=export&kind=receipts_paid&format=csv&' + q + '">Квитанции (оплаченные)</a>'
+            + '<a href="api/finance.php?action=export&kind=invoices_paid&format=csv&' + q + '">Счета (оплаченные)</a>'
+            + '<a href="api/finance.php?action=export&kind=orders&format=csv&' + q + '">Заказы</a>';
+
+        qs('#drillLinks').innerHTML = ''
+            + '<span class="linkish" data-drill="receipts_paid">Оплаченные квитанции</span>'
+            + '<span class="linkish" data-drill="receipts_unpaid">Неоплаченные квитанции</span>'
+            + '<span class="linkish" data-drill="invoices_paid">Оплаченные счета</span>'
+            + '<span class="linkish" data-drill="invoices_unpaid">Неоплаченные счета</span>'
+            + '<span class="linkish" data-drill="invoices_overdue">Просроченные счета</span>'
+            + '<span class="linkish" data-drill="orders_period">Заказы в периоде</span>';
+    }
+
+    async function runDrill(kind) {
+        const panel = qs('#drillPanel');
+        const pre = qs('#drillPre');
+        pre.textContent = 'Загрузка…';
+        panel.style.display = 'block';
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const q = periodQuery();
+        try {
+            if (kind === 'income') {
+                const [r1, r2] = await Promise.all([
+                    fetch('api/finance.php?action=drilldown&kind=receipts_paid&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); }),
+                    fetch('api/finance.php?action=drilldown&kind=invoices_paid&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); })
+                ]);
+                if (!r1.success || !r2.success) {
+                    throw new Error(r1.message || r2.message || 'Ошибка');
+                }
+                pre.textContent = JSON.stringify({
+                    оплаченные_квитанции: r1.rows,
+                    оплаченные_счета: r2.rows
+                }, null, 2);
+                return;
+            }
+            if (kind === 'unpaid') {
+                const [r1, r2] = await Promise.all([
+                    fetch('api/finance.php?action=drilldown&kind=receipts_unpaid&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); }),
+                    fetch('api/finance.php?action=drilldown&kind=invoices_unpaid&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); })
+                ]);
+                if (!r1.success || !r2.success) {
+                    throw new Error(r1.message || r2.message || 'Ошибка');
+                }
+                pre.textContent = JSON.stringify({
+                    неоплаченные_квитанции: r1.rows,
+                    неоплаченные_счета: r2.rows
+                }, null, 2);
+                return;
+            }
+            if (kind === 'expense') {
+                const j = await fetch('api/finance.php?action=drilldown&kind=orders_period&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); });
+                if (!j.success) {
+                    throw new Error(j.message || 'Ошибка');
+                }
+                pre.textContent = JSON.stringify({
+                    пояснение: 'Расход: суммы parts_purchase_total из заказов с датой приёма в периоде (см. строки заказов).',
+                    заказы_в_периоде: j.rows
+                }, null, 2);
+                return;
+            }
+            if (kind === 'profit') {
+                const [r1, r2, r3] = await Promise.all([
+                    fetch('api/finance.php?action=drilldown&kind=receipts_paid&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); }),
+                    fetch('api/finance.php?action=drilldown&kind=invoices_paid&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); }),
+                    fetch('api/finance.php?action=drilldown&kind=orders_period&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); })
+                ]);
+                if (!r1.success || !r2.success || !r3.success) {
+                    throw new Error(r1.message || r2.message || r3.message || 'Ошибка');
+                }
+                pre.textContent = JSON.stringify({
+                    пояснение: 'Доход (оплаченные квитанции и счета в периоде) минус расход (закупка запчастей по заказам в периоде).',
+                    оплаченные_квитанции: r1.rows,
+                    оплаченные_счета: r2.rows,
+                    заказы_в_периоде: r3.rows
+                }, null, 2);
+                return;
+            }
+            const res = await fetch('api/finance.php?action=drilldown&kind=' + encodeURIComponent(kind) + '&' + q, { credentials: 'same-origin' });
+            const j = await res.json();
+            if (!j.success) {
+                pre.textContent = j.message || 'Ошибка';
+                return;
+            }
+            pre.textContent = JSON.stringify(j.rows, null, 2);
+        } catch (e) {
+            pre.textContent = e.message || String(e);
+        }
+    }
+
+    function onDrillActivate(ev) {
+        const el = ev.target.closest('[data-drill]');
+        if (!el) {
+            return;
+        }
+        const kind = el.getAttribute('data-drill');
+        if (!kind) {
+            return;
+        }
+        runDrill(kind);
+    }
+
+    function onDrillKeydown(ev) {
+        if (ev.key !== 'Enter' && ev.key !== ' ') {
+            return;
+        }
+        const el = ev.target.closest('[data-drill].click-val');
+        if (!el) {
+            return;
+        }
+        ev.preventDefault();
+        runDrill(el.getAttribute('data-drill'));
+    }
+
+    async function load() {
+        showErr('');
+        try {
+            const res = await fetch('api/finance.php?action=overview&' + periodQuery(), { credentials: 'same-origin', cache: 'no-store' });
+            const j = await res.json();
+            if (!j.success) {
+                showErr(j.message || 'Ошибка загрузки');
+                return;
+            }
+            render(j.data, j.period_meta);
+        } catch (e) {
+            showErr(e.message || String(e));
+        }
+    }
+
+    document.querySelectorAll('#presetChips .chip').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const p = btn.getAttribute('data-preset');
+            currentPreset = p;
+            const cr = qs('#customRange');
+            if (p === 'custom') {
+                cr.hidden = false;
+                const t = new Date();
+                const y = t.getFullYear();
+                const m = String(t.getMonth() + 1).padStart(2, '0');
+                const d = String(t.getDate()).padStart(2, '0');
+                if (!qs('#dateFrom').value) qs('#dateFrom').value = y + '-' + m + '-01';
+                if (!qs('#dateTo').value) qs('#dateTo').value = y + '-' + m + '-' + d;
+            } else {
+                cr.hidden = true;
+            }
+            setChips();
+            load();
+        });
+    });
+
+    qs('#applyCustom').addEventListener('click', () => { load(); });
+
+    ['kpiHero', 'mainGrid', 'taxSection', 'drillLinks'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('click', onDrillActivate);
+            el.addEventListener('keydown', onDrillKeydown);
+        }
+    });
+
+    currentPreset = 'month';
+    setChips();
+    load();
+})();
+</script>
+</body>
+</html>

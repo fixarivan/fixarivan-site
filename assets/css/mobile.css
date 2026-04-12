@@ -1,0 +1,370 @@
+/* FixariVan Mobile Optimizations */
+/* Enhanced mobile experience with animations and touch interactions */
+
+/* Mobile-first responsive design */
+@media (max-width: 768px) {
+    /* Container adjustments */
+    .container {
+        padding: 10px;
+        margin: 0;
+    }
+    
+    /* Header optimizations */
+    .header {
+        padding: 15px;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .logo {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .logo-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+    
+    /* Form optimizations */
+    .form-container {
+        padding: 20px 15px;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .form-group.full-width {
+        grid-column: 1;
+    }
+    
+    /* Input optimizations for mobile */
+    input, select, textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 14px 16px;
+        border-radius: 10px;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    
+    /* Button optimizations */
+    .submit-btn, .btn {
+        padding: 16px 24px;
+        font-size: 16px;
+        border-radius: 12px;
+        min-height: 48px; /* Touch-friendly size */
+        touch-action: manipulation;
+    }
+    
+    /* Tab navigation for mobile */
+    .tab-navigation {
+        display: flex;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    
+    .tab-navigation::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .tab-btn {
+        flex-shrink: 0;
+        padding: 12px 20px;
+        white-space: nowrap;
+        min-width: 120px;
+    }
+    
+    /* Device type buttons */
+    .device-types {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .device-type-btn {
+        padding: 16px 12px;
+        font-size: 14px;
+        border-radius: 10px;
+    }
+    
+    /* Test items */
+    .test-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .test-item {
+        padding: 16px;
+        border-radius: 10px;
+    }
+    
+    /* Statistics grid */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+    
+    .stat-card {
+        padding: 20px 16px;
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+    }
+    
+    /* Table responsive */
+    .orders-table {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    table {
+        min-width: 600px;
+    }
+    
+    th, td {
+        padding: 8px 6px;
+        font-size: 14px;
+    }
+    
+    /* Signature canvas */
+    .signature-canvas {
+        width: 100%;
+        height: 200px;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        touch-action: none;
+    }
+    
+    /* Service items */
+    .service-item {
+        padding: 12px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+    }
+    
+    .service-item input {
+        margin-bottom: 8px;
+    }
+    
+    /* Success/Error messages */
+    .success-message, .error-message {
+        padding: 16px;
+        margin: 15px 0;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+}
+
+/* Touch interactions and animations */
+@media (hover: none) and (pointer: coarse) {
+    /* Touch device optimizations */
+    .btn, .submit-btn, .device-type-btn, .test-item {
+        transition: all 0.2s ease;
+    }
+    
+    .btn:active, .submit-btn:active {
+        transform: scale(0.98);
+        background: #1547B8;
+    }
+    
+    .device-type-btn:active {
+        transform: scale(0.95);
+    }
+    
+    .test-item:active {
+        transform: scale(0.98);
+    }
+}
+
+/* Landscape orientation */
+@media (max-width: 768px) and (orientation: landscape) {
+    .form-container {
+        padding: 15px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .device-types {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+    .container {
+        padding: 5px;
+    }
+    
+    .form-container {
+        padding: 15px 10px;
+    }
+    
+    .header {
+        padding: 10px;
+    }
+    
+    .logo h1 {
+        font-size: 1.5rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .device-types {
+        grid-template-columns: 1fr;
+    }
+    
+    .test-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    input, select, textarea {
+        padding: 12px;
+        font-size: 16px;
+    }
+    
+    .submit-btn {
+        padding: 14px 20px;
+        font-size: 16px;
+    }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .btn, .submit-btn {
+        border: 2px solid currentColor;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: 3px solid #1C5FDD;
+        outline-offset: 2px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    body {
+        background: #1a1a1a;
+        color: #ffffff;
+    }
+    
+    .container {
+        background: #2d2d2d;
+        color: #ffffff;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        background: #3d3d3d;
+        border-color: #555;
+        color: #ffffff;
+    }
+    
+    .stat-card {
+        background: #3d3d3d;
+        color: #ffffff;
+    }
+    
+    .orders-table {
+        background: #3d3d3d;
+        color: #ffffff;
+    }
+}
+
+/* Loading animations */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.loading {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Touch feedback */
+.touch-feedback {
+    position: relative;
+    overflow: hidden;
+}
+
+.touch-feedback::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+}
+
+.touch-feedback:active::after {
+    width: 200px;
+    height: 200px;
+}
+
+/* Swipe gestures for mobile */
+.swipe-container {
+    overflow: hidden;
+    position: relative;
+}
+
+.swipe-item {
+    transition: transform 0.3s ease;
+}
+
+.swipe-item.swiped-left {
+    transform: translateX(-100%);
+}
+
+.swipe-item.swiped-right {
+    transform: translateX(100%);
+}

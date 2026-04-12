@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>FixariVan — новый заказ</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧾</text></svg>">
+    <script>window.FIXARIVAN_REQUIRE_ADMIN_SESSION = true;</script>
+    <script src="auth_check.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #312e81 0%, #4c1d95 100%);
+            min-height: 100vh;
+            color: #1f2937;
+        }
+        .container { max-width: 920px; margin: 0 auto; padding: 24px 16px 48px; }
+        .header { margin-bottom: 24px; color: #e5e7eb; }
+        .header-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .header-titles { flex: 1; min-width: 200px; }
+        .header h1 { font-size: 1.65rem; font-weight: 800; text-align: left; }
+        .dash-link {
+            display: inline-block;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.22);
+            color: #e0e7ff;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .dash-link:hover { background: rgba(255,255,255,0.2); color: #fff; }
+        .card {
+            background: rgba(255,255,255,0.96);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+        }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: #374151; font-size: 0.9rem; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; padding: 10px 12px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 15px;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none; border-color: #6366f1;
+        }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) {
+            body { overflow-x: hidden; }
+            .container { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+            .header-row { flex-direction: column; align-items: stretch; }
+            .dash-link { text-align: center; }
+        }
+        .section-title { font-size: 1.1rem; font-weight: 800; color: #4338ca; margin: 20px 0 12px; }
+        .btn {
+            display: inline-block; padding: 12px 20px; border-radius: 10px; border: none;
+            background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; font-weight: 700; cursor: pointer;
+        }
+        .btn-secondary { background: #e5e7eb; color: #374151; margin-left: 8px; }
+        .link-box { margin-top: 16px; padding: 12px; background: #f3f4f6; border-radius: 10px; word-break: break-all; font-size: 0.85rem; }
+        .doc-quick { font-weight: 600; color: #4338ca; text-decoration: none; }
+        .doc-quick:hover { text-decoration: underline; }
+        .muted { color: #6b7280; font-size: 0.85rem; margin-top: 8px; }
+        /* Сворачиваемые подсказки */
+        .hint-collapsible {
+            margin-bottom: 12px;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+            overflow: hidden;
+        }
+        .hint-title {
+            padding: 10px 12px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #4338ca;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .hint-title::after {
+            content: '▸';
+            margin-left: auto;
+            flex-shrink: 0;
+            font-size: 0.72rem;
+            opacity: 0.65;
+            transition: transform 0.2s ease;
+        }
+        .hint-collapsible.active .hint-title::after {
+            transform: rotate(90deg);
+        }
+        .hint-content {
+            display: none;
+            padding: 0 12px 10px;
+            font-size: 0.8125rem;
+            line-height: 1.45;
+            color: #64748b;
+        }
+        .hint-content p { margin-top: 8px; }
+        .hint-content p:first-child { margin-top: 0; }
+        .hint-content a { color: #4f46e5; }
+        .hint-collapsible.active .hint-content {
+            display: block;
+        }
+        .header .hint-collapsible {
+            margin-top: 10px;
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.2);
+        }
+        .header .hint-title { color: #e0e7ff; }
+        .header .hint-content { color: rgba(226,232,240,0.92); }
+        .lines-hints { margin-bottom: 10px; }
+        /* Блок позиций: читаемая таблица */
+        .lines-table-wrap {
+            overflow-x: auto;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+            margin: 12px 0 14px;
+        }
+        table.lines-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 15px;
+            min-width: 800px;
+        }
+        .lines-table thead th {
+            background: linear-gradient(180deg, #eef2ff 0%, #e0e7ff 100%);
+            color: #312e81;
+            font-weight: 800;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 14px 14px;
+            text-align: left;
+            border-bottom: 2px solid #a5b4fc;
+            white-space: nowrap;
+        }
+        .lines-table thead th:first-child { border-radius: 14px 0 0 0; }
+        .lines-table thead th:last-child { border-radius: 0 14px 0 0; }
+        .lines-table tbody td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+            background: #fff;
+        }
+        .lines-table tbody tr:nth-child(even) td { background: #fafbfc; }
+        .lines-table tbody tr:hover td { background: #f1f5f9; }
+        .lines-table tbody tr:last-child td { border-bottom: none; }
+        .lines-table tbody tr:last-child td:first-child { border-radius: 0 0 0 12px; }
+        .lines-table tbody tr:last-child td:last-child { border-radius: 0 0 12px 0; }
+        .lines-table td:nth-child(1) { min-width: 200px; }
+        .lines-table td:nth-child(2) { width: 88px; max-width: 100px; }
+        .lines-table td:nth-child(3),
+        .lines-table td:nth-child(4) { width: 104px; max-width: 118px; }
+        .lines-table td:nth-child(5) { width: 72px; text-align: center; vertical-align: middle; }
+        .lines-table td:nth-child(6) { width: 84px; max-width: 96px; }
+        .lines-table td:nth-child(7) { min-width: 120px; font-size: 12px; color: #64748b; line-height: 1.35; }
+        .lines-table .line-from-stock { width: 20px; height: 20px; cursor: pointer; accent-color: #4f46e5; }
+        .lines-table .line-inv-id { min-height: 40px; font-size: 14px; }
+        .lines-table input[type="text"],
+        .lines-table input[type="number"] {
+            width: 100%;
+            min-height: 44px;
+            padding: 10px 12px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #111827;
+            border: 1.5px solid #94a3b8;
+            border-radius: 10px;
+            background: #fff;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+        }
+        .lines-table input::placeholder { color: #9ca3af; }
+        .lines-table input:hover { border-color: #64748b; }
+        .lines-table input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
+        }
+        .lines-table input[type="number"] {
+            font-variant-numeric: tabular-nums;
+            -moz-appearance: textfield;
+        }
+        .lines-table input[type="number"]::-webkit-outer-spin-button,
+        .lines-table input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        #addLine { margin-top: 4px; }
+        /* Ориентировочная стоимость работы — в одном стиле с таблицей позиций */
+        .portal-cost-box {
+            margin: 18px 0 8px;
+            padding: 16px 18px 18px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+        }
+        .portal-cost-box .portal-cost-heading {
+            font-weight: 800;
+            color: #312e81;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 10px;
+            line-height: 1.35;
+        }
+        .portal-cost-box .portal-badge {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #eef2ff 0%, #e0e7ff 100%);
+            border: 1px solid #c7d2fe;
+            color: #3730a3;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            vertical-align: middle;
+        }
+        .portal-cost-input {
+            width: 100%;
+            min-height: 48px;
+            padding: 12px 14px;
+            font-size: 16px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            color: #111827;
+            border: 1.5px solid #94a3b8;
+            border-radius: 10px;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.07);
+        }
+        .portal-cost-input::placeholder { color: #9ca3af; font-weight: 500; }
+        .portal-cost-input:hover { border-color: #64748b; }
+        .portal-cost-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
+        }
+        .portal-cost-hint {
+            margin-top: 10px;
+            color: #64748b;
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+        .hint-content .portal-cost-hint {
+            margin-top: 8px;
+            font-size: 0.8125rem;
+        }
+        .hint-content .portal-cost-hint:first-child { margin-top: 0; }
+        /* Ремонт vs продажа vs нестандарт: разные подписи, одна форма */
+        .order-mode-repair .show-sale-only,
+        .order-mode-repair .show-custom-only,
+        .order-mode-sale .show-repair-only,
+        .order-mode-sale .show-custom-only,
+        .order-mode-custom .show-repair-only,
+        .order-mode-custom .show-sale-only {
+            display: none !important;
+        }
+        .order-mode-sale .commerce-highlight,
+        .order-mode-custom .commerce-highlight {
+            border-color: #a5b4fc;
+            background: linear-gradient(180deg, #f5f3ff 0%, #eef2ff 100%);
+        }
+        .order-type-block.order-type-hidden {
+            display: none !important;
+        }
+    </style>
+    <link rel="stylesheet" href="mobile_fixes.css">
+</head>
+<body class="order-new-page order-mode-repair">
+    <div class="container">
+        <div class="header">
+            <div class="header-row">
+                <div class="header-titles">
+                    <h1>Новый заказ</h1>
+                    <div class="hint-collapsible">
+                        <div class="hint-title">ℹ️ Подсказка</div>
+                        <div class="hint-content">
+                            <p class="muted show-repair-only" style="margin-top:0;color:#c7d2fe;">Новый заказ в формате акта приёма: устройство, проблема, при необходимости — запчасти со складом (как в Track).</p>
+                            <p class="muted show-sale-only" style="margin-top:0;color:#e0e7ff;">Форма продажи: позиции, склад, цены и итог по заказу без лишних полей ремонта.</p>
+                            <p class="muted show-custom-only" style="margin-top:0;color:#e0e7ff;">Гибкая форма: описание, позиции, комментарии и сроки без перегруза полями ремонта.</p>
+                        </div>
+                    </div>
+                </div>
+                <a class="dash-link" href="dashboard_app.html">← Рабочий стол</a>
+            </div>
+        </div>
+
+        <form class="card" id="orderForm">
+            <div class="order-type-block" data-order-types="repair,sale,custom" data-block-name="meta">
+            <div class="form-group">
+                <label>Тип заказа</label>
+                <select id="orderMode" required>
+                    <option value="repair">Ремонт (акт приёма)</option>
+                    <option value="sale">Продажа (позиции + склад)</option>
+                    <option value="custom">Нестандарт / другое (позиции + склад)</option>
+                </select>
+                <div class="hint-collapsible" style="margin-top:8px;">
+                    <div class="hint-title">ℹ️ Подсказка</div>
+                    <div class="hint-content">
+                        <p class="muted" style="margin-top:0;" id="orderModeHint"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Номер документа (documentId)</label>
+                <input type="text" id="documentId" readonly>
+            </div>
+            </div>
+
+            <div class="order-type-block" data-order-types="repair,sale,custom" data-block-name="client">
+            <div class="section-title">Клиент</div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Имя *</label>
+                    <input type="text" id="clientName" required>
+                </div>
+                <div class="form-group">
+                    <label>Телефон *</label>
+                    <input type="text" id="clientPhone" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="clientEmail">
+            </div>
+            </div>
+
+            <div class="order-type-block" data-order-types="repair" data-block-name="device">
+            <div class="section-title">
+                <span>Устройство / предмет ремонта</span>
+            </div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Модель / устройство</label>
+                    <input type="text" id="deviceModel" placeholder="" data-ph-repair="Напр. iPhone 14">
+                </div>
+                <div class="form-group">
+                    <label>Тип устройства *</label>
+                    <select id="deviceType" required data-required-modes="repair">
+                        <option value="" disabled selected>— выберите —</option>
+                        <option value="phone">Телефон</option>
+                        <option value="laptop">Ноутбук</option>
+                        <option value="tablet">Планшет</option>
+                        <option value="console">Консоль</option>
+                        <option value="other">Другое / товар / услуга</option>
+                    </select>
+                </div>
+            </div>
+            </div>
+
+            <div class="order-type-block" data-order-types="repair,sale,custom" data-block-name="description">
+            <div class="form-group">
+                <label>
+                    <span class="show-repair-only">Описание / неисправность</span>
+                    <span class="show-sale-only">Комментарий к сделке</span>
+                    <span class="show-custom-only">Описание заказа / комментарий</span>
+                </label>
+                <textarea id="problemDescription" rows="3" placeholder="" data-ph-repair="Что случилось, что делали" data-ph-sale="Кратко по сделке, условиям или заказу" data-ph-custom="Опишите задачу, заказ или состав работ"></textarea>
+            </div>
+            </div>
+
+            <div class="order-type-block" data-order-types="repair,sale,custom" data-block-name="lines">
+            <div class="section-title">
+                <span class="show-repair-only">Запчасти (опционально) ℹ️</span>
+                <span class="show-sale-only">Позиции и склад *</span>
+                <span class="show-custom-only">Позиции и склад</span>
+            </div>
+            <div class="hint-collapsible lines-hints">
+                <div class="hint-title">ℹ️ Подсказка</div>
+                <div class="hint-content">
+                    <p class="muted show-repair-only" style="margin-top:0;">Необязательно на старте. Если заполните — строки уйдут в Track, заявку на закупку, каталог и напоминания по поставке (как заявка на запчасть).</p>
+                    <p class="muted show-sale-only" style="margin-top:0;"><strong>Обязательно минимум одна строка.</strong> Название, количество, закуп и продажа: по этим строкам работает склад — резервирование, движения и списание при статусе «готово» / «выдано», как в Track.</p>
+                    <p class="muted show-custom-only" style="margin-top:0;">Можно использовать как гибкий список работ, товаров или смешанных позиций. Если добавлены строки, они сохраняются в заказ как обычно и совместимы со складской логикой.</p>
+                    <p class="muted show-repair-only">Формат цен в строках: закуп €… / продажа €… — для учёта на складе.</p>
+                    <p class="muted" style="margin-top:8px;">Галочка «Со склада» и ID позиции из <a href="inventory.html" target="_blank" rel="noopener">каталога склада</a>: строка не попадает в заявку на закупку; при статусе «готово» / «выдано» списывается остаток (не больше количества в строке).</p>
+                </div>
+            </div>
+            <div class="lines-table-wrap" id="linesTableWrap">
+                <table id="linesTable" class="lines-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Название</th>
+                            <th scope="col">Кол-во</th>
+                            <th scope="col">Закуп (€)</th>
+                            <th scope="col">Продажа (€)</th>
+                            <th scope="col" title="Списать с остатка при выдаче">Склад</th>
+                            <th scope="col" title="ID карточки в inventory">ID</th>
+                            <th scope="col"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="linesBody"></tbody>
+                </table>
+            </div>
+            <button type="button" class="btn btn-secondary" id="addLine">+ Строка</button>
+            </div>
+
+            <div class="order-type-block" data-order-types="repair,sale,custom" data-block-name="portal">
+            <div class="section-title">Публично для клиента (портал)</div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Статус для клиента</label>
+                    <select id="publicStatus">
+                        <option value="in_progress" selected>В работе</option>
+                        <option value="waiting_parts">Ожидает запчасть</option>
+                        <option value="in_transit">В пути</option>
+                        <option value="done">Готово</option>
+                        <option value="delivered">Выдано</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Ориентировочная дата</label>
+                    <input type="text" id="publicExpectedDate" placeholder="2026-04-01">
+                </div>
+            </div>
+            <div class="portal-cost-box">
+                <div class="portal-cost-heading show-repair-only">
+                    Ориентировочная стоимость работы<span class="portal-badge">портал</span>
+                </div>
+                <div class="portal-cost-heading show-sale-only">
+                    Ориентировочная сумма для клиента<span class="portal-badge">портал</span>
+                </div>
+                <div class="portal-cost-heading show-custom-only">
+                    Ориентировочная сумма / бюджет<span class="portal-badge">портал</span>
+                </div>
+                <input type="text" id="publicEstimatedCost" class="portal-cost-input" placeholder="" data-ph-repair="напр. 55 € или 80–120 € за работу" data-ph-sale="напр. итог по заказу или диапазон" data-ph-custom="напр. бюджет, диапазон или ориентир по заказу" inputmode="decimal" autocomplete="off" aria-label="Ориентировочная стоимость для портала">
+                <div class="hint-collapsible portal-cost-hints">
+                    <div class="hint-title">ℹ️ Подсказка</div>
+                    <div class="hint-content">
+                        <p class="portal-cost-hint show-repair-only">Показывается клиенту (текст или число с €). Не суммируется автоматически с позициями; отдельно от отчёта диагностики.</p>
+                        <p class="portal-cost-hint show-sale-only">Показывается клиенту отдельно от таблицы позиций — удобно для «от и до» или скидки; детали по строкам клиент видит в портале по позициям.</p>
+                        <p class="portal-cost-hint show-custom-only">Можно указать общий ориентир по заказу, даже если часть работ или позиций ещё уточняется.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Комментарий для клиента</label>
+                <textarea id="publicComment" rows="2"></textarea>
+            </div>
+            </div>
+
+            <div class="order-type-block" data-order-types="repair" data-block-name="acceptance">
+            <div class="section-title">
+                <span>Приём аппарата</span>
+            </div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Место приёма</label>
+                    <input type="text" id="placeOfAcceptance" value="FixariVan, Turku">
+                </div>
+                <div class="form-group">
+                    <label>Дата приёма</label>
+                    <input type="date" id="dateOfAcceptance">
+                </div>
+            </div>
+            </div>
+
+            <div class="form-group" style="margin-top:20px;">
+                <button type="submit" class="btn" id="submitBtn">Сохранить заказ</button>
+            </div>
+            <div class="link-box" id="clientLinkBox" hidden>
+                <strong>Ссылка клиенту (портал):</strong>
+                <div id="clientLink"></div>
+            </div>
+            <div class="link-box" id="quickDocsBox" hidden style="margin-top:12px;">
+                <strong>Документы по этому заказу (как в Track):</strong>
+                <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;">
+                    <a id="qdReceipt" class="doc-quick" href="#" target="_blank" rel="noopener">➕ Квитанция</a>
+                    <a id="qdInvoice" class="doc-quick" href="#" target="_blank" rel="noopener">➕ Счёт</a>
+                    <a id="qdRepMob" class="doc-quick" href="#" target="_blank" rel="noopener">➕ Отчёт (тел/планшет)</a>
+                    <a id="qdRepPc" class="doc-quick" href="#" target="_blank" rel="noopener">➕ Отчёт (ПК)</a>
+                </div>
+                <div class="hint-collapsible" style="margin-top:12px;">
+                    <div class="hint-title">ℹ️ Квитанция и счёт</div>
+                    <div class="hint-content">
+                        <p>Ссылки открывают формы с привязкой к заказу; при необходимости данные подставляются из этого заказа. Для печати и PDF используйте кнопки внутри открытой формы.</p>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function genId() {
+            const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+            const r = Math.random().toString(36).substring(2, 6).toUpperCase();
+            return 'FIX-' + ts + '-' + r;
+        }
+
+        function escapeAttr(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        }
+
+        function addLineRow(data) {
+            const tr = document.createElement('tr');
+            const name = data && data.name ? data.name : '';
+            const qty = data && data.qty != null ? data.qty : 1;
+            const p = data && data.purchase != null ? data.purchase : '';
+            const s = data && data.sale != null ? data.sale : '';
+            const invId = data && data.inventory_item_id != null ? data.inventory_item_id : '';
+            const fromStock = data && (data.from_stock === true || data.from_stock === 1 || data.fromStock === true);
+            tr.innerHTML =
+                '<td><input type="text" class="line-name" placeholder="Наименование позиции" value="' + escapeAttr(name) + '"></td>' +
+                '<td><input type="number" class="line-qty" placeholder="1" min="0.01" step="any" value="' + escapeAttr(qty) + '"></td>' +
+                '<td><input type="number" class="line-purchase" placeholder="0" min="0" step="0.01" value="' + escapeAttr(p) + '"></td>' +
+                '<td><input type="number" class="line-sale" placeholder="0" min="0" step="0.01" value="' + escapeAttr(s) + '"></td>' +
+                '<td><input type="checkbox" class="line-from-stock" title="Брать со склада, списать при выдаче"' + (fromStock || invId ? ' checked' : '') + '></td>' +
+                '<td><input type="number" class="line-inv-id" placeholder="№" min="1" step="1" value="' + escapeAttr(invId) + '" title="ID карточки в каталоге"></td>' +
+                '<td class="line-stock-hint"></td>';
+            document.getElementById('linesBody').appendChild(tr);
+            wireLineStockRow(tr);
+        }
+
+        function wireLineStockRow(tr) {
+            const cb = tr.querySelector('.line-from-stock');
+            const iid = tr.querySelector('.line-inv-id');
+            const hint = tr.querySelector('.line-stock-hint');
+            if (!cb || !iid || !hint) return;
+            cb.addEventListener('change', function () {
+                if (!cb.checked) hint.textContent = '';
+            });
+            iid.addEventListener('blur', function () {
+                const id = parseInt(iid.value, 10);
+                if (!id) {
+                    if (!cb.checked) hint.textContent = '';
+                    return;
+                }
+                cb.checked = true;
+                fetchJson('./api/inventory_list.php?id=' + id).then(function (res) {
+                    const items = (res && res.data && res.data.items) ? res.data.items : [];
+                    const it = items[0];
+                    if (it) {
+                        const q = it.quantity != null ? it.quantity : 0;
+                        hint.textContent = 'Остаток: ' + q + ' · ' + String(it.name || '').slice(0, 36);
+                    } else {
+                        hint.textContent = 'Не найдено';
+                    }
+                }).catch(function () {
+                    hint.textContent = '';
+                });
+            });
+        }
+
+        function collectLines() {
+            const rows = document.querySelectorAll('#linesBody tr');
+            const out = [];
+            rows.forEach(function (tr) {
+                let name = tr.querySelector('.line-name').value.trim();
+                const qty = parseFloat(tr.querySelector('.line-qty').value) || 0;
+                const purchase = parseFloat(tr.querySelector('.line-purchase').value) || 0;
+                const sale = parseFloat(tr.querySelector('.line-sale').value) || 0;
+                const fromStock = tr.querySelector('.line-from-stock') && tr.querySelector('.line-from-stock').checked;
+                const invId = parseInt((tr.querySelector('.line-inv-id') && tr.querySelector('.line-inv-id').value) || '', 10) || 0;
+                if (!name && invId <= 0) return;
+                if (!name && invId > 0) name = '—';
+                const o = { name: name, qty: qty > 0 ? qty : 1, purchase: purchase, sale: sale };
+                if (invId > 0) {
+                    o.inventory_item_id = invId;
+                }
+                if (fromStock) {
+                    o.from_stock = true;
+                }
+                out.push(o);
+            });
+            return out;
+        }
+
+        function buildQuickDocUrls(orderDocumentId, orderId, clientToken, clientName, clientPhone, clientEmail, deviceModel, problem) {
+            var p = new URLSearchParams();
+            p.set('document_id', orderDocumentId || '');
+            p.set('order_id', orderId || '');
+            if (clientToken) {
+                p.set('client_token', clientToken);
+            }
+            p.set('client_name', clientName || '');
+            p.set('client_phone', clientPhone || '');
+            p.set('client_email', clientEmail || '');
+            p.set('device_model', deviceModel || '');
+            p.set('problem_description', problem || '');
+            p.set('problem', problem || '');
+            var q = p.toString();
+            return {
+                receipt: 'receipt.html?' + q,
+                invoice: 'invoice.html?' + q,
+                reportMobile: 'diagnostic_mobile.html?' + q,
+                reportPc: 'diagnostic_pc.html?' + q
+            };
+        }
+
+        async function fetchJson(url, options) {
+            const response = await fetch(url, options);
+            const text = await response.text();
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status + ': ' + text.slice(0, 200));
+            }
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                throw new Error('Некорректный JSON: ' + text.slice(0, 200));
+            }
+        }
+
+        function getModeDatasetValue(el, prefix, mode) {
+            if (!el || !el.dataset) return '';
+            if (mode === 'repair' && el.dataset[prefix + 'Repair'] != null) return el.dataset[prefix + 'Repair'];
+            if (mode === 'sale') {
+                if (el.dataset[prefix + 'Sale'] != null) return el.dataset[prefix + 'Sale'];
+                if (el.dataset[prefix + 'Commerce'] != null) return el.dataset[prefix + 'Commerce'];
+            }
+            if (mode === 'custom') {
+                if (el.dataset[prefix + 'Custom'] != null) return el.dataset[prefix + 'Custom'];
+                if (el.dataset[prefix + 'Sale'] != null) return el.dataset[prefix + 'Sale'];
+                if (el.dataset[prefix + 'Commerce'] != null) return el.dataset[prefix + 'Commerce'];
+            }
+            return '';
+        }
+
+        function updateOrderTypeUI(orderType) {
+            var mode = orderType || document.getElementById('orderMode').value || 'repair';
+            document.body.classList.toggle('order-mode-repair', mode === 'repair');
+            document.body.classList.toggle('order-mode-sale', mode === 'sale');
+            document.body.classList.toggle('order-mode-custom', mode === 'custom');
+
+            document.querySelectorAll('.order-type-block[data-order-types]').forEach(function (block) {
+                var raw = String(block.getAttribute('data-order-types') || '');
+                var allowed = raw.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+                var visible = allowed.length === 0 || allowed.indexOf(mode) !== -1;
+                block.classList.toggle('order-type-hidden', !visible);
+            });
+
+            document.querySelectorAll('#orderForm input, #orderForm select, #orderForm textarea').forEach(function (field) {
+                if (!field.dataset.baseRequired) {
+                    field.dataset.baseRequired = field.required ? '1' : '0';
+                }
+                var block = field.closest('.order-type-block');
+                var isVisible = !block || !block.classList.contains('order-type-hidden');
+                var requiredModesRaw = String(field.getAttribute('data-required-modes') || '');
+                var requiredModes = requiredModesRaw.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+                var shouldRequire = field.dataset.baseRequired === '1';
+                if (requiredModes.length) {
+                    shouldRequire = requiredModes.indexOf(mode) !== -1;
+                }
+                field.required = isVisible && shouldRequire;
+            });
+
+            var hint = document.getElementById('orderModeHint');
+            if (hint) {
+                if (mode === 'repair') {
+                    hint.textContent = 'Форма акта приёма: устройство, проблема, комментарии и при необходимости запчасти.';
+                } else if (mode === 'sale') {
+                    hint.textContent = 'Форма продажи: позиции, склад, цены и комментарий по сделке.';
+                } else {
+                    hint.textContent = 'Гибкая форма: описание, позиции, комментарии и сроки без лишних полей ремонта.';
+                }
+            }
+            var dm = document.getElementById('deviceModel');
+            var pr = document.getElementById('problemDescription');
+            var pec = document.getElementById('publicEstimatedCost');
+            var wrap = document.getElementById('linesTableWrap');
+            if (dm && dm.dataset) {
+                dm.placeholder = getModeDatasetValue(dm, 'ph', mode) || '';
+            }
+            if (pr && pr.dataset) {
+                pr.placeholder = getModeDatasetValue(pr, 'ph', mode) || '';
+            }
+            if (pec && pec.dataset) {
+                pec.placeholder = getModeDatasetValue(pec, 'ph', mode) || '';
+            }
+            if (wrap) {
+                wrap.classList.toggle('commerce-highlight', mode === 'sale' || mode === 'custom');
+            }
+        }
+
+        document.getElementById('orderMode').addEventListener('change', function (e) {
+            updateOrderTypeUI(e.target.value);
+        });
+
+        document.getElementById('documentId').value = genId();
+        document.getElementById('dateOfAcceptance').value = new Date().toISOString().split('T')[0];
+        addLineRow({ name: '', qty: 1, purchase: '', sale: '' });
+        updateOrderTypeUI(document.getElementById('orderMode').value);
+
+        (function prefillFromQuery() {
+            try {
+                var u = new URLSearchParams(window.location.search || '');
+                var n = u.get('client_name');
+                var ph = u.get('client_phone');
+                var em = u.get('client_email');
+                if (n) document.getElementById('clientName').value = n;
+                if (ph) document.getElementById('clientPhone').value = ph;
+                if (em) document.getElementById('clientEmail').value = em;
+            } catch (e) {}
+        })();
+
+        document.getElementById('addLine').addEventListener('click', function () {
+            addLineRow({});
+        });
+
+        document.getElementById('orderForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const mode = document.getElementById('orderMode').value;
+            updateOrderTypeUI(mode);
+            if (!document.getElementById('orderForm').reportValidity()) {
+                return;
+            }
+            const lines = collectLines();
+            if ((mode === 'sale' || mode === 'custom') && lines.length === 0) {
+                alert('Добавьте хотя бы одну позицию для продажи или нестандарта.');
+                return;
+            }
+            for (let i = 0; i < lines.length; i++) {
+                const ln = lines[i];
+                if (ln.from_stock && (!ln.inventory_item_id || ln.inventory_item_id <= 0)) {
+                    alert('Строка «со склада»: укажите ID позиции из каталога (или снимите галочку).');
+                    return;
+                }
+            }
+
+            const payload = {
+                isMasterForm: true,
+                orderMode: mode,
+                documentId: document.getElementById('documentId').value.trim(),
+                clientName: document.getElementById('clientName').value.trim(),
+                clientPhone: document.getElementById('clientPhone').value.trim(),
+                clientEmail: document.getElementById('clientEmail').value.trim(),
+                deviceModel: document.getElementById('deviceModel').value.trim(),
+                deviceType: document.getElementById('deviceType').value.trim(),
+                problemDescription: document.getElementById('problemDescription').value.trim(),
+                orderLines: lines,
+                publicStatus: document.getElementById('publicStatus').value.trim(),
+                publicComment: document.getElementById('publicComment').value.trim(),
+                publicExpectedDate: document.getElementById('publicExpectedDate').value.trim(),
+                publicEstimatedCost: document.getElementById('publicEstimatedCost').value.trim(),
+                placeOfAcceptance: document.getElementById('placeOfAcceptance').value.trim(),
+                dateOfAcceptance: document.getElementById('dateOfAcceptance').value,
+                uniqueCode: document.getElementById('documentId').value.trim(),
+                language: 'ru',
+                priority: 'normal'
+            };
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.textContent = 'Сохранение...';
+            try {
+                const result = await fetchJson('./api/save_order_fixed.php', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!result.success) {
+                    throw new Error(result.message || 'Ошибка сохранения');
+                }
+                const token = result.client_token || '';
+                if (!token) throw new Error('Не вернулся client_token');
+                const orderIdResolved = String(result.order_id || payload.documentId || '').trim();
+                const origin = window.location.origin;
+                const path = window.location.pathname.replace('order_new.html', 'client_portal.php');
+                const link = origin + path + '?token=' + encodeURIComponent(token) + '&lang=ru';
+                document.getElementById('clientLink').textContent = link;
+                document.getElementById('clientLinkBox').hidden = false;
+                var qu = buildQuickDocUrls(
+                    payload.documentId,
+                    orderIdResolved,
+                    token,
+                    payload.clientName,
+                    payload.clientPhone,
+                    payload.clientEmail,
+                    payload.deviceModel,
+                    payload.problemDescription
+                );
+                document.getElementById('qdReceipt').href = qu.receipt;
+                document.getElementById('qdInvoice').href = qu.invoice;
+                document.getElementById('qdRepMob').href = qu.reportMobile;
+                document.getElementById('qdRepPc').href = qu.reportPc;
+                document.getElementById('quickDocsBox').hidden = false;
+                let okMsg = 'Заказ сохранён. Ссылка для клиента и быстрые документы — ниже.';
+                if (result.supply_warning) {
+                    okMsg += '\n\n' + result.supply_warning;
+                }
+                alert(okMsg);
+            } catch (err) {
+                alert('Ошибка: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Сохранить заказ';
+            }
+        });
+
+        document.querySelectorAll('.hint-collapsible .hint-title').forEach(function (el) {
+            el.addEventListener('click', function () {
+                el.parentElement.classList.toggle('active');
+            });
+        });
+    </script>
+</body>
+</html>

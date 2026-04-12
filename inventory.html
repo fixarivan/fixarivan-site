@@ -1,0 +1,2626 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Космический Склад - FixariVan</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>">
+    
+    <!-- Доступ к складу только с админ-сессией (как рабочий стол index.php) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('./api/admin_session_check.php', { credentials: 'same-origin' })
+                .then(function(r) { return r.json().catch(function() { return {}; }); })
+                .then(function(data) {
+                    if (!data || !data.success) {
+                        var next = encodeURIComponent(location.pathname.split('/').pop() || 'inventory.html');
+                        window.location.href = 'admin/login.php?next=' + next;
+                    }
+                })
+                .catch(function() {
+                    window.location.href = 'admin/login.php?next=inventory.html';
+                });
+        });
+    </script>
+    
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a0033;
+            --secondary: #2d1b4e;
+            --accent: #6b2fb5;
+            --highlight: #a855f7;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --text: #e4e4e4;
+            --text-secondary: #a0a0a0;
+            --bg-dark: #0a0014;
+            --card-bg: rgba(168, 85, 247, 0.1);
+            --border: rgba(168, 85, 247, 0.3);
+            --glow: rgba(168, 85, 247, 0.5);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px var(--glow), 0 0 10px var(--glow); }
+            50% { box-shadow: 0 0 20px var(--glow), 0 0 30px var(--glow); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--bg-dark) 50%, var(--secondary) 100%);
+            color: var(--text);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Cosmic Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(2px 2px at 20% 30%, white, transparent),
+                radial-gradient(2px 2px at 60% 70%, white, transparent),
+                radial-gradient(1px 1px at 50% 50%, white, transparent),
+                radial-gradient(1px 1px at 80% 10%, white, transparent),
+                radial-gradient(2px 2px at 90% 60%, white, transparent),
+                radial-gradient(1px 1px at 33% 80%, white, transparent);
+            background-size: 200% 200%;
+            animation: twinkle 5s ease-in-out infinite;
+            opacity: 0.5;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .sqlite-degraded-banner {
+            display: none;
+            margin: 0 24px 16px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 1px solid rgba(245, 158, 11, 0.6);
+            background: linear-gradient(135deg, rgba(120, 53, 15, 0.95) 0%, rgba(69, 26, 3, 0.95) 100%);
+            color: #fef3c7;
+            font-size: 0.95rem;
+            line-height: 1.45;
+            position: relative;
+            z-index: 50;
+        }
+        .sqlite-degraded-banner strong {
+            display: block;
+            margin-bottom: 6px;
+            color: #fde68a;
+        }
+
+        .header {
+            background: rgba(45, 27, 78, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--highlight);
+            text-decoration: none;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .logo-icon {
+            font-size: 36px;
+            filter: drop-shadow(0 0 10px var(--glow));
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .nav-link:hover {
+            background: var(--card-bg);
+            border-color: var(--border);
+            color: var(--highlight);
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 32px 24px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .page-header {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideIn 0.5s ease-out;
+            box-shadow: 0 8px 32px rgba(168, 85, 247, 0.2);
+        }
+
+        .inventory-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .page-title {
+            font-size: 36px;
+            background: linear-gradient(135deg, var(--highlight), #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 900;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--highlight), var(--accent));
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(168, 85, 247, 0.6);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            transition: all 0.3s ease;
+            animation: slideIn 0.5s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 70%);
+            animation: rotate 10s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--highlight);
+            box-shadow: 0 10px 30px rgba(168, 85, 247, 0.3);
+        }
+
+        .stat-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            filter: drop-shadow(0 0 10px var(--glow));
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .stat-value {
+            font-size: 40px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--highlight), #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        /* Controls */
+        .controls {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 32px;
+            animation: slideIn 0.6s ease-out;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-bar {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(45, 27, 78, 0.5);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+        }
+
+        .search-bar:focus-within {
+            border-color: var(--highlight);
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+        }
+
+        .search-bar input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 16px;
+            outline: none;
+        }
+
+        .search-bar input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .voice-btn {
+            background: none;
+            border: none;
+            color: var(--highlight);
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 4px;
+        }
+
+        .voice-btn:hover {
+            transform: scale(1.2);
+            filter: drop-shadow(0 0 10px var(--glow));
+        }
+
+        .voice-btn.listening {
+            animation: pulse 0.5s ease-in-out infinite;
+            color: var(--danger);
+        }
+
+        .filter-chips {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .chip {
+            background: rgba(45, 27, 78, 0.5);
+            border: 2px solid var(--border);
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .chip:hover {
+            background: var(--accent);
+            border-color: var(--highlight);
+            transform: translateY(-2px);
+        }
+
+        .chip.active {
+            background: linear-gradient(135deg, var(--highlight), var(--accent));
+            border-color: var(--highlight);
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+        }
+
+        /* Inventory Grid */
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .inventory-empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 48px 20px;
+        }
+
+        .inventory-empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            line-height: 1;
+        }
+
+        .inventory-empty-state h3 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .inventory-empty-state p {
+            font-size: 15px;
+        }
+
+        .item-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            animation: slideIn 0.7s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .item-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .item-card:hover::before {
+            left: 100%;
+        }
+
+        .item-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--highlight);
+            box-shadow: 0 12px 40px rgba(168, 85, 247, 0.4);
+        }
+
+        .item-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 16px;
+        }
+
+        .item-icon-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .item-icon {
+            font-size: 52px;
+            filter: drop-shadow(0 0 10px var(--glow));
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .item-image {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+        }
+
+        .item-status {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-in-stock {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .status-low-stock {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-out-of-stock {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .item-name {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            color: var(--highlight);
+        }
+
+        .item-details {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+
+        .item-quantity {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: rgba(45, 27, 78, 0.5);
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .quantity-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .quantity-value {
+            font-size: 32px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--highlight), #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .item-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .btn-small {
+            background: rgba(45, 27, 78, 0.7);
+            border: 1px solid var(--border);
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            text-align: center;
+            color: var(--text);
+        }
+
+        .btn-small:hover {
+            background: linear-gradient(135deg, var(--highlight), var(--accent));
+            border-color: var(--highlight);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(168, 85, 247, 0.3);
+        }
+
+        .qr-code-small {
+            width: 60px;
+            height: 60px;
+            padding: 4px;
+            background: white;
+            border-radius: 8px;
+            margin-top: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            border: 2px solid var(--border);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(168, 85, 247, 0.4);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .modal-title {
+            font-size: 28px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--highlight), #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .close-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            font-size: 28px;
+            cursor: pointer;
+            line-height: 1;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: var(--danger);
+            color: white;
+            transform: rotate(90deg);
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 700;
+            color: var(--text);
+            font-size: 15px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            background: rgba(45, 27, 78, 0.5);
+            border: 2px solid var(--border);
+            color: var(--text);
+            padding: 14px 18px;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--highlight);
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+        }
+
+        .image-upload-container {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(45, 27, 78, 0.3);
+        }
+
+        .image-upload-container:hover {
+            border-color: var(--highlight);
+            background: rgba(45, 27, 78, 0.5);
+        }
+
+        .image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin: 12px auto;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            display: none;
+        }
+
+        .image-preview.show {
+            display: block;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .btn-cancel {
+            background: rgba(107, 47, 181, 0.3);
+            border: 2px solid var(--border);
+        }
+
+        .btn-cancel:hover {
+            background: rgba(107, 47, 181, 0.5);
+        }
+
+        .qr-display {
+            text-align: center;
+            padding: 24px;
+            background: white;
+            border-radius: 16px;
+            margin: 20px 0;
+        }
+
+        .qr-display canvas {
+            max-width: 100%;
+        }
+
+        /* History Table */
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .history-table th {
+            background: rgba(45, 27, 78, 0.5);
+            font-weight: 700;
+            color: var(--highlight);
+        }
+
+        .history-table tr:hover {
+            background: rgba(168, 85, 247, 0.1);
+        }
+
+        /* Chart Container */
+        .chart-container {
+            background: rgba(45, 27, 78, 0.3);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 32px;
+        }
+
+        .chart-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--highlight);
+            margin-bottom: 20px;
+        }
+
+        /* Shopping List Styles */
+        .shopping-item {
+            background: rgba(45, 27, 78, 0.5);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .shopping-item:hover {
+            border-color: var(--highlight);
+            transform: translateX(5px);
+        }
+
+        .shopping-item.priority-urgent {
+            border-color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .shopping-item.priority-high {
+            border-color: var(--warning);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .shopping-item.priority-medium {
+            border-color: var(--info);
+        }
+
+        .shopping-item.priority-low {
+            border-color: var(--success);
+            opacity: 0.8;
+        }
+
+        .shopping-item-content {
+            flex: 1;
+        }
+
+        .shopping-item-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .shopping-item-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .shopping-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-urgent {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .badge-high {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+
+        .badge-medium {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--info);
+            border: 1px solid var(--info);
+        }
+
+        .badge-low {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .shopping-item-details {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .shopping-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .shopping-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .shopping-empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            /* Сетка склада и шапка страницы — см. mobile_fixes.css (.inventory-page) */
+            .modal-content {
+                padding: 24px;
+            }
+
+            .item-actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="mobile_fixes.css">
+</head>
+<body class="inventory-page">
+    <div class="header">
+        <a href="index.php" class="logo">
+            <span class="logo-icon">🔧</span>
+            <div>
+                <div style="font-size: 24px;">FixariVan</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Космический склад</div>
+            </div>
+        </a>
+        <div class="nav-links">
+            <a href="index.php" class="nav-link">🏠 Главная</a>
+            <a href="master_form.html" class="nav-link">🔧 Акт приёма</a>
+            <a href="track.html" class="nav-link">📋 Заказы</a>
+        </div>
+    </div>
+
+    <div id="sqliteDegradedBanner" class="sqlite-degraded-banner" role="alert" style="display:none;">
+        <strong>⚠️ Ограничение данных</strong>
+        <span id="sqliteDegradedBannerText"></span>
+    </div>
+
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">🚀 Космический Склад</h1>
+            <div class="inventory-actions">
+                <button class="btn" onclick="openAddModal()">
+                    ✨ Добавить позицию
+                </button>
+                <button class="btn" onclick="syncInventory()" style="background: #3b82f6;">
+                    🔄 Обновить с сервера
+                </button>
+                <button class="btn" onclick="openInventorySettingsModal()" style="background: #7c3aed;">
+                    ⚙️ Настройки склада
+                </button>
+                <button class="btn" onclick="clearInventory()" style="background: #ef4444;">
+                    🗑️ Очистка склада
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-icon">📦</div>
+                    <div class="stat-value" id="totalItems">0</div>
+                    <div class="stat-label">Всего позиций</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value" id="inStockItems">0</div>
+                    <div class="stat-label">В наличии</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-icon">⚠️</div>
+                    <div class="stat-value" id="lowStockItems">0</div>
+                    <div class="stat-label">Мало остатков</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-value" id="totalValue">0,00 €</div>
+                    <div class="stat-label">Закупка (остаток × закуп)</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-icon">🏷️</div>
+                    <div class="stat-value" id="saleValue">0,00 €</div>
+                    <div class="stat-label">Продажа (остаток × цена)</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-icon">📈</div>
+                    <div class="stat-value" id="profitValue">0,00 €</div>
+                    <div class="stat-label">Потенциальная маржа</div>
+                </div>
+            </div>
+        </div>
+        <div class="stats-grid" id="salesAnalyticsGrid" style="margin-top:14px;">
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-icon">🧾</div>
+                    <div class="stat-value" id="soldQtyValue">0</div>
+                    <div class="stat-label">Продано (шт)</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-icon">💶</div>
+                    <div class="stat-value" id="soldRevenueValue">0,00 €</div>
+                    <div class="stat-label">Продано (€)</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-icon">🧱</div>
+                    <div class="stat-value" id="soldPurchaseValue">0,00 €</div>
+                    <div class="stat-label">Закупка проданного (€)</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-value" id="realizedMarginValue">0,00 €</div>
+                    <div class="stat-label">Реализованная маржа (€)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="search-container">
+                <div class="search-bar">
+                    <span style="font-size: 20px;">🔍</span>
+                    <input type="text" id="searchInput" placeholder="Поиск по названию, артикулу, совместимости...">
+                    <button class="voice-btn" id="voiceBtn" onclick="startVoiceSearch()">🎤</button>
+                </div>
+            </div>
+            <div class="filter-chips">
+                <div class="chip active" data-filter="all">Все</div>
+                <div class="chip" data-filter="in-stock">✅ В наличии</div>
+                <div class="chip" data-filter="low-stock">⚠️ Мало</div>
+                <div class="chip" data-filter="out-of-stock" title="Только каталог с нулём на складе. Заказная потребность — в «Под заказ», не здесь">❌ Нет</div>
+                <div class="chip" data-filter="for-order" title="Очередь закупки по заказам (order_warehouse_lines). Приход — отсюда">📋 Под заказ</div>
+                <div class="chip" data-filter="accessories">🎧 Аксессуары</div>
+                <div class="chip" data-filter="consumables">🧪 Расходники</div>
+                <div class="chip" data-filter="cables">🔌 Кабели</div>
+                <div class="chip" data-filter="tools">🔧 Инструменты</div>
+                <div class="chip" data-filter="parts">📦 Запчасти</div>
+                <div class="chip" data-filter="technology">💻 Техника</div>
+                <div class="chip" data-filter="protective_glass">🛡️ Защитные стёкла</div>
+                <div class="chip" data-filter="screens">📱 Экраны</div>
+                <div class="chip" data-filter="batteries">🔋 Батареи</div>
+                <div class="chip" data-filter="charging">⚡ Разъёмы</div>
+            </div>
+        </div>
+
+        <!-- Inventory Grid (каталог; режим «Под заказ» — карточки заказов) -->
+        <div class="inventory-grid" id="inventoryGrid"></div>
+
+        <!-- Usage Chart -->
+        <div id="usageChartSection" class="chart-container">
+            <div class="chart-title">📊 График расхода запчастей (последние 7 дней)</div>
+            <canvas id="usageChart"></canvas>
+        </div>
+
+        <div id="analyticsSummarySection" class="chart-container" style="display:none; margin-top: 32px;">
+            <div class="chart-title">📈 Аналитика категорий</div>
+            <div id="analyticsSummary"></div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div class="modal" id="itemModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">✨ Добавить позицию</h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <form id="itemForm">
+                <div class="form-group">
+                    <label>📝 Название *</label>
+                    <input type="text" id="itemName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>📂 Категория *</label>
+                    <select id="itemCategory" required>
+                        <option value="">Выберите категорию</option>
+                        <optgroup label="🔥 Основные категории">
+                            <option value="accessories">🎧 Аксессуары (чехлы, стёкла, наушники)</option>
+                            <option value="protective_glass">🛡️ Защитные стёкла (iPhone / Samsung)</option>
+                            <option value="consumables">🧪 Расходники (салфетки, термопаста, клей)</option>
+                            <option value="cables">🔌 Кабели (USB-C, Lightning, HDMI)</option>
+                        </optgroup>
+                        <optgroup label="📦 Дополнительно">
+                            <option value="tools">🔧 Инструменты</option>
+                            <option value="parts">📦 Запчасти (редкие)</option>
+                            <option value="screens">📱 Экраны (редкие)</option>
+                            <option value="batteries">🔋 Батареи (редкие)</option>
+                            <option value="charging">⚡ Разъёмы зарядки (редкие)</option>
+                            <option value="technology">💻 Техника (ноутбуки, планшеты, гаджеты)</option>
+                            <option value="other">🔹 Другое</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>📸 Фото товара</label>
+                    <div class="image-upload-container" onclick="document.getElementById('itemImageInput').click()">
+                        <div style="font-size: 48px; margin-bottom: 8px;">📷</div>
+                        <div style="color: var(--text-secondary);">Нажмите для загрузки фото</div>
+                        <img id="imagePreview" class="image-preview" alt="Preview">
+                    </div>
+                    <input type="file" id="itemImageInput" accept="image/*" style="display: none;" onchange="previewImage(event)">
+                </div>
+
+                <div class="form-group">
+                    <label>🔢 Артикул</label>
+                    <small style="display:block;color:var(--text-secondary);font-size:12px;margin:0 0 6px;line-height:1.35;">При сохранении в базу можно оставить пустым — присвоится автоматически (формат FV‑номер).</small>
+                    <input type="text" id="itemSku" placeholder="" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label>📱 Совместимость</label>
+                    <input type="text" id="itemCompatibility" placeholder="iPhone 14 Pro, Samsung S23...">
+                </div>
+
+                <div class="form-group">
+                    <label>📊 Количество *</label>
+                    <input type="number" id="itemQuantity" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label>⚠️ Мин. остаток для оповещения</label>
+                    <input type="number" id="itemMinStock" min="0" value="5">
+                </div>
+
+                <div class="form-group">
+                    <label>💵 Цена закупки (€)</label>
+                    <input type="number" id="itemCostPrice" min="0" step="0.01">
+                </div>
+
+                <div class="form-group">
+                    <label>💰 Цена продажи (€)</label>
+                    <input type="number" id="itemSellPrice" min="0" step="0.01">
+                </div>
+
+                <div class="form-group">
+                    <label>📍 Расположение на складе</label>
+                    <input type="text" id="itemLocation" placeholder="Полка A-12">
+                </div>
+
+                <div class="form-group">
+                    <label>📝 Примечания</label>
+                    <textarea id="itemNotes" rows="3"></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeModal()">Отмена</button>
+                    <button type="submit" class="btn">💾 Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Adjust Quantity Modal -->
+    <div class="modal" id="adjustModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">📊 Изменить количество</h2>
+                <button class="close-btn" onclick="closeAdjustModal()">×</button>
+            </div>
+            <form id="adjustForm">
+                <div class="form-group">
+                    <label>🔄 Операция</label>
+                    <select id="adjustType">
+                        <option value="add">➕ Приход товара</option>
+                        <option value="subtract">➖ Расход товара</option>
+                        <option value="set">🎯 Установить количество</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>📊 Количество</label>
+                    <input type="number" id="adjQtyInput" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>📝 Причина/Комментарий</label>
+                    <textarea id="adjustReason" rows="2" placeholder="Использовано в ремонте заказа #1234..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>📌 Тип расхода</label>
+                    <div id="movementModeGroup" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+                        <label id="movementSaleOption" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(45,27,78,0.25);cursor:pointer;transition:all .18s ease;">
+                            <input type="checkbox" id="movementSaleFlag">
+                            <span>Это продажа</span>
+                        </label>
+                        <label id="movementWriteoffOption" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(45,27,78,0.25);cursor:pointer;transition:all .18s ease;">
+                            <input type="checkbox" id="movementWriteoffFlag">
+                            <span>Это списание (удаление / тест / брак)</span>
+                        </label>
+                    </div>
+                    <small id="movementModeHint" style="display:block;color:var(--text-secondary);font-size:12px;margin-top:6px;line-height:1.35;">Для расхода: продажа влияет на продажи и маржу, списание уменьшает остаток без влияния на продажи. Если ничего не выбрано, будет списание.</small>
+                </div>
+                <div class="form-group">
+                    <label>📎 Связь с документом (опционально)</label>
+                    <select id="moveRefKind" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:rgba(45,27,78,0.5);color:var(--text);">
+                        <option value="">— нет —</option>
+                        <option value="order">Акт приёма</option>
+                        <option value="receipt">Квитанция</option>
+                        <option value="report">Отчёт диагностики</option>
+                        <option value="manual">Другое / вручную</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>ID документа (document_id / report_id)</label>
+                    <input type="text" id="moveRefId" placeholder="Например номер из списка документов" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:rgba(45,27,78,0.3);color:var(--text);">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeAdjustModal()">Отмена</button>
+                    <button type="submit" class="btn">✅ Применить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Item Modal -->
+    <div class="modal" id="viewModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="viewModalTitle">📦 Информация о товаре</h2>
+                <button class="close-btn" onclick="closeViewModal()">×</button>
+            </div>
+            <div id="viewModalContent"></div>
+        </div>
+    </div>
+
+    <!-- History (SQLite) -->
+    <div class="modal" id="historyModal">
+        <div class="modal-content" style="max-width: 720px;">
+            <div class="modal-header">
+                <h2 class="modal-title" id="historyModalTitle">📜 История движений</h2>
+                <button type="button" class="close-btn" onclick="closeHistoryModal()">×</button>
+            </div>
+            <div id="historyModalBody" style="max-height: 60vh; overflow: auto;"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="inventorySettingsModal">
+        <div class="modal-content" style="max-width: 560px;">
+            <div class="modal-header">
+                <h2 class="modal-title">⚙️ Настройки склада</h2>
+                <button type="button" class="close-btn" onclick="closeInventorySettingsModal()">×</button>
+            </div>
+            <div>
+                <label style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
+                    <input type="checkbox" id="setShowUsageChart"> Показывать график расхода (7 дней)
+                </label>
+                <label style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
+                    <input type="checkbox" id="setShowCategoryAnalytics"> Показывать аналитику категорий
+                </label>
+                <p class="muted">Можно включать/выключать аналитические блоки без перезагрузки.</p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-cancel" onclick="closeInventorySettingsModal()">Отмена</button>
+                <button type="button" class="btn" onclick="saveInventorySettingsFromModal()">Сохранить настройки</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/format_money.js"></script>
+    <script>
+        let inventory = [];
+        /** Строки из заказов (SQLite), ожидающие закупки — подгружаются с сервера */
+        let orderPurchaseQueueLines = [];
+        /** id карточек склада, привязанных к активной очереди закупки (ответ API queue_inventory_item_ids) */
+        let queueInventoryItemIdsExtra = new Set();
+        let currentFilter = 'all';
+        let currentEditId = null;
+        let currentAdjustId = null;
+        let usageChart = null;
+        let inventorySettings = {
+            showUsageChart: false,
+            showCategoryAnalytics: false
+        };
+
+        // Category Icons
+        const categoryIcons = {
+            screens: '📱',
+            batteries: '🔋',
+            charging: '⚡',
+            protective_glass: '🛡️',
+            cables: '🔌',
+            accessories: '🎧',
+            consumables: '🧪',
+            tools: '🔧',
+            parts: '📦',
+            technology: '💻',
+            other: '🔹'
+        };
+
+        // Translations
+        const translations = {
+            ru: {
+                screens: 'Экраны',
+                batteries: 'Батареи',
+                charging: 'Разъёмы',
+                protective_glass: 'Защитные стёкла',
+                cables: 'Кабели',
+                accessories: 'Аксессуары',
+                consumables: 'Расходники',
+                tools: 'Инструменты',
+                parts: 'Запчасти',
+                technology: 'Техника',
+                other: 'Другое',
+                'in-stock': 'В наличии',
+                'low-stock': 'Мало остатков',
+                'out-of-stock': 'Нет в наличии'
+            }
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async function() {
+            loadInventorySettings();
+            await loadInventory();
+            setupSearch();
+            setupFilters();
+            setupForms();
+            initUsageChart();
+            updateInventoryStats();
+            applyInventorySettings();
+        });
+
+        function loadInventorySettings() {
+            try {
+                const raw = localStorage.getItem('fixarivan_inventory_settings');
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (!parsed || typeof parsed !== 'object') return;
+                inventorySettings = { ...inventorySettings, ...parsed };
+            } catch (e) {
+                console.warn('inventory settings load failed', e);
+            }
+        }
+
+        function saveInventorySettings() {
+            localStorage.setItem('fixarivan_inventory_settings', JSON.stringify(inventorySettings));
+        }
+
+        function applyInventorySettings() {
+            const usage = document.getElementById('usageChartSection');
+            const category = document.getElementById('analyticsSummarySection');
+            if (usage) usage.style.display = inventorySettings.showUsageChart ? 'block' : 'none';
+            if (category) category.style.display = inventorySettings.showCategoryAnalytics ? 'block' : 'none';
+            renderCategoryAnalytics();
+        }
+
+        function openInventorySettingsModal() {
+            document.getElementById('setShowUsageChart').checked = !!inventorySettings.showUsageChart;
+            document.getElementById('setShowCategoryAnalytics').checked = !!inventorySettings.showCategoryAnalytics;
+            document.getElementById('inventorySettingsModal').classList.add('show');
+        }
+
+        function closeInventorySettingsModal() {
+            document.getElementById('inventorySettingsModal').classList.remove('show');
+        }
+
+        function saveInventorySettingsFromModal() {
+            inventorySettings.showUsageChart = document.getElementById('setShowUsageChart').checked;
+            inventorySettings.showCategoryAnalytics = document.getElementById('setShowCategoryAnalytics').checked;
+            saveInventorySettings();
+            applyInventorySettings();
+            closeInventorySettingsModal();
+        }
+
+        function renderCategoryAnalytics() {
+            const box = document.getElementById('analyticsSummary');
+            if (!box || !inventorySettings.showCategoryAnalytics) return;
+            if (!Array.isArray(inventory) || !inventory.length) {
+                box.innerHTML = '<div class="muted">Нет данных для аналитики</div>';
+                return;
+            }
+            const byCategory = {};
+            for (const item of inventory) {
+                const cat = item.category || 'other';
+                if (!byCategory[cat]) byCategory[cat] = { count: 0, qty: 0, value: 0 };
+                byCategory[cat].count += 1;
+                byCategory[cat].qty += Number(item.quantity || 0);
+                byCategory[cat].value += Number(item.costPrice || item.default_cost || 0) * Number(item.quantity || 0);
+            }
+            const rows = Object.entries(byCategory).sort((a, b) => b[1].value - a[1].value);
+            box.innerHTML = rows.map(([cat, s]) => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;background:rgba(45,27,78,0.35);">
+                    <div><strong>${categoryIcons[cat] || '📦'} ${translations.ru[cat] || cat}</strong></div>
+                    <div class="muted">Карточек: ${s.count} • Остаток: ${s.qty} • Стоимость: ${formatMoney(s.value, 'ru')}</div>
+                </div>
+            `).join('');
+        }
+
+        async function loadOrderQueueLines() {
+            const nextLines = [];
+            const nextIds = new Set();
+            let ok = false;
+            try {
+                const res = await fetch('./api/order_purchase_queue.php', { credentials: 'same-origin', cache: 'no-store' });
+                const json = await res.json();
+                if (json && json.success && json.data && Array.isArray(json.data.lines)) {
+                    nextLines.push(...json.data.lines);
+                    ok = true;
+                }
+                if (json && json.success && json.data && Array.isArray(json.data.queue_inventory_item_ids)) {
+                    json.data.queue_inventory_item_ids.forEach(function (id) {
+                        const n = parseInt(String(id), 10);
+                        if (n > 0) nextIds.add(n);
+                    });
+                }
+            } catch (e) {
+                console.warn('order_purchase_queue:', e);
+            }
+            if (ok) {
+                orderPurchaseQueueLines = nextLines;
+                queueInventoryItemIdsExtra = nextIds;
+            }
+            window.orderPurchaseQueueLines = orderPurchaseQueueLines;
+            window.queueInventoryItemIdsExtra = queueInventoryItemIdsExtra;
+            return ok;
+        }
+
+        /** Карточки склада с активной строкой «Под заказ» — не показывать в «Нет» (каталог ≠ очередь закупки). */
+        function inventoryItemIdsInOrderQueue() {
+            const s = new Set();
+            (orderPurchaseQueueLines || []).forEach(function(l) {
+                const id = parseInt(String(l.inventory_item_id || ''), 10);
+                if (id > 0) s.add(id);
+            });
+            (queueInventoryItemIdsExtra || new Set()).forEach(function (id) {
+                s.add(id);
+            });
+            return s;
+        }
+
+        function orderIdsInQueue() {
+            const ids = new Set();
+            (orderPurchaseQueueLines || []).forEach(function (l) {
+                const oid = String(l.order_id || l.document_id || '').trim();
+                if (oid !== '') ids.add(oid);
+            });
+            return ids;
+        }
+
+        function inventoryItemLinkedToQueueByReqTag(item, orderIds) {
+            if (!item || !orderIds || orderIds.size === 0) return false;
+            const notes = String(item.notes || '').trim();
+            if (notes === '') return false;
+            for (const oid of orderIds) {
+                if (notes.indexOf('[REQ ' + oid + ']') !== -1) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        async function reloadOrderPurchaseQueue() {
+            await loadOrderQueueLines();
+            console.log('orderPurchaseQueueLines after reloadOrderPurchaseQueue()', orderPurchaseQueueLines);
+            if (currentFilter === 'for-order') {
+                renderInventory();
+            }
+        }
+
+        async function loadInventory() {
+            let remoteLoaded = false;
+
+            try {
+                const response = await fetch('./api/sync_inventory.php');
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && Array.isArray(result.inventory)) {
+                        remoteLoaded = true;
+                        if (result.inventory.length > 0) {
+                            inventory = result.inventory.map(normalizeInventoryItem);
+                            localStorage.setItem('fixarivan_inventory', JSON.stringify(inventory));
+                        } else {
+                            inventory = [];
+                            localStorage.removeItem('fixarivan_inventory');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn('Inventory sync fetch failed, using local cache', error);
+            }
+
+            if (!remoteLoaded) {
+                const stored = localStorage.getItem('fixarivan_inventory');
+                if (stored) {
+                    inventory = JSON.parse(stored).map(normalizeInventoryItem);
+                } else {
+                    inventory = generateDemoInventory();
+                    await syncInventoryToServer(inventory);
+                }
+            }
+
+            await loadOrderQueueLines();
+            console.log('orderPurchaseQueueLines after loadInventory()', orderPurchaseQueueLines);
+            renderInventory();
+            updateStats();
+            updateUsageChart();
+            renderCategoryAnalytics();
+        }
+
+        function normalizeInventoryItem(item) {
+            return {
+                id: item.id ?? Date.now() + Math.random(),
+                name: item.name ?? 'Без названия',
+                category: item.category ?? 'other',
+                quantity: Number(item.quantity ?? 0),
+                minStock: Number(item.minStock ?? item.min_stock ?? 0),
+                costPrice: Number(item.costPrice ?? item.cost_price ?? item.default_cost ?? 0),
+                sellPrice: Number(item.sellPrice ?? item.sale_price ?? item.sellingPrice ?? item.selling_price ?? 0),
+                price: Number(item.price ?? item.sellingPrice ?? 0),
+                sku: item.sku ?? '',
+                compatibility: item.compatibility ?? '',
+                location: item.location ?? 'Склад',
+                notes: item.notes ?? '',
+                description: item.description ?? '',
+                history: Array.isArray(item.history) ? item.history : [],
+                image: item.image ?? item.imageUrl ?? '',
+                qrCode: item.qrCode ?? item.qr_code ?? '',
+                created: item.created ?? new Date().toISOString(),
+                updated: item.updated ?? new Date().toISOString()
+            };
+        }
+
+        function generateDemoInventory() {
+            const now = Date.now();
+            return [
+                // АКСЕССУАРЫ - основная категория
+                {
+                    id: now + 1,
+                    name: 'Защитное стекло iPhone 14/15 Pro',
+                    category: 'accessories',
+                    sku: 'ACC-GLASS-IP14P',
+                    compatibility: 'iPhone 14 Pro, 15 Pro',
+                    quantity: 45,
+                    minStock: 15,
+                    costPrice: 2.5,
+                    sellPrice: 15,
+                    location: 'Полка A-01',
+                    notes: 'Закаленное стекло 9H, популярный товар',
+                    created: new Date().toISOString(),
+                    image: '',
+                    history: []
+                },
+                {
+                    id: now + 2,
+                    name: 'Силиконовый чехол универсальный',
+                    category: 'accessories',
+                    sku: 'ACC-CASE-UNIV',
+                    compatibility: 'Различные модели',
+                    quantity: 28,
+                    minStock: 10,
+                    costPrice: 1.8,
+                    sellPrice: 10,
+                    location: 'Полка A-02',
+                    notes: 'Разные цвета в ассортименте',
+                    created: new Date().toISOString(),
+                    image: '',
+                    history: []
+                },
+                {
+                    id: now + 3,
+                    name: 'TWS наушники беспроводные',
+                    category: 'accessories',
+                    sku: 'ACC-TWS-BT50',
+                    compatibility: 'Bluetooth 5.0',
+                    quantity: 12,
+                    minStock: 5,
+                    costPrice: 8,
+                    sellPrice: 25,
+                    location: 'Полка A-03',
+                    notes: 'Качественный звук, популярные',
+                    created: new Date().toISOString(),
+                    image: '',
+                    history: []
+                },
+                // РАСХОДНИКИ - вторая важная категория
+                {
+                    id: now + 4,
+                    name: 'Салфетки микрофибра (упаковка 50шт)',
+                    category: 'consumables',
+                    sku: 'CONS-WIPES-MF50',
+                    compatibility: 'Универсальные',
+                    quantity: 8,
+                    minStock: 3,
+                    costPrice: 5,
+                    sellPrice: 12,
+                    location: 'Полка D-01',
+                    notes: 'Для чистки экранов и корпусов',
+                    created: new Date().toISOString(),
+                    image: '',
+                    history: []
+                },
+                {
+                    id: now + 5,
+                    name: 'Термопаста Arctic MX-4 (4г)',
+                    category: 'consumables',
+                    sku: 'CONS-THERMAL-MX4',
+                    compatibility: 'Универсальная',
+                    quantity: 6,
+                    minStock: 3,
+                    costPrice: 7,
+                    sellPrice: 18,
+                    location: 'Полка D-02',
+                    notes: 'Для ремонта ноутбуков и ПК',
+                    created: new Date().toISOString(),
+                    image: '',
+                    history: []
+                },
+                {
+                    id: now + 6,
+                    name: 'Термопрокладки 0.5мм (комплект)',
+                    category: 'consumables',
+                    sku: 'CONS-THERMOPAD-05',
+                    compatibility: 'Универсальные',
+                    quantity: 4,
+                    minStock: 2,
+                    costPrice: 4,
+                    sellPrice: 12,
+                    location: 'Полка D-03',
+                    notes: 'Разные размеры в комплекте',
+                    created: new Date().toISOString(),
+                    image: '',
+                    history: []
+                },
+                {
+                    id: now + 7,
+                    name: 'Клей B-7000 (50мл)',
+                    category: 'consumables',
+                    sku: 'CONS-GLUE-B7000',
+                    compatibility: 'Для дисплеев и корпусов',
+                    quantity: 5,
+                    minStock: 2,
+                    costPrice: 3.5,
+                    sellPrice: 10,
+                    location: 'Полка D-04',
+                    notes: 'Прозрачный клей для экранов',
+                    created: new Date().toISOString(),
+                    image: '',
+                    history: []
+                },
+                {
+                    id: now + 8,
+                    name: 'Изопропиловый спирт 99.9% (500мл)',
+                    category: 'consumables',
+                    sku: 'CONS-IPA-500',
+                    compatibility: 'Для чистки плат',
+                    quantity: 3,
+                    minStock: 2,
+                    costPrice: 6,
+                    sellPrice: 15,
+                    location: 'Полка D-05',
+                    notes: 'Высокая чистота, для электроники',
+                    created: new Date().toISOString(),
+                    image: '',
+                    history: []
+                },
+                // КАБЕЛИ
+                {
+                    id: now + 9,
+                    name: 'USB-C кабель 2м (быстрая зарядка)',
+                    category: 'cables',
+                    sku: 'CBL-USBC-2M-PD',
+                    compatibility: 'Все устройства с USB-C',
+                    quantity: 35,
+                    minStock: 10,
+                    costPrice: 3,
+                    sellPrice: 15,
+                    location: 'Полка C-01',
+                    notes: 'Поддержка Power Delivery до 100W',
+                    created: new Date().toISOString(),
+                    image: '',
+                    history: []
+                },
+                {
+                    id: now + 10,
+                    name: 'Lightning кабель 1м',
+                    category: 'cables',
+                    sku: 'CBL-LIGHT-1M',
+                    compatibility: 'iPhone, iPad',
+                    quantity: 22,
+                    minStock: 8,
+                    costPrice: 2.5,
+                    sellPrice: 12,
+                    location: 'Полка C-02',
+                    notes: 'Сертифицированный MFi',
+                    created: new Date().toISOString(),
+                    image: '',
+                    history: []
+                },
+                // ИНСТРУМЕНТЫ
+                {
+                    id: now + 11,
+                    name: 'Набор отвёрток iFixit Pro Tech',
+                    category: 'tools',
+                    sku: 'TOOL-IFIXIT-PRO',
+                    compatibility: 'Универсальный',
+                    quantity: 2,
+                    minStock: 1,
+                    costPrice: 55,
+                    sellPrice: 0,
+                    location: 'Мастерская',
+                    notes: 'Рабочий инструмент, не для продажи',
+                    created: new Date().toISOString(),
+                    image: '',
+                    history: []
+                },
+                // ЗАПЧАСТИ (редко)
+                {
+                    id: now + 12,
+                    name: 'Батарея iPhone 13 (3227mAh)',
+                    category: 'batteries',
+                    sku: 'BAT-IP13-3227',
+                    compatibility: 'iPhone 13, 13 Pro',
+                    quantity: 1,
+                    minStock: 2,
+                    costPrice: 25,
+                    sellPrice: 60,
+                    location: 'Полка B-08',
+                    notes: 'Заказывается под клиента',
+                    created: new Date().toISOString(),
+                    image: '',
+                    history: []
+                }
+            ];
+        }
+
+        async function saveInventory(sync = true) {
+            localStorage.setItem('fixarivan_inventory', JSON.stringify(inventory));
+
+            if (sync) {
+                await syncInventoryToServer(inventory);
+            }
+
+            if (window.AutoInventorySync) {
+                console.log('🔄 Автосинхронизация после изменения склада...');
+                window.AutoInventorySync.autoSync();
+            }
+        }
+
+        async function syncInventoryToServer(currentInventory) {
+            try {
+                const payload = currentInventory.map(item => ({
+                    name: item.name,
+                    category: item.category,
+                    quantity: item.quantity,
+                    minStock: item.minStock,
+                    costPrice: item.costPrice,
+                    sellingPrice: item.sellPrice ?? item.sellingPrice ?? item.price ?? 0,
+                    description: item.description,
+                    qrCode: item.qrCode,
+                    imageUrl: item.image,
+                    sku: item.sku,
+                    compatibility: item.compatibility,
+                    location: item.location,
+                    notes: item.notes,
+                    history: item.history,
+                    deviceType: item.deviceType,
+                    status: item.status
+                }));
+
+                const response = await fetch('./api/sync_inventory.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ inventory: payload })
+                });
+
+                const result = await response.json();
+                if (!result.success) {
+                    console.warn('Inventory sync warning:', result.message);
+                }
+                return result.success;
+            } catch (error) {
+                console.error('Inventory sync error:', error);
+                return false;
+            }
+        }
+
+        function escHtmlInv(s) {
+            if (s == null || s === '') return '';
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function renderOrderQueueCardsHtml() {
+            const lines = orderPurchaseQueueLines || [];
+            if (lines.length === 0) {
+                return `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
+                        <div style="font-size: 56px; margin-bottom: 16px;">📋</div>
+                        <h3 style="font-size: 20px; color: var(--highlight); margin-bottom: 8px;">Нет позиций к закупке из заказов</h3>
+                        <p style="color: var(--text-secondary); max-width: 520px; margin: 0 auto; line-height: 1.5;">
+                            Здесь рабочая очередь закупки (строки заказа). Каталог с нулём в наличии смотрите в «Нет» — без дубля заказной позиции.
+                        </p>
+                    </div>`;
+            }
+            const groups = {};
+            for (const line of lines) {
+                const k = String(line.order_id || line.document_id || 'unknown');
+                if (!groups[k]) groups[k] = [];
+                groups[k].push(line);
+            }
+            const keys = Object.keys(groups);
+            return keys.map(function (orderKey) {
+                const g = groups[orderKey];
+                const first = g[0];
+                const oid = escHtmlInv(first.order_id || orderKey);
+                const doc = escHtmlInv(first.document_id || '');
+                const client = escHtmlInv(first.client_name || '');
+                const dev = escHtmlInv(first.device_model || '');
+                const exp = escHtmlInv(first.expected_date || '');
+                const trackQ = encodeURIComponent(String(first.order_id || orderKey));
+                const trackUrl = 'track.html?q=' + trackQ;
+                const linesHtml = g.map(function (line) {
+                    const name = escHtmlInv(line.name || '');
+                    const qty = Number(line.qty) || 0;
+                    const pp = line.purchase_price != null ? Number(line.purchase_price) : 0;
+                    const owlId = Number(line.owl_id);
+                    const invHint = line.inventory_item_id ? (' · склад #' + escHtmlInv(String(line.inventory_item_id))) : '';
+                    return `
+                        <div style="border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:12px;margin-top:10px;background:rgba(0,0,0,0.15);">
+                            <div style="font-weight:600;margin-bottom:6px;">${name}</div>
+                            <div class="muted" style="font-size:13px;margin-bottom:8px;">
+                                ${qty} шт.${pp > 0 ? (' · закуп ~ ' + formatMoney(pp, 'ru')) : ''}${invHint}
+                            </div>
+                            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                                <button type="button" class="btn-small" style="background:linear-gradient(135deg,#10b981,#059669);border-color:rgba(16,185,129,0.5);color:#ecfdf5;" onclick="openPurchaseArrivalByOwl(${owlId})">➕ Приход</button>
+                                <button type="button" class="btn-small" style="background:rgba(239,68,68,0.2);border-color:#ef4444;color:#fecaca;" onclick="dismissPurchaseQueueByOwl(${owlId})">🗑 Убрать из списка</button>
+                            </div>
+                        </div>`;
+                }).join('');
+                return `
+                    <div class="item-card order-queue-card" style="grid-column: 1 / -1; max-width: 920px; margin: 0 auto; width: 100%;">
+                        <div class="item-content">
+                            <div class="item-header">
+                                <div class="item-name" style="font-size:1.05rem;">📦 Заказ ${oid}</div>
+                            </div>
+                            <div class="muted" style="font-size:13px;margin-bottom:10px;line-height:1.45;">
+                                ${client ? client + ' · ' : ''}${dev}${exp ? ' · ожид. ' + exp : ''}
+                                ${doc ? '<br><span class="muted">Акт: ' + doc + '</span>' : ''}
+                            </div>
+                            <a href="${trackUrl}" target="_blank" rel="noopener" class="btn-small" style="display:inline-block;margin-bottom:12px;">Открыть Track</a>
+                            ${linesHtml}
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        function renderInventory() {
+            const grid = document.getElementById('inventoryGrid');
+            if (currentFilter === 'for-order') {
+                grid.innerHTML = renderOrderQueueCardsHtml();
+                return;
+            }
+
+            let filtered = inventory;
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            
+            if (searchQuery) {
+                filtered = filtered.filter(item =>
+                    item.name.toLowerCase().includes(searchQuery) ||
+                    (item.sku && item.sku.toLowerCase().includes(searchQuery)) ||
+                    (item.compatibility && item.compatibility.toLowerCase().includes(searchQuery))
+                );
+            }
+            
+            const queueSkuIds = inventoryItemIdsInOrderQueue();
+            const queueOrderIds = orderIdsInQueue();
+            filtered = filtered.filter(item => {
+                if (currentFilter === 'all') return item.quantity > 0;
+                if (currentFilter === 'in-stock') return item.quantity > item.minStock;
+                if (currentFilter === 'low-stock') {
+                    if (queueSkuIds.has(item.id) || inventoryItemLinkedToQueueByReqTag(item, queueOrderIds)) {
+                        return false;
+                    }
+                    return item.quantity > 0 && item.quantity <= item.minStock;
+                }
+                if (currentFilter === 'out-of-stock') {
+                    if (queueSkuIds.has(item.id) || inventoryItemLinkedToQueueByReqTag(item, queueOrderIds)) {
+                        return false;
+                    }
+                    return item.quantity === 0;
+                }
+                return item.category === currentFilter && item.quantity > 0;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="inventory-empty-state">
+                        <div class="inventory-empty-icon" style="filter: drop-shadow(0 0 12px var(--glow));">🔍</div>
+                        <h3 style="color: var(--highlight);">Ничего не найдено</h3>
+                        <p style="color: var(--text-secondary);">Попробуйте изменить фильтры или добавьте новую позицию</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(item => {
+                const status = getStatus(item);
+                const icon = categoryIcons[item.category] || '📦';
+                
+                return `
+                    <div class="item-card" onclick="viewItem(${item.id})">
+                        <div class="item-content">
+                            <div class="item-header">
+                                <div class="item-icon-container">
+                                    ${item.image ? 
+                                        `<img src="${item.image}" class="item-image" alt="${item.name}">` : 
+                                        `<div class="item-icon">${icon}</div>`
+                                    }
+                                </div>
+                                <div class="item-status status-${status.class}">${status.text}</div>
+                            </div>
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-sku-inline" style="font-size:0.86rem;opacity:0.88;margin-top:5px;line-height:1.3;">
+                                <strong>Артикул:</strong>
+                                ${item.sku && String(item.sku).trim()
+                                    ? String(item.sku).trim()
+                                    : '<span style="opacity:0.65">обновите страницу — присвоится FV-…</span>'}
+                            </div>
+                            <div class="item-details">
+                                <strong>Совместимость:</strong> ${item.compatibility || 'Универсальное'}<br>
+                                ${item.location ? `<strong>Место:</strong> ${item.location}` : ''}
+                            </div>
+                            <div class="item-quantity">
+                                <span class="quantity-label">На складе:</span>
+                                <span class="quantity-value">${item.quantity}</span>
+                            </div>
+                            ${(Number(item.costPrice || item.default_cost || 0) > 0 || Number(item.sellPrice || item.sale_price || 0) > 0) ? `
+                            <div class="item-prices" style="font-size:0.86rem;opacity:0.9;margin-top:6px;">
+                                Закуп: ${(typeof formatMoney === 'function' ? formatMoney(Number(item.costPrice || item.default_cost || 0), 'ru') : (Number(item.costPrice || item.default_cost || 0).toFixed(2) + ' €'))}
+                                · Продажа: ${(typeof formatMoney === 'function' ? formatMoney(Number(item.sellPrice || item.sale_price || 0), 'ru') : (Number(item.sellPrice || item.sale_price || 0).toFixed(2) + ' €'))}
+                            </div>` : ''}
+                            <div class="item-actions" onclick="event.stopPropagation()">
+                                <button class="btn-small" onclick="openAdjustModal(${item.id})">📊 Изменить</button>
+                                <button class="btn-small" onclick="editItem(${item.id})">✏️ Редактировать</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getStatus(item) {
+            if (item.quantity === 0) {
+                return { class: 'out-of-stock', text: '❌ Нет' };
+            } else if (item.quantity <= item.minStock) {
+                return { class: 'low-stock', text: '⚠️ Мало' };
+            } else {
+                return { class: 'in-stock', text: '✅ OK' };
+            }
+        }
+
+        function updateStats() {
+            const total = inventory.length;
+            const inStock = inventory.filter(i => i.quantity > i.minStock).length;
+            const lowStock = inventory.filter(i => i.quantity > 0 && i.quantity <= i.minStock).length;
+            const purchaseVal = inventory.reduce((sum, i) => sum + (Number(i.costPrice || 0) * Number(i.quantity || 0)), 0);
+            const saleVal = inventory.reduce((sum, i) => sum + (Number(i.sellPrice || 0) * Number(i.quantity || 0)), 0);
+
+            document.getElementById('totalItems').textContent = total;
+            document.getElementById('inStockItems').textContent = inStock;
+            document.getElementById('lowStockItems').textContent = lowStock;
+            document.getElementById('totalValue').textContent = formatMoney(purchaseVal, 'ru');
+            const saleEl = document.getElementById('saleValue');
+            const profEl = document.getElementById('profitValue');
+            if (saleEl) saleEl.textContent = formatMoney(saleVal, 'ru');
+            if (profEl) profEl.textContent = formatMoney(saleVal - purchaseVal, 'ru');
+            const soldQtyEl = document.getElementById('soldQtyValue');
+            const soldRevenueEl = document.getElementById('soldRevenueValue');
+            const soldPurchaseEl = document.getElementById('soldPurchaseValue');
+            const realizedMarginEl = document.getElementById('realizedMarginValue');
+            if (soldQtyEl) soldQtyEl.textContent = '0';
+            if (soldRevenueEl) soldRevenueEl.textContent = formatMoney(0, 'ru');
+            if (soldPurchaseEl) soldPurchaseEl.textContent = formatMoney(0, 'ru');
+            if (realizedMarginEl) realizedMarginEl.textContent = formatMoney(0, 'ru');
+        }
+
+        let inventorySearchDebounce = null;
+        function setupSearch() {
+            document.getElementById('searchInput').addEventListener('input', function() {
+                clearTimeout(inventorySearchDebounce);
+                inventorySearchDebounce = setTimeout(function() {
+                    loadInventory();
+                }, 400);
+            });
+        }
+
+        function setupFilters() {
+            document.querySelectorAll('.chip').forEach(chip => {
+                chip.addEventListener('click', async function() {
+                    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    currentFilter = this.getAttribute('data-filter');
+                    if (currentFilter === 'for-order') {
+                        await reloadOrderPurchaseQueue();
+                        renderInventory();
+                        return;
+                    }
+                    await loadInventory();
+                });
+            });
+        }
+
+        function setupForms() {
+            document.getElementById('itemForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveItem();
+            });
+
+            document.getElementById('adjustForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                var fn = window.adjustQuantity;
+                if (typeof fn === 'function') {
+                    fn();
+                }
+            });
+        }
+
+        // Voice Search
+        function startVoiceSearch() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('Голосовой поиск не поддерживается вашим браузером');
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            
+            recognition.lang = 'ru-RU';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            const voiceBtn = document.getElementById('voiceBtn');
+            voiceBtn.classList.add('listening');
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('searchInput').value = transcript;
+                loadInventory();
+                voiceBtn.classList.remove('listening');
+            };
+
+            recognition.onerror = function() {
+                voiceBtn.classList.remove('listening');
+                alert('Ошибка распознавания речи');
+            };
+
+            recognition.onend = function() {
+                voiceBtn.classList.remove('listening');
+            };
+
+            recognition.start();
+        }
+
+        // Image Preview
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('imagePreview');
+                    preview.src = e.target.result;
+                    preview.classList.add('show');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Modal Functions
+        function openAddModal() {
+            currentEditId = null;
+            document.getElementById('modalTitle').textContent = '✨ Добавить позицию';
+            document.getElementById('itemForm').reset();
+            document.getElementById('imagePreview').classList.remove('show');
+            document.getElementById('itemModal').classList.add('show');
+        }
+
+        function editItem(id) {
+            const item = inventory.find(i => i.id === id);
+            if (!item) return;
+
+            currentEditId = id;
+            document.getElementById('modalTitle').textContent = '✏️ Редактировать позицию';
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemCategory').value = item.category;
+            document.getElementById('itemSku').value = item.sku || '';
+            document.getElementById('itemCompatibility').value = item.compatibility || '';
+            document.getElementById('itemQuantity').value = item.quantity;
+            document.getElementById('itemMinStock').value = item.minStock;
+            document.getElementById('itemCostPrice').value = item.costPrice || '';
+            document.getElementById('itemSellPrice').value = item.sellPrice || '';
+            document.getElementById('itemLocation').value = item.location || '';
+            document.getElementById('itemNotes').value = item.notes || '';
+            
+            if (item.image) {
+                const preview = document.getElementById('imagePreview');
+                preview.src = item.image;
+                preview.classList.add('show');
+            }
+            
+            document.getElementById('itemModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('itemModal').classList.remove('show');
+        }
+
+        function saveItem() {
+            const itemData = {
+                name: document.getElementById('itemName').value,
+                category: document.getElementById('itemCategory').value,
+                sku: document.getElementById('itemSku').value,
+                compatibility: document.getElementById('itemCompatibility').value,
+                quantity: parseInt(document.getElementById('itemQuantity').value),
+                minStock: parseInt(document.getElementById('itemMinStock').value),
+                costPrice: parseFloat(document.getElementById('itemCostPrice').value) || 0,
+                sellPrice: parseFloat(document.getElementById('itemSellPrice').value) || 0,
+                location: document.getElementById('itemLocation').value,
+                notes: document.getElementById('itemNotes').value,
+                image: document.getElementById('imagePreview').src || ''
+            };
+
+            if (currentEditId) {
+                const index = inventory.findIndex(i => i.id === currentEditId);
+                inventory[index] = { ...inventory[index], ...itemData };
+                
+                // Add history entry
+                if (!inventory[index].history) inventory[index].history = [];
+                inventory[index].history.push({
+                    date: new Date().toISOString(),
+                    action: 'Отредактировано',
+                    user: 'Мастер'
+                });
+            } else {
+                itemData.id = Date.now();
+                if (!String(itemData.sku || '').trim()) {
+                    itemData.sku = 'FV-' + itemData.id;
+                }
+                itemData.created = new Date().toISOString();
+                itemData.history = [{
+                    date: new Date().toISOString(),
+                    action: 'Создано',
+                    quantity: itemData.quantity,
+                    user: 'Мастер'
+                }];
+                inventory.push(itemData);
+            }
+
+            saveInventory();
+            renderInventory();
+            updateStats();
+            updateUsageChart();
+            closeModal();
+        }
+
+        function openAdjustModal(id) {
+            currentAdjustId = id;
+            document.getElementById('adjustForm').reset();
+            document.getElementById('adjustModal').classList.add('show');
+        }
+
+        function closeAdjustModal() {
+            if (typeof window.pendingOwlArrival !== 'undefined') {
+                window.pendingOwlArrival = null;
+            }
+            document.getElementById('adjustModal').classList.remove('show');
+        }
+
+        function adjustQuantity() {
+            const item = inventory.find(i => i.id === currentAdjustId);
+            if (!item) return;
+
+            const type = document.getElementById('adjustType').value;
+            const quantity = parseInt(document.getElementById('adjQtyInput').value, 10);
+            const reason = document.getElementById('adjustReason').value;
+            const oldQuantity = item.quantity;
+
+            if (type === 'add') {
+                item.quantity += quantity;
+            } else if (type === 'subtract') {
+                item.quantity = Math.max(0, item.quantity - quantity);
+            } else if (type === 'set') {
+                item.quantity = quantity;
+            }
+
+            // Add to history
+            if (!item.history) item.history = [];
+            item.history.push({
+                date: new Date().toISOString(),
+                action: type === 'add' ? 'Приход' : type === 'subtract' ? 'Расход' : 'Установлено',
+                oldQuantity: oldQuantity,
+                newQuantity: item.quantity,
+                quantity: quantity,
+                reason: reason,
+                user: 'Мастер'
+            });
+
+            saveInventory();
+            renderInventory();
+            updateStats();
+            updateUsageChart();
+            closeAdjustModal();
+        }
+
+        function viewItem(id) {
+            const item = inventory.find(i => i.id === id);
+            if (!item) return;
+
+            const status = getStatus(item);
+            const icon = categoryIcons[item.category] || '📦';
+            
+            let historyHtml = '';
+            if (item.history && item.history.length > 0) {
+                historyHtml = `
+                    <h3 style="color: var(--highlight); margin: 24px 0 16px;">📋 История движений</h3>
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Действие</th>
+                                <th>Количество</th>
+                                <th>Комментарий</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${item.history.slice().reverse().map(h => `
+                                <tr>
+                                    <td>${new Date(h.date).toLocaleString('ru-RU')}</td>
+                                    <td>${h.action}</td>
+                                    <td>${h.oldQuantity !== undefined ? `${h.oldQuantity} → ${h.newQuantity}` : h.quantity || '-'}</td>
+                                    <td>${h.reason || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+
+            const content = `
+                <div style="text-align: center; margin-bottom: 24px;">
+                    ${item.image ? 
+                        `<img src="${item.image}" style="max-width: 300px; max-height: 300px; border-radius: 16px; border: 2px solid var(--border); margin-bottom: 16px;">` : 
+                        `<div style="font-size: 120px; margin-bottom: 16px;">${icon}</div>`
+                    }
+                    <h2 style="color: var(--highlight); font-size: 28px; margin-bottom: 8px;">${item.name}</h2>
+                    <div class="item-status status-${status.class}" style="display: inline-block; margin-bottom: 16px;">${status.text}</div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
+                    <div style="background: rgba(45, 27, 78, 0.3); padding: 16px; border-radius: 12px; border: 1px solid var(--border);">
+                        <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: 4px;">Категория</div>
+                        <div style="font-weight: 700;">${translations.ru[item.category]}</div>
+                    </div>
+                    <div style="background: rgba(45, 27, 78, 0.3); padding: 16px; border-radius: 12px; border: 1px solid var(--border);">
+                        <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: 4px;">Артикул</div>
+                        <div style="font-weight: 700;">${item.sku || 'Не указан'}</div>
+                    </div>
+                    <div style="background: rgba(45, 27, 78, 0.3); padding: 16px; border-radius: 12px; border: 1px solid var(--border);">
+                        <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: 4px;">Количество</div>
+                        <div style="font-weight: 700; font-size: 24px; color: var(--highlight);">${item.quantity}</div>
+                    </div>
+                    <div style="background: rgba(45, 27, 78, 0.3); padding: 16px; border-radius: 12px; border: 1px solid var(--border);">
+                        <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: 4px;">Мин. остаток</div>
+                        <div style="font-weight: 700;">${item.minStock}</div>
+                    </div>
+                    <div style="background: rgba(45, 27, 78, 0.3); padding: 16px; border-radius: 12px; border: 1px solid var(--border);">
+                        <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: 4px;">Цена закупки</div>
+                        <div style="font-weight: 700;">${formatMoney(item.costPrice, 'ru')}</div>
+                    </div>
+                    <div style="background: rgba(45, 27, 78, 0.3); padding: 16px; border-radius: 12px; border: 1px solid var(--border);">
+                        <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: 4px;">Цена продажи</div>
+                        <div style="font-weight: 700;">${formatMoney(item.sellPrice, 'ru')}</div>
+                    </div>
+                    <div style="background: rgba(45, 27, 78, 0.3); padding: 16px; border-radius: 12px; border: 1px solid var(--border); grid-column: 1 / -1;">
+                        <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: 4px;">Совместимость</div>
+                        <div style="font-weight: 700;">${item.compatibility || 'Универсальное'}</div>
+                    </div>
+                    ${item.location ? `
+                        <div style="background: rgba(45, 27, 78, 0.3); padding: 16px; border-radius: 12px; border: 1px solid var(--border); grid-column: 1 / -1;">
+                            <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: 4px;">Расположение</div>
+                            <div style="font-weight: 700;">${item.location}</div>
+                        </div>
+                    ` : ''}
+                    ${item.notes ? `
+                        <div style="background: rgba(45, 27, 78, 0.3); padding: 16px; border-radius: 12px; border: 1px solid var(--border); grid-column: 1 / -1;">
+                            <div style="color: var(--text-secondary); font-size: 13px; margin-bottom: 4px;">Примечания</div>
+                            <div style="font-weight: 700;">${item.notes}</div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                ${historyHtml}
+            `;
+
+            document.getElementById('viewModalTitle').textContent = `📦 ${item.name}`;
+            document.getElementById('viewModalContent').innerHTML = content;
+            document.getElementById('viewModal').classList.add('show');
+        }
+
+        function closeViewModal() {
+            document.getElementById('viewModal').classList.remove('show');
+        }
+
+        // Usage Chart
+        function initUsageChart() {
+            const ctx = document.getElementById('usageChart').getContext('2d');
+            
+            usageChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: getLast7Days(),
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#e4e4e4',
+                                font: {
+                                    size: 12,
+                                    weight: 600
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#a0a0a0',
+                                stepSize: 1
+                            },
+                            grid: {
+                                color: 'rgba(168, 85, 247, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#a0a0a0'
+                            },
+                            grid: {
+                                color: 'rgba(168, 85, 247, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getLast7Days() {
+            const days = [];
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                days.push(date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }));
+            }
+            return days;
+        }
+
+        function updateUsageChart() {
+            if (!usageChart) return;
+
+            const datasets = [];
+            const colors = [
+                'rgba(168, 85, 247, 1)',
+                'rgba(236, 72, 153, 1)',
+                'rgba(59, 130, 246, 1)',
+                'rgba(16, 185, 129, 1)',
+                'rgba(245, 158, 11, 1)'
+            ];
+
+            // Get top 5 most used items
+            const topItems = inventory
+                .filter(item => item.history && item.history.length > 0)
+                .slice(0, 5);
+
+            topItems.forEach((item, index) => {
+                const data = new Array(7).fill(0);
+                
+                if (item.history) {
+                    item.history.forEach(h => {
+                        if (h.action === 'Расход') {
+                            const daysAgo = Math.floor((Date.now() - new Date(h.date).getTime()) / (1000 * 60 * 60 * 24));
+                            if (daysAgo < 7) {
+                                data[6 - daysAgo] += h.quantity || 0;
+                            }
+                        }
+                    });
+                }
+
+                datasets.push({
+                    label: item.name,
+                    data: data,
+                    borderColor: colors[index],
+                    backgroundColor: colors[index].replace('1)', '0.1)'),
+                    tension: 0.4,
+                    borderWidth: 2
+                });
+            });
+
+            usageChart.data.datasets = datasets;
+            usageChart.update();
+        }
+
+        // Close modals on background click
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('show');
+            }
+        };
+
+        // ============= ОЧЕРЕДЬ ЗАКАЗОВ / ПРИХОД =============
+
+        async function openPurchaseArrivalByOwl(owlId) {
+            if (typeof window.openPurchaseArrivalFromQueue === 'function') {
+                await window.openPurchaseArrivalFromQueue(owlId);
+            } else {
+                alert('Загрузите страницу полностью (модуль склада SQLite).');
+            }
+        }
+
+        async function dismissPurchaseQueueByOwl(owlId) {
+            if (typeof window.dismissPurchaseQueueFromQueue === 'function') {
+                await window.dismissPurchaseQueueFromQueue(owlId);
+            } else {
+                alert('Загрузите страницу полностью.');
+            }
+        }
+
+        // Функция очистки склада с подтверждением пароля
+        function clearInventory() {
+            // Первое предупреждение
+            if (!confirm('⚠️ ВНИМАНИЕ!\n\nВы собираетесь удалить ВСЕ позиции со склада.\n\nЭто действие НЕОБРАТИМО!\n\nПродолжить?')) {
+                return;
+            }
+
+            // Запрос пароля
+            const password = prompt('🔒 Введите пароль для подтверждения очистки склада:');
+            
+            if (password !== '1989') {
+                alert('❌ Неверный пароль! Операция отменена.');
+                return;
+            }
+
+            // Финальное подтверждение
+            if (!confirm('🚨 ПОСЛЕДНЕЕ ПРЕДУПРЕЖДЕНИЕ!\n\nВы действительно хотите удалить ВСЕ позиции со склада?\n\n• Все товары\n• Все остатки\n• Всю историю\n\nНажмите OK для продолжения или Отмена для отмены.')) {
+                alert('✅ Операция отменена пользователем');
+                return;
+            }
+
+            // Выполняем очистку
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '⏳ Очистка...';
+            button.disabled = true;
+
+            fetch('./api/clear_inventory_ultimate.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    confirm: 'YES_DELETE_INVENTORY'
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    // Обновляем статистику сразу из ответа API
+                    if (result.updated_stats) {
+                        const totalEl = document.getElementById('totalItems');
+                        const inStockEl = document.getElementById('inStockItems');
+                        const lowStockEl = document.getElementById('lowStockItems');
+                        const valueEl = document.getElementById('totalValue');
+                        if (totalEl) totalEl.textContent = result.updated_stats.total || 0;
+                        if (inStockEl) inStockEl.textContent = result.updated_stats.in_stock || 0;
+                        if (lowStockEl) lowStockEl.textContent = result.updated_stats.low_stock || 0;
+                        if (valueEl) valueEl.textContent = formatMoney(result.updated_stats.value || 0, 'ru');
+                    }
+                    
+                    alert(`✅ Склад очищен!\n\nУдалено позиций: ${result.total_deleted}`);
+                    
+                    // Перезагружаем данные
+                    localStorage.removeItem('fixarivan_inventory');
+                    loadInventory();
+                    
+                    // Принудительно обновляем статистику на главной странице
+                    if (window.parent && window.parent.loadStatistics) {
+                        window.parent.loadStatistics();
+                    }
+                } else {
+                    alert(`❌ Ошибка очистки: ${result.message}`);
+                }
+            })
+            .catch(error => {
+                alert('❌ Ошибка при очистке склада');
+                console.error('Clear inventory error:', error);
+            })
+            .finally(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        }
+
+        // Функция синхронизации склада
+        function syncInventory() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '⏳ Синхронизация...';
+            button.disabled = true;
+
+            fetch('./api/safe_sync_inventory.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(`✅ Синхронизация завершена!\n\n${result.message}`);
+                    // Перезагружаем данные
+                    loadInventory();
+                } else {
+                    alert(`❌ Ошибка синхронизации: ${result.message}`);
+                }
+            })
+            .catch(error => {
+                alert('❌ Ошибка при синхронизации склада');
+                console.error('Sync inventory error:', error);
+            })
+            .finally(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        }
+
+        // Функция обновления статистики склада
+        async function updateInventoryStats() {
+            const box = document.getElementById('sqliteDegradedBanner');
+            const txt = document.getElementById('sqliteDegradedBannerText');
+            function showBanner(message) {
+                if (txt) txt.textContent = message;
+                if (box) box.style.display = 'block';
+            }
+            function hideBanner() {
+                if (box) box.style.display = 'none';
+            }
+            try {
+                const response = await fetch('./api/get_fast_stats.php', { credentials: 'same-origin' });
+                const result = await response.json();
+
+                if (result.success && result.stats && result.stats.sqlite_degraded) {
+                    showBanner('База SQLite недоступна или ответ неполный — цифры склада могут быть нулевыми. Проверьте расширение pdo_sqlite и права на каталог storage/.');
+                } else if (!result.success) {
+                    showBanner(result.message || 'Не удалось получить статистику с сервера.');
+                } else {
+                    hideBanner();
+                }
+
+                if (result.success && result.stats && result.stats.inventory) {
+                    const invStats = result.stats.inventory;
+                    document.getElementById('totalItems').textContent = invStats.total || 0;
+                    document.getElementById('inStockItems').textContent = invStats.in_stock || 0;
+                    document.getElementById('lowStockItems').textContent = invStats.low_stock || 0;
+                    const valueEl = document.getElementById('totalValue');
+                    if (valueEl) valueEl.textContent = formatMoney(invStats.value || 0, 'ru');
+                    const soldQtyEl = document.getElementById('soldQtyValue');
+                    const soldRevenueEl = document.getElementById('soldRevenueValue');
+                    const soldPurchaseEl = document.getElementById('soldPurchaseValue');
+                    const realizedMarginEl = document.getElementById('realizedMarginValue');
+                    if (soldQtyEl) soldQtyEl.textContent = String(invStats.sold_qty || 0);
+                    if (soldRevenueEl) soldRevenueEl.textContent = formatMoney(invStats.sold_revenue || 0, 'ru');
+                    if (soldPurchaseEl) soldPurchaseEl.textContent = formatMoney(invStats.sold_purchase || 0, 'ru');
+                    if (realizedMarginEl) realizedMarginEl.textContent = formatMoney(invStats.realized_margin || 0, 'ru');
+                }
+            } catch (error) {
+                console.error('Error updating inventory stats:', error);
+                showBanner('Нет ответа от сервера или SQLite недоступна — статистика может быть неактуальна.');
+            }
+        }
+
+        // Auto popup disabled by request: low stock is visible in widgets/filters only.
+    </script>
+    <script src="js/inventory_sqlite_override.js"></script>
+</body>
+</html>
+

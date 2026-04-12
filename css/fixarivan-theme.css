@@ -1,0 +1,101 @@
+/**
+ * FixariVan — общая тёмная тема (рабочий стол, трек, клиенты, финансы).
+ * Подключать после страничных <style>, где нужны классы fv-*.
+ */
+
+:root {
+    --fv-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --fv-bg-base: #070b14;
+    --fv-bg-mesh: rgba(99, 102, 241, 0.14);
+    --fv-bg-mesh-2: rgba(139, 92, 246, 0.1);
+    --fv-card-bg: rgba(255, 255, 255, 0.06);
+    --fv-card-border: rgba(255, 255, 255, 0.12);
+    --fv-radius: 14px;
+    --fv-link: #93c5fd;
+    --fv-accent: #6366f1;
+}
+
+html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- Рабочий стол: dashboard_app.html --- */
+body.fv-dashboard {
+    font-family: var(--fv-font);
+    background: radial-gradient(1200px 700px at 50% -5%, var(--fv-bg-mesh), transparent 55%),
+        radial-gradient(800px 500px at 95% 0%, var(--fv-bg-mesh-2), transparent 45%),
+        var(--fv-bg-base);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+}
+
+body.fv-dashboard .nebula {
+    background: radial-gradient(ellipse 80% 60% at 50% 18%, rgba(99, 102, 241, 0.24), transparent 65%),
+        radial-gradient(ellipse 55% 45% at 88% 72%, rgba(124, 58, 237, 0.14), transparent 55%);
+    animation: fv-nebula-pulse 12s ease-in-out infinite;
+}
+
+@keyframes fv-nebula-pulse {
+    0%,
+    100% {
+        opacity: 0.48;
+    }
+    50% {
+        opacity: 0.82;
+    }
+}
+
+body.fv-dashboard .logo-icon {
+    background: linear-gradient(135deg, #6366f1 0%, #7c3aed 52%, #6d28d9 100%);
+    box-shadow: 0 12px 36px rgba(99, 102, 241, 0.42);
+}
+
+body.fv-dashboard .stat-card,
+body.fv-dashboard .nav-card,
+body.fv-dashboard .recent-section {
+    border-radius: 18px;
+    border-color: var(--fv-card-border);
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+}
+
+body.fv-dashboard .header h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    letter-spacing: -0.02em;
+}
+
+/* --- Трек, клиенты и др. компактные страницы --- */
+body.fv-page {
+    font-family: var(--fv-font);
+    background: radial-gradient(1000px 600px at 50% -12%, rgba(59, 130, 246, 0.12), transparent 52%),
+        var(--fv-bg-base);
+    color: #eef2ff;
+    margin: 0;
+    min-height: 100vh;
+}
+
+body.fv-page a {
+    color: var(--fv-link);
+}
+
+body.fv-page .card {
+    border-radius: var(--fv-radius);
+    border-color: var(--fv-card-border);
+    background: var(--fv-card-bg);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
+}
+
+body.fv-page button.primary {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    border-color: rgba(96, 165, 250, 0.5);
+}
+
+/* --- Финансы: поверх собственных --bg в finance.html --- */
+body.fv-finance {
+    font-family: var(--fv-font);
+    background: radial-gradient(900px 520px at 8% 0%, rgba(56, 189, 248, 0.09), transparent 48%),
+        radial-gradient(700px 400px at 100% 20%, rgba(99, 102, 241, 0.08), transparent 50%),
+        var(--bg, #0f172a);
+}

@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixariVan - Акт приёма (Мастер)</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>">
+    <script>window.FIXARIVAN_REQUIRE_ADMIN_SESSION = true;</script>
+    <script src="auth_check.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; color: white; }
+        .header h1 { font-size: 2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.2);
+            padding: 10px;
+            border-radius: 15px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            background: rgba(255,255,255,0.3);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: rgba(255,255,255,0.95);
+            color: #667eea;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .language-switcher {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .lang-btn {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .lang-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .form-section { margin-bottom: 25px; }
+        .section-title { font-size: 1.2rem; font-weight: bold; color: #667eea; margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        #patternCanvas, #signatureCanvas {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: crosshair;
+            margin: 10px 0;
+            touch-action: none;
+        }
+
+        .unique-code {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 15px 0;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a6fd8; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        .btn-secondary { background: #6c757d; color: white; margin-right: 10px; }
+
+        .submit-btn {
+            background: #667eea;
+            color: white;
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+
+        .link-display {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            word-break: break-all;
+            font-family: monospace;
+        }
+
+        @media (max-width: 768px) {
+            .tabs { flex-direction: column; }
+            .form-container { padding: 20px; }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 FixariVan - Акт приёма (Мастер)</h1>
+            <p>Полная версия с генерацией ссылок</p>
+            <button type="button" onclick="window.location.href='index.php'" style="margin-top: 12px; background: rgba(255,255,255,0.95); border: none; padding: 10px 16px; border-radius: 10px; cursor: pointer; font-weight: 600;">
+                ← Главное меню
+            </button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('form')">📝 Заполнить акт</button>
+            <button class="tab" onclick="switchTab('link')">🔗 Создать ссылку для клиента</button>
+        </div>
+
+        <!-- Form Tab -->
+        <div id="formTab" class="tab-content active">
+            <div class="form-container">
+                <div class="language-switcher">
+                    <button class="lang-btn active" data-lang="ru">🇷🇺 RU</button>
+                    <button class="lang-btn" data-lang="en">🇬🇧 EN</button>
+                    <button class="lang-btn" data-lang="fi">🇫🇮 FI</button>
+                </div>
+
+                <form id="masterForm">
+                    <div class="form-section">
+                        <div class="section-title" data-lang="client_section">👤 Клиент</div>
+                        <div class="form-group">
+                            <label data-lang="client_name">ФИО *</label>
+                            <input type="text" id="clientName" required>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label data-lang="client_phone">Телефон *</label>
+                                <input type="tel" id="clientPhone" required>
+                            </div>
+                            <div class="form-group">
+                                <label data-lang="client_email">Email</label>
+                                <input type="email" id="clientEmail">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="section-title" data-lang="device_section">📱 Устройство</div>
+                        <div class="form-group">
+                            <label data-lang="device_type">Тип *</label>
+                            <select id="deviceType" required>
+                                <option value="">Выберите</option>
+                                <option value="smartphone">📱 Смартфон</option>
+                                <option value="tablet">📱 Планшет</option>
+                                <option value="laptop">💻 Ноутбук</option>
+                                <option value="desktop">🖥️ Настольный ПК</option>
+                                <option value="monoblock">🖥️ Моноблок</option>
+                                <option value="smartwatch">⌚ Умные часы</option>
+                                <option value="tv">📺 ТВ/Монитор</option>
+                                <option value="console">🎮 Игровая консоль</option>
+                                <option value="other">🔧 Другое</option>
+                            </select>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label data-lang="device_model">Модель *</label>
+                                <input type="text" id="deviceModel" required>
+                            </div>
+                            <div class="form-group">
+                                <label data-lang="device_serial">IMEI / Серийный номер</label>
+                                <input type="text" id="imeiNumber">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label data-lang="device_condition">Внешнее состояние</label>
+                            <select id="externalCondition">
+                                <option value="excellent">Отличное</option>
+                                <option value="good">Хорошее</option>
+                                <option value="satisfactory">Удовлетворительное</option>
+                                <option value="poor">Плохое</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label data-lang="accessories">Комплектация</label>
+                            <textarea id="accessories" rows="2"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label data-lang="device_problem">Проблема *</label>
+                            <textarea id="deviceProblem" rows="3" required></textarea>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label data-lang="device_password">Пароль</label>
+                                <input type="text" id="devicePassword">
+                            </div>
+                            <div class="form-group">
+                                <label data-lang="priority">Приоритет</label>
+                                <select id="priority">
+                                    <option value="low">🟢 Низкий</option>
+                                    <option value="medium">🟡 Средний</option>
+                                    <option value="high">🔴 Высокий</option>
+                                    <option value="urgent">⚡ Срочный</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="section-title" data-lang="pattern_section">🔐 Графический пароль</div>
+                        <canvas id="patternCanvas" width="300" height="300"></canvas>
+                        <button type="button" class="btn btn-secondary" onclick="clearPattern()">Очистить</button>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="section-title" data-lang="location_date">📍 Место и дата</div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label data-lang="location">Место приёма *</label>
+                                <input type="text" id="location" value="Helsinki, Finland" required>
+                            </div>
+                            <div class="form-group">
+                                <label data-lang="date">Дата приёма *</label>
+                                <input type="date" id="acceptanceDate" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <label style="display: flex; gap: 10px; align-items: center;">
+                            <input type="checkbox" id="confirmation" required style="transform: scale(1.5);">
+                            <span data-lang="consent">Клиент согласен с условиями приёма</span>
+                        </label>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="section-title" data-lang="unique_code">🔢 Уникальный код</div>
+                        <div class="unique-code" id="uniqueCode">Сгенерируется автоматически</div>
+                    </div>
+
+                    <button type="submit" class="submit-btn btn" data-lang="create_act">Создать акт</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Link Tab -->
+        <div id="linkTab" class="tab-content">
+            <div class="form-container">
+                <h2 style="color: #667eea; margin-bottom: 20px;">Постоянная ссылка для клиентов</h2>
+                <p style="margin-bottom: 20px;">Эта ссылка всегда одна и та же - используйте для создания QR-кода:</p>
+                <div class="link-display" id="clientLink"></div>
+                <button class="btn btn-success" onclick="copyLink()">📋 Копировать ссылку</button>
+                <button class="btn btn-primary" onclick="generateQR()" style="margin-left: 10px;">📱 QR-код</button>
+                <button class="btn btn-secondary" onclick="openClientViewer()" style="margin-left: 10px;">👁️ Открыть акт</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const translations = {
+            ru: {
+                client_section: '👤 Клиент',
+                client_name: 'ФИО *',
+                client_phone: 'Телефон *',
+                client_email: 'Email',
+                device_section: '📱 Устройство',
+                device_type: 'Тип *',
+                device_model: 'Модель *',
+                device_serial: 'IMEI / Серийный номер',
+                device_condition: 'Внешнее состояние',
+                accessories: 'Комплектация',
+                device_problem: 'Проблема *',
+                device_password: 'Пароль',
+                priority: 'Приоритет',
+                pattern_section: '🔐 Графический пароль',
+                location_date: '📍 Место и дата',
+                location: 'Место приёма *',
+                date: 'Дата приёма *',
+                consent: 'Клиент согласен с условиями приёма',
+                unique_code: '🔢 Уникальный код',
+                create_act: 'Создать акт'
+            },
+            en: {
+                client_section: '👤 Client',
+                client_name: 'Full Name *',
+                client_phone: 'Phone *',
+                client_email: 'Email',
+                device_section: '📱 Device',
+                device_type: 'Type *',
+                device_model: 'Model *',
+                device_serial: 'IMEI / Serial Number',
+                device_condition: 'External Condition',
+                accessories: 'Accessories',
+                device_problem: 'Problem *',
+                device_password: 'Password',
+                priority: 'Priority',
+                pattern_section: '🔐 Pattern Password',
+                location_date: '📍 Location and Date',
+                location: 'Reception Location *',
+                date: 'Reception Date *',
+                consent: 'Client agrees to terms',
+                unique_code: '🔢 Unique Code',
+                create_act: 'Create Act'
+            },
+            fi: {
+                client_section: '👤 Asiakas',
+                client_name: 'Koko nimi *',
+                client_phone: 'Puhelin *',
+                client_email: 'Sähköposti',
+                device_section: '📱 Laite',
+                device_type: 'Tyyppi *',
+                device_model: 'Malli *',
+                device_serial: 'IMEI / Sarjanumero',
+                device_condition: 'Ulkoinen kunto',
+                accessories: 'Tarvikkeet',
+                device_problem: 'Ongelma *',
+                device_password: 'Salasana',
+                priority: 'Prioriteetti',
+                pattern_section: '🔐 Kuviollinen salasana',
+                location_date: '📍 Sijainti ja päivämäärä',
+                location: 'Vastaanottopaikka *',
+                date: 'Vastaanottopäivä *',
+                consent: 'Asiakas hyväksyy ehdot',
+                unique_code: '🔢 Yksilöllinen koodi',
+                create_act: 'Luo asiakirja'
+            }
+        };
+
+        let patternData = '';
+        let currentLanguage = 'ru';
+        let currentClientToken = '';
+
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, options);
+            const text = await response.text();
+            if (!response.ok) {
+                const snippet = (text || '').trim().slice(0, 200);
+                throw new Error(snippet || `HTTP ${response.status}`);
+            }
+            try {
+                return JSON.parse(text);
+            } catch (error) {
+                const snippet = (text || '').trim().slice(0, 200);
+                throw new Error(snippet || 'Сервер вернул некорректный ответ');
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tab + 'Tab').classList.add('active');
+            
+            if (tab === 'link') {
+                updateClientLink();
+            }
+        }
+
+        function updateClientLink() {
+            const origin = window.location.origin;
+            const path = window.location.pathname.replace('master_form.html', 'client_portal.php');
+
+            if (!currentClientToken) {
+                document.getElementById('clientLink').textContent = '';
+                return;
+            }
+
+            const langParam = currentLanguage ? `&lang=${encodeURIComponent(currentLanguage)}` : '';
+            document.getElementById('clientLink').textContent = `${origin + path}?token=${encodeURIComponent(currentClientToken)}${langParam}`;
+        }
+
+        // Language switcher
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                currentLanguage = this.getAttribute('data-lang');
+                document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                Object.keys(translations[currentLanguage]).forEach(key => {
+                    document.querySelectorAll(`[data-lang="${key}"]`).forEach(el => {
+                        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                            el.placeholder = translations[currentLanguage][key];
+                        } else {
+                            el.textContent = translations[currentLanguage][key];
+                        }
+                    });
+                });
+            });
+        });
+
+        // Pattern canvas
+        const patternCanvas = document.getElementById('patternCanvas');
+        const patternCtx = patternCanvas.getContext('2d');
+        let isDrawingPattern = false;
+
+        patternCtx.strokeStyle = '#667eea';
+        patternCtx.lineWidth = 3;
+        patternCtx.lineCap = 'round';
+
+        patternCanvas.addEventListener('mousedown', e => {
+            isDrawingPattern = true;
+            const rect = patternCanvas.getBoundingClientRect();
+            patternCtx.beginPath();
+            patternCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        patternCanvas.addEventListener('mousemove', e => {
+            if (!isDrawingPattern) return;
+            const rect = patternCanvas.getBoundingClientRect();
+            patternCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            patternCtx.stroke();
+        });
+
+        patternCanvas.addEventListener('mouseup', () => {
+            isDrawingPattern = false;
+            patternData = patternCanvas.toDataURL();
+        });
+
+        // Touch events for pattern
+        patternCanvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = patternCanvas.getBoundingClientRect();
+            patternCtx.beginPath();
+            patternCtx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+            isDrawingPattern = true;
+        });
+
+        patternCanvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            if (!isDrawingPattern) return;
+            const touch = e.touches[0];
+            const rect = patternCanvas.getBoundingClientRect();
+            patternCtx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+            patternCtx.stroke();
+        });
+
+        patternCanvas.addEventListener('touchend', () => {
+            isDrawingPattern = false;
+            patternData = patternCanvas.toDataURL();
+        });
+
+        function clearPattern() {
+            patternCtx.clearRect(0, 0, patternCanvas.width, patternCanvas.height);
+            patternData = '';
+        }
+
+        function generateUniqueCode() {
+            const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+            const random = Math.random().toString(36).substr(2, 4).toUpperCase();
+            return `FIX-${timestamp}-${random}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('uniqueCode').textContent = generateUniqueCode();
+            document.getElementById('acceptanceDate').value = new Date().toISOString().split('T')[0];
+        });
+
+        document.getElementById('masterForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            if (!document.getElementById('confirmation').checked) {
+                alert('Необходимо подтвердить согласие клиента.');
+                return;
+            }
+
+            const documentId = document.getElementById('uniqueCode').textContent.trim();
+            const payload = {
+                documentId,
+                clientName: document.getElementById('clientName').value.trim(),
+                clientPhone: document.getElementById('clientPhone').value.trim(),
+                clientEmail: document.getElementById('clientEmail').value.trim(),
+                deviceType: document.getElementById('deviceType').value,
+                deviceModel: document.getElementById('deviceModel').value.trim(),
+                serialNumber: document.getElementById('imeiNumber').value,
+                deviceCondition: document.getElementById('externalCondition').value,
+                accessories: document.getElementById('accessories').value,
+                problemDescription: document.getElementById('deviceProblem').value.trim(),
+                devicePassword: document.getElementById('devicePassword').value,
+                priority: document.getElementById('priority').value,
+                patternData: patternData,
+                placeOfAcceptance: document.getElementById('location').value || 'FixariVan, Turku',
+                dateOfAcceptance: document.getElementById('acceptanceDate').value,
+                uniqueCode: documentId,
+                language: currentLanguage,
+                clientConsent: true,
+                isMasterForm: true
+            };
+
+            const btn = this.querySelector('.submit-btn');
+            btn.disabled = true;
+            btn.textContent = 'Сохранение...';
+
+            try {
+                const saveResult = await fetchJson('./api/save_order_fixed.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!saveResult || saveResult.success !== true) {
+                    throw new Error(saveResult?.message || 'Ошибка сохранения акта');
+                }
+                if (saveResult.sqlite_warning) {
+                    console.warn('save_order_fixed sqlite_warning:', saveResult.sqlite_warning);
+                }
+                if (saveResult.supply_warning) {
+                    console.warn('save_order_fixed supply_warning:', saveResult.supply_warning);
+                }
+                if (saveResult.warehouse_warning) {
+                    console.warn('save_order_fixed warehouse_warning:', saveResult.warehouse_warning);
+                }
+
+                currentClientToken = saveResult.client_token || '';
+                if (!currentClientToken) {
+                    throw new Error('Не вернулся client_token после сохранения');
+                }
+                updateClientLink();
+
+                let okMsg = 'Акт успешно создан! Ссылка клиенту готова.';
+                if (saveResult.supply_warning) {
+                    okMsg += '\n\n' + saveResult.supply_warning;
+                }
+                if (saveResult.warehouse_warning) {
+                    okMsg += '\n\nСклад: ' + saveResult.warehouse_warning;
+                }
+                alert(okMsg);
+                this.reset();
+                clearPattern();
+                const nextId = generateUniqueCode();
+                document.getElementById('uniqueCode').textContent = nextId;
+                document.getElementById('acceptanceDate').value = new Date().toISOString().split('T')[0];
+            } catch (error) {
+                console.error('Ошибка сохранения акта:', error);
+                alert('Ошибка: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = translations[currentLanguage].create_act;
+            }
+        });
+
+        function copyLink() {
+            const link = document.getElementById('clientLink').textContent.trim();
+            navigator.clipboard.writeText(link).then(() => {
+                alert('Ссылка скопирована! Используйте для QR-кода');
+            });
+        }
+
+        function openClientViewer() {
+            const link = document.getElementById('clientLink').textContent.trim();
+            if (!link) {
+                alert('Сначала сохраните акт.');
+                return;
+            }
+            window.open(link, '_blank');
+        }
+
+        // Функция генерации красивого PDF (fallback для кнопок/доп. действий)
+        async function generatePNGToPDF(type, data) {
+            try {
+                const result = await fetchJson('./api/generate_dompdf_fixed.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        documentId: data.documentId,
+                        documentType: type,
+                        language: currentLanguage,
+                        data
+                    })
+                });
+
+                if (result.success) {
+                    const link = result.pdf_url || result.download_url;
+                    if (link) {
+                        window.open(link, '_blank');
+                    }
+                } else {
+                    throw new Error(result.message || 'Ошибка генерации PDF');
+                }
+            } catch (error) {
+                console.error('Ошибка генерации PDF:', error);
+                alert('Ошибка генерации PDF: ' + error.message);
+            }
+        }
+
+        function generateQR() {
+            const link = document.getElementById('clientLink').textContent.trim();
+            window.open(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}`, '_blank');
+        }
+    </script>
+    <script src="js/client_autofill.js"></script>
+</body>
+</html>

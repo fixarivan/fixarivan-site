@@ -1,0 +1,108 @@
+<!-- КНОПКА СИНХРОНИЗАЦИИ СКЛАДА -->
+<div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+    <button id="syncButton" onclick="syncInventory()" style="
+        background: linear-gradient(135deg, #a855f7 0%, #6b2fb5 100%);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 25px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    ">
+        <span id="syncIcon">🔄</span>
+        <span id="syncText">Синхронизировать</span>
+    </button>
+</div>
+
+<script>
+// Функция синхронизации склада
+async function syncInventory() {
+    const button = document.getElementById('syncButton');
+    const icon = document.getElementById('syncIcon');
+    const text = document.getElementById('syncText');
+    
+    // Показываем процесс синхронизации
+    button.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+    icon.textContent = '⏳';
+    text.textContent = 'Синхронизация...';
+    button.disabled = true;
+    
+    try {
+        // Получаем данные склада из localStorage
+        const inventory = JSON.parse(localStorage.getItem('fixarivan_inventory') || '[]');
+        
+        if (inventory.length === 0) {
+            alert('Склад пуст! Добавьте позиции перед синхронизацией.');
+            return;
+        }
+        
+        // Отправляем данные в БД
+        const response = await fetch('./api/sync_inventory.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ inventory: inventory })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Успешная синхронизация
+            button.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            icon.textContent = '✅';
+            text.textContent = 'Синхронизировано!';
+            
+            // Обновляем статистику на дашборде
+            if (window.loadInventoryStats) {
+                window.loadInventoryStats();
+            }
+            
+            setTimeout(() => {
+                button.style.background = 'linear-gradient(135deg, #a855f7 0%, #6b2fb5 100%)';
+                icon.textContent = '🔄';
+                text.textContent = 'Синхронизировать';
+                button.disabled = false;
+            }, 2000);
+            
+        } else {
+            throw new Error(result.message);
+        }
+        
+    } catch (error) {
+        console.error('Ошибка синхронизации:', error);
+        
+        // Ошибка синхронизации
+        button.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+        icon.textContent = '❌';
+        text.textContent = 'Ошибка!';
+        
+        setTimeout(() => {
+            button.style.background = 'linear-gradient(135deg, #a855f7 0%, #6b2fb5 100%)';
+            icon.textContent = '🔄';
+            text.textContent = 'Синхронизировать';
+            button.disabled = false;
+        }, 3000);
+    }
+}
+
+// Автоматическая синхронизация при загрузке страницы
+document.addEventListener('DOMContentLoaded', async function() {
+    // Ждём 2 секунды после загрузки
+    setTimeout(async () => {
+        try {
+            const inventory = JSON.parse(localStorage.getItem('fixarivan_inventory') || '[]');
+            if (inventory.length > 0) {
+                // Автоматически синхронизируем при загрузке
+                await syncInventory();
+            }
+        } catch (error) {
+            console.error('Ошибка автоматической синхронизации:', error);
+        }
+    }, 2000);
+});
+</script>

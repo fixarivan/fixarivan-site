@@ -1,0 +1,12 @@
+# Защита конфигурационных файлов
+<FilesMatch "\.(php|conf|ini|cfg)$">
+    Require all denied
+</FilesMatch>
+
+# Запрещаем просмотр директории
+Options -Indexes
+
+# Защита от прямого доступа
+<FilesMatch ".*">
+    Require all denied
+</FilesMatch>

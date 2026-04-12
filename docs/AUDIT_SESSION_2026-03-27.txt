@@ -1,0 +1,155 @@
+================================================================================
+FixariVan — полный аудит изменений (сессия разработки)
+Дата отчёта: 2026-03-27
+Назначение: зафиксировать цепочки логики, найденные ошибки, риски и готовность
+Связь: docs/CHANGES_2026-04-05.txt (краткий список изменений к отчёту на 05.04.2026),
+  docs/REPORT_2026-04-05.txt (основной отчёт), docs/TZ_PRIORITY_FIX_IMPLEMENTATION_LOG_2026-04-05.txt
+================================================================================
+
+Раздел 1. ОБЛАСТЬ АУДИТА
+--------------------------------------------------------------------------------
+
+Проверены изменения по темам:
+  • Этап 5 — даты и календарь (public_expected_date, AUTO_SUPPLY)
+  • Этап 6 — единое сохранение JSON заказа на диск (P2 блок 6 ТЗ)
+  • Этап 7 — напоминания и даты: предупреждения при пустой дате (P2 блок 7)
+  • Этап 8 — клиентский портал: структура, lib, i18n (P2 блок 8)
+  • Унификация загрузки заказа: get_document и client_portal
+
+Ключевые файлы:
+  api/lib/order_supply.php
+  api/lib/order_json_storage.php
+  api/lib/order_client_portal.php
+  api/lib/order_document_load.php
+  api/save_order_fixed.php
+  api/order_track_order_lines.php
+  api/save_order_supply.php
+  api/order_track_patch.php
+  api/get_document.php
+  api/lib/order_supply.php (patch JSON public status)
+  api/generate_beautiful_client_act.php
+  client_portal.php
+  track.html
+  order_new.html
+  api/lib/viewer_i18n.php
+
+
+Раздел 2. КАРТА ИЗМЕНЕНИЙ
+--------------------------------------------------------------------------------
+
+Тема: Календарь / supply (этап 5)
+  Суть: при пустой нормализованной public_expected_date в create_supply_reminder
+         удаляются события AUTO_SUPPLY для заказа (раньше «зависали» при очистке даты).
+  Файл: api/lib/order_supply.php — fixarivan_create_supply_reminder
+
+Тема: JSON на диск (этап 6)
+  Суть: одна реализация записи storage/orders/{document_id}.json и
+         storage/orders_tokens/{token}.json
+  Файлы: api/lib/order_json_storage.php (новый);
+         save_order_fixed.php, order_track_order_lines.php, save_order_supply.php;
+         order_supply.php — пути к JSON при patch статуса;
+         generate_beautiful_client_act.php — чтение каталога заказов
+
+Тема: Предупреждения о дате (этап 7)
+  Суть: supply_warning в ответе order_track_patch; алерты в Track при смене статуса,
+         языка, даты; order_new показывает supply_warning после save_order_fixed
+  Файлы: api/order_track_patch.php, track.html, order_new.html
+
+Тема: Портал (этап 8)
+  Суть: порядок блоков «документы → позиции»; fixarivan_portal_public_order_lines
+         и сумма через fixarivan_orders_estimate_from_lines_json; подсказки i18n
+  Файлы: client_portal.php, api/lib/order_client_portal.php, api/lib/viewer_i18n.php
+
+Тема: Единая загрузка заказа
+  Суть: тот же путь, что get_document.php?type=order: SQLite → overlay из JSON
+         файла заказа → enrich order_lines_json по SKU
+  Файлы: api/lib/order_document_load.php (новый); get_document.php; client_portal.php
+
+
+Раздел 3. ЛОГИЧЕСКИЕ ЦЕПОЧКИ (ПРОВЕРКА)
+--------------------------------------------------------------------------------
+
+3.1 Supply → календарь
+  • fixarivan_apply_supply_effects → fixarivan_create_supply_reminder
+  • Пустая дата: DELETE AUTO_SUPPLY и return — согласовано с order_track_patch
+    (fixarivan_clear_supply_calendar_for_order при очистке даты).
+  • Остаточный риск: если supply_request непустой, но парсер дал пустой список
+    позиций, apply_supply_effects выходит раньше create_supply_reminder — теоретически
+    возможны «зависшие» события при исключительно битом тексте заявки (узкий кейс).
+
+3.2 Сохранение заказа → JSON
+  • Все основные пути используют fixarivan_save_order_json_files и единые каталоги.
+
+3.3 order_track_patch
+  • UPDATE заказа → при изменении только ожидаемой даты: clear календаря или
+    fixarivan_apply_supply_effects.
+  • supply_warning: финальный expVal + supply_request и order_lines_json из первой
+    выборки (PATCH эти поля не меняет) — корректно для предупреждения о закупке без даты.
+
+3.4 get_document ↔ портал
+  • Оба используют fixarivan_load_order_from_sqlite_or_json.
+  • Fallback без строки в SQLite: только JSON-файл заказа (без enrich, как и раньше
+    по смыслу fallback в API).
+
+
+Раздел 4. НАЙДЕННЫЕ ОШИБКИ И ИСПРАВЛЕНИЯ
+--------------------------------------------------------------------------------
+
+Критическая (исправлена при аудите):
+  • client_portal.php вызывал удалённую функцию client_portal_public_lines вместо
+    fixarivan_portal_public_order_lines — приводило бы к fatal error при открытии
+    портала. Исправлено на вызов fixarivan_portal_public_order_lines.
+
+
+Раздел 5. ЗАМЕЧАНИЯ И ТЕХДОЛГ
+--------------------------------------------------------------------------------
+
+  • get_document.php: путь к JSON в loadJsonDocument для заказа дублирует логику
+    fixarivan_orders_storage_dir() — косметика, на поведение не влияет.
+  • client_portal.php: подключение order_document_load тянет order_warehouse_sync
+    и далее тяжёлые зависимости — больше памяти/времени на запрос; для одного мастера
+    обычно приемлемо.
+  • docs/REPORT_2026-04-05.txt упоминает fixarivan_merge_order_json_overlay в
+    get_document.php — после рефакторинга функция перенесена в order_document_load.php
+    (при необходимости обновить документ вручную).
+  • Автотесты в репозитории (tests/…) в рамках этого аудита на машине разработчика
+    не запускались — рекомендуется прогон после деплоя.
+
+
+Раздел 6. ОЦЕНКА ГОТОВНОСТИ
+--------------------------------------------------------------------------------
+
+Критерий                              | Оценка
+--------------------------------------|------------------------------------------
+Согласованность supply / дата /       | Хорошо; редкий кейс «непустой текст заявки,
+  календарь                            | 0 строк после парсера» не закрыт полностью
+Единый слой JSON на диск              | Хорошо
+Предупреждения (Track / order_new /    | Хорошо
+  patch)
+Портал: структура и единый loader      | Хорошо после исправления имени функции
+Регрессии                             | Одна критическая ошибка портала устранена
+
+Итог:
+  • Для пилотной эксплуатации одним мастером — готовность высокая при условии
+    ручной проверки: портал по token, переключение заказа, документы и таблица
+    позиций; Track — смена даты/статуса и supply_warning при закупке без даты;
+    сохранение заказа из мастер-формы и Track.
+  • Для продакшена со SLA — желательны smoke-тесты (curl/Playwright) на портал и
+    get_document; по желанию — интеграционный тест сценария «очистка даты + заявка
+    на закуп».
+
+
+Раздел 7. РЕКОМЕНДУЕМЫЙ ЧЕКЛИСТ РУЧНОЙ ПРОВЕРКИ
+--------------------------------------------------------------------------------
+
+  [ ] client_portal.php?token=… — страница открывается, позиции и суммы отображаются
+  [ ] Несколько заказов у клиента — переключение focus_order / кнопки заказов
+  [ ] Квитанция / счёт / отчёт — ссылки ведут на viewer
+  [ ] Track: изменение ожидаемой даты — предупреждение при закупке без даты
+  [ ] order_new / master_form — успешное сохранение и текст supply_warning при нужде
+  [ ] Календарь: после указания даты — AUTO_SUPPLY; после очистки даты — событие снято
+
+
+================================================================================
+Конец отчёта
+================================================================================

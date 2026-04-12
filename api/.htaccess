@@ -1,0 +1,27 @@
+# API access rules (Apache 2.4+ with fallback для 2.2)
+
+<IfModule mod_authz_core.c>
+    # Разрешаем PHP-скрипты в каталоге API
+    <FilesMatch "\.php$">
+        Require all granted
+    </FilesMatch>
+
+    # Закрываем доступ к служебным файлам
+    <FilesMatch "\.(log|sql|bak|backup)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+    <FilesMatch "\.php$">
+        Order Allow,Deny
+        Allow from all
+    </FilesMatch>
+
+    <FilesMatch "\.(log|sql|bak|backup)$">
+        Order Deny,Allow
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+Options -Indexes

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест унифицированной авторизации FixariVan</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .test-button:hover {
+            background: #5a6fd8;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .warning { background: #fff3cd; color: #856404; }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .form-card {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        .form-card.with-auth {
+            border-color: #28a745;
+            background: #f8fff9;
+        }
+        .form-card.without-auth {
+            border-color: #ffc107;
+            background: #fffdf7;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Тест унифицированной авторизации FixariVan</h1>
+    
+    <div class="test-section">
+        <h2>Текущий статус авторизации</h2>
+        <div id="authStatus" class="status info">Проверка...</div>
+        <button class="test-button" onclick="checkAuthStatus()">Обновить статус</button>
+        <button class="test-button" onclick="testLogin()">Тест входа</button>
+        <button class="test-button" onclick="testLogout()">Тест выхода</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Проверка форм с авторизацией</h2>
+        <div class="form-grid">
+            <div class="form-card with-auth">
+                <h3>🔧 Акт приёма (Мастер)</h3>
+                <p>✅ С авторизацией</p>
+                <a href="master_form.html" class="test-button">Открыть</a>
+            </div>
+            
+            <div class="form-card without-auth">
+                <h3>📋 Акт приёма (Клиент)</h3>
+                <p>❌ БЕЗ авторизации (для клиентов)</p>
+                <a href="client_form.html" class="test-button">Открыть</a>
+            </div>
+            
+            <div class="form-card with-auth">
+                <h3>🧾 Квитанция</h3>
+                <p>✅ С авторизацией</p>
+                <a href="receipt.html" class="test-button">Открыть</a>
+            </div>
+            
+            <div class="form-card with-auth">
+                <h3>📱 Диагностика мобильных</h3>
+                <p>✅ С авторизацией (добавлено)</p>
+                <a href="diagnostic_mobile.html" class="test-button">Открыть</a>
+            </div>
+            
+            <div class="form-card with-auth">
+                <h3>💻 Диагностика ПК</h3>
+                <p>✅ С авторизацией</p>
+                <a href="diagnostic_pc.html" class="test-button">Открыть</a>
+            </div>
+            
+            <div class="form-card with-auth">
+                <h3>🔍 Отслеживание</h3>
+                <p>✅ С авторизацией (добавлено)</p>
+                <a href="track.html" class="test-button">Открыть</a>
+            </div>
+            
+            <div class="form-card with-auth">
+                <h3>📦 Космический Склад</h3>
+                <p>✅ С авторизацией</p>
+                <a href="inventory.html" class="test-button">Открыть</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Тест единой системы авторизации</h2>
+        <p><strong>Логика:</strong> Если вы авторизованы в одной форме, вы авторизованы во всех формах!</p>
+        
+        <div class="status info">
+            <h4>📋 Инструкция по тестированию:</h4>
+            <ol>
+                <li>Нажмите "Тест входа" для авторизации</li>
+                <li>Откройте любую форму с авторизацией - модальное окно НЕ должно появляться</li>
+                <li>Откройте <code>client_form.html</code> - должна открыться без авторизации</li>
+                <li>Нажмите "Тест выхода" для выхода из системы</li>
+                <li>Попробуйте открыть любую форму - должно появиться модальное окно авторизации</li>
+            </ol>
+        </div>
+        
+        <button class="test-button" onclick="testAllForms()">Тест всех форм</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Переходы</h2>
+        <a href="index.php" class="test-button">🏠 Главная страница</a>
+        <a href="test_auth.html" class="test-button">🔐 Тест авторизации</a>
+    </div>
+
+    <script src="auth_check.js"></script>
+    <script>
+        // Проверка статуса авторизации
+        function checkAuthStatus() {
+            const isLoggedIn = localStorage.getItem('fixarivan_logged_in');
+            const username = localStorage.getItem('fixarivan_username');
+            const loginTime = localStorage.getItem('fixarivan_login_time');
+            
+            const statusDiv = document.getElementById('authStatus');
+            
+            if (isLoggedIn && username) {
+                const timeAgo = loginTime ? new Date(loginTime).toLocaleString('ru-RU') : 'Неизвестно';
+                statusDiv.className = 'status success';
+                statusDiv.innerHTML = `✅ Авторизован как: <strong>${username}</strong><br>Время входа: ${timeAgo}<br><small>Сессия действительна 24 часа</small>`;
+            } else {
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = '❌ Не авторизован<br><small>При открытии любой формы появится модальное окно авторизации</small>';
+            }
+        }
+        
+        // Тест входа
+        function testLogin() {
+            const success = AuthManager.login('TestUser', '');
+            if (success) {
+                alert('✅ Вход выполнен успешно!\n\nТеперь вы можете открывать любые формы без повторной авторизации.');
+                checkAuthStatus();
+            } else {
+                alert('❌ Ошибка входа');
+            }
+        }
+        
+        // Тест выхода
+        function testLogout() {
+            AuthManager.logout();
+            alert('🚪 Выход выполнен\n\nТеперь при открытии любой формы появится модальное окно авторизации.');
+            checkAuthStatus();
+        }
+        
+        // Тест всех форм
+        function testAllForms() {
+            const forms = [
+                { name: 'master_form.html', title: 'Акт приёма (Мастер)' },
+                { name: 'client_form.html', title: 'Акт приёма (Клиент)' },
+                { name: 'receipt.html', title: 'Квитанция' },
+                { name: 'diagnostic_mobile.html', title: 'Диагностика мобильных' },
+                { name: 'diagnostic_pc.html', title: 'Диагностика ПК' },
+                { name: 'track.html', title: 'Отслеживание' },
+                { name: 'inventory.html', title: 'Космический Склад' }
+            ];
+            
+            let message = '📋 Список форм для тестирования:\n\n';
+            forms.forEach((form, index) => {
+                const status = form.name === 'client_form.html' ? '❌ БЕЗ авторизации' : '✅ С авторизацией';
+                message += `${index + 1}. ${form.title}\n   Файл: ${form.name}\n   Статус: ${status}\n\n`;
+            });
+            
+            message += '💡 Откройте каждую форму и проверьте поведение авторизации!';
+            alert(message);
+        }
+        
+        // Проверка при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
+        });
+    </script>
+</body>
+</html>

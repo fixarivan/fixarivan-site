@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { 
+            font-family: 'DejaVu Sans', Arial, sans-serif; 
+            color: #222; 
+            margin: 0; 
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .header { 
+            text-align: center; 
+            color: #4e6ef2; 
+            border-bottom: 3px solid #4e6ef2;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 8px;
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #4e6ef2, #667eea, #764ba2);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin: 0 0 10px 0;
+            font-weight: bold;
+        }
+        .header p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .company-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4e6ef2;
+        }
+        .block { 
+            border: 1px solid #e0e0e0; 
+            border-radius: 8px; 
+            padding: 20px; 
+            margin: 15px 0;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .block h2 {
+            color: #4e6ef2;
+            font-size: 20px;
+            margin-top: 0;
+            border-bottom: 2px solid #4e6ef2;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 15px;
+            border-radius: 8px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .label { 
+            font-weight: bold; 
+            color: #333; 
+            display: inline-block;
+            min-width: 120px;
+        }
+        
+        .diagnosis-block {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 2px solid #ffc107;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+        }
+        
+        .recommendations-block {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            border: 2px solid #17a2b8;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.2);
+        }
+        .footer { 
+            text-align: center; 
+            color: #888; 
+            font-size: 12px; 
+            margin-top: 30px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+        .section-title {
+            color: #4e6ef2;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 15px 0 10px 0;
+        }
+        .diagnosis-block {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+        .recommendations-block {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>FixariVan</h1>
+        <p>Y-tunnus: 3526510-5 | Телефон: +358 44 954 5263</p>
+        <p>Email: fixarivan@gmail.com | Сайт: www.fixarivan.fi</p>
+    </div>
+    
+    <div class="company-info">
+        <strong>Документ:</strong> {{DOCUMENT_ID}}<br>
+        <strong>Дата создания:</strong> {{DATE}}
+    </div>
+    
+    <div class="section-title">📋 ДИАГНОСТИЧЕСКИЙ ОТЧЁТ</div>
+    
+    <div class="block">
+        <div class="label">Клиент:</div> {{CLIENT_NAME}}<br><br>
+        <div class="label">Телефон:</div> {{CLIENT_PHONE}}<br><br>
+        <div class="label">Email:</div> {{CLIENT_EMAIL}}<br><br>
+        <div class="label">Устройство:</div> {{DEVICE_MODEL}}<br><br>
+        <div class="label">Серийный номер:</div> {{SERIAL_NUMBER}}<br><br>
+        <div class="label">Дата отчёта:</div> {{REPORT_DATE}}
+    </div>
+    
+    <div class="diagnosis-block">
+        <div class="section-title">🔍 ДИАГНОЗ</div>
+        {{DIAGNOSIS}}
+    </div>
+    
+    <div class="recommendations-block">
+        <div class="section-title">💡 РЕКОМЕНДАЦИИ</div>
+        {{RECOMMENDATIONS}}
+    </div>
+    
+    <div class="block">
+        <div class="section-title">💰 СТОИМОСТЬ И ВРЕМЯ</div>
+        <div class="label">Стоимость ремонта:</div> {{REPAIR_COST}} EUR<br><br>
+        <div class="label">Время ремонта:</div> {{REPAIR_TIME}}<br><br>
+        <div class="label">Гарантия:</div> {{WARRANTY}}<br><br>
+        <div class="label">Примечания:</div> {{NOTES}}
+    </div>
+    
+    <div class="footer">
+        <p>Мастер: Sergeev Viacheslav</p>
+        <p>FixariVan - Ремонт и диагностика техники</p>
+        <p>Сгенерировано: {{DATE}}</p>
+    </div>
+</body>
+</html>

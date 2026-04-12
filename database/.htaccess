@@ -1,0 +1,12 @@
+# Защита базы данных
+<FilesMatch "\.(sql|db|sqlite)$">
+    Require all denied
+</FilesMatch>
+
+# Запрещаем просмотр директории
+Options -Indexes
+
+# Защита от прямого доступа
+<FilesMatch ".*">
+    Require all denied
+</FilesMatch>

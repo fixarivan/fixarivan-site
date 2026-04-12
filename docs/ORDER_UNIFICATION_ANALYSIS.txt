@@ -1,0 +1,214 @@
+================================================================================
+FixariVan — Финальная унификация: анализ текущей реализации и выводы
+Дата составления: 2026-03-27
+================================================================================
+
+Раздел 1. КАК СЕЙЧАС УСТРОЕНО (ФАКТИЧЕСКИ)
+--------------------------------------------------------------------------------
+
+orders (SQLite, api/sqlite.php)
+  - Центральная строка заказа: document_id (UNIQUE), опционально order_id, client_id,
+    client_token, статусы, контактные и устройственные поля.
+  - Дополнительно: parts_purchase_total / parts_sale_total, order_type, public_status,
+    public_comment, public_expected_date, order_lines_json.
+  - Отдельной таблицы «акт» нет: акт = запись в orders + просмотр order_view.php по токену.
+
+clients
+  - Таблица clients с client_id (текстовый бизнес-ID), связь с заказами через orders.client_id
+    -> числовой clients.id.
+
+client_portal.php
+  - Загружает заказ WHERE client_token = :token (один заказ на токен).
+  - Документы:
+    * receipts / invoices: WHERE order_id = :o OR document_id = :d — явный fallback по
+      document_id, если order_id не совпал или пустой.
+    * mobile_reports: только WHERE order_id = :o (без fallback по document_id).
+  - Позиции для клиента из order_lines_json (без закупки в выводе).
+  - Отдельного «статуса запчастей» как поля в портале в коде нет.
+
+save_order_fixed.php
+  - Пишет JSON в storage/orders/ + SQLite orders.
+  - client_token генерируется/наследуется при сохранении мастером; привязка клиента через
+    fixarivan_ensure_client, order_id через fixarivan_resolve_order_id_for_document / резолв.
+  - Поддержаны режимы repair / sale / custom и строки позиций с автосуммами.
+
+Отчёты (mobile + PC)
+  - Отдельной таблицы pc_reports в SQLite нет.
+  - И mobile, и PC сохраняются через api/save_report_fixed.php в таблицу mobile_reports
+    (имя таблицы историческое).
+  - order_id подставляется через fixarivan_resolve_client_and_order(): при пустом orderId
+    возможен поиск последнего заказа клиента — риск привязки не к тому заказу.
+
+Квитанции / счета
+  - receipts, invoices: в схеме есть order_id, client_token (свой токен на документ для viewer).
+  - Сохранение: save_receipt_ultimate.php, save_invoice.php + резолв order_id.
+
+track.html
+  - Тянет api/get_all_documents.php -> группировка Client -> Orders -> Documents.
+  - Просмотр/редактирование документов, заявка на запчасти (save_order_supply).
+  - Нет кнопок «портал клиента» / «копировать ссылку» / явного отображения client_token.
+
+client_lookup.php / js/client_autofill.js
+  - Подстановка клиента и при необходимости order_id из последних заказов через API.
+
+Склад
+  - inventory_items + движения; связь с заказом в движениях через ref_kind / ref_id в
+    inventory_movements (не полная сквозная модель «позиция заказа = склад»).
+
+api/lib/documents_query.php
+  - Для типа order в списке viewer_url ведёт на order_view.php?token=, не на client_portal.php.
+
+
+Раздел 2. ПРОВЕРКА: order_id, client_token, fallback
+--------------------------------------------------------------------------------
+
+Сущность              | order_id в SQLite | Типичные пробелы
+----------------------|-------------------|--------------------------------------------------
+orders                | Да                | Часто order_id совпадает с document_id при резолве.
+receipts              | Да                | Может быть NULL; портал ловит через OR document_id.
+invoices              | Да                | Аналогично.
+mobile_reports        | Да                | Может быть NULL; портал не использует OR document_id —
+                      |                   | отчёт пропадёт из портала без order_id.
+«Акт»                 | Нет отд. таблицы  | Всегда есть строка в orders с document_id.
+
+client_token
+  - Хранится в orders.client_token (портал заказа) и отдельно у квитанции/счёта/отчёта
+    для своих *_view.php.
+  - Центральный токен по ТЗ — токен заказа; вторичные токены — для PDF/viewer документа.
+
+Где ссылка в UI
+  - master_form.html / order_new.html: ссылка на client_portal.php после сохранения.
+  - track.html, clients.html: нет быстрых действий «портал / копировать ссылку» по заказу.
+  - documents_query: для заказа viewer_url = order_view, не единый портал.
+
+client_portal и поиск документов
+  - receipts/invoices: order_id ИЛИ костыль document_id.
+  - reports: строго order_id.
+
+
+Раздел 3. ВЫЯВЛЕННЫЕ ПРОБЛЕМЫ
+--------------------------------------------------------------------------------
+
+1. Единый центр заказа в UI не доведён: track и карточка клиента не дают повторно получить
+   client_portal.php?token= по заказу.
+
+2. Жёсткая связь «всё только по order_id» не выполнена: в client_portal.php остаётся
+   OR document_id для квитанций/счетов; отчёты без order_id в портале не видны.
+
+3. Риск неверной привязки отчёта: fixarivan_resolve_client_and_order может взять последний
+   заказ клиента вместо явного order_id.
+
+4. Два «мира» viewer: список документов ведёт на order_view, целевой сценарий — client_portal
+   как единая витрина.
+
+5. Публичные статусы: поля в БД есть, но нет единого UX (список на track, API обновления
+   public_* без полной пересборки формы).
+
+6. Статус запчастей для клиента как отдельная сущность в БД/UI не смоделирован (только
+   косвенно через текст/публичные поля).
+
+7. Склад <-> заказ: движения могут ссылаться на заказ, но нет сквозного правила без дублирования.
+
+8. documents_query / дашборд не синхронизированы с политикой «одна ссылка клиенту».
+
+
+Раздел 4. ПЛАН ВНЕДРЕНИЯ (ЭТАПЫ)
+--------------------------------------------------------------------------------
+
+Этап A — Целостность данных
+  Гарантировать order_id при создании/сохранении квитанции, счёта, отчёта; миграция/скрипт
+  добивки старых строк (задел: api/migrate_order_center.php).
+
+Этап B — Портал только по order_id
+  Убрать необходимость OR document_id после добивки; fallback для legacy опционально.
+
+Этап C — Токен заказа в мастерском UI
+  track.html: «Открыть портал», «Копировать ссылку» (client_portal.php?token=).
+  clients.html: то же для активных заказов; расширить ответ api/clients.php полями
+  client_token из orders.
+
+Этап D — Единая ссылка в списках
+  documents_query.php: для type=order подставлять client_portal (или две ссылки: Акт / Портал).
+
+Этап E — Публичные поля заказа
+  API PATCH/POST для public_* + при необходимости supply_parts_status (новое поле); формы на track.
+
+Этап F — Форма нового заказа
+  Доработать order_new.html: deviceType как select, подписи дат, адаптация полей под тип.
+
+Этап G — Документы «из заказа»
+  Кнопки с track с передачей order_id в URL форм + автосоздание заказа, если документ без заказа.
+
+Этап H — Проверка цен
+  Аудит client_portal и публичных viewer на отсутствие purchase/profit у клиента.
+
+
+Раздел 5. СПИСОК ФАЙЛОВ (ОЖИДАЕМО ЗАТРАГИВАЕМЫХ)
+--------------------------------------------------------------------------------
+
+Данные и связи:
+  api/sqlite.php
+  api/lib/order_center.php
+  api/save_order_fixed.php
+  api/save_receipt_ultimate.php
+  api/save_invoice.php
+  api/save_report_fixed.php
+  api/migrate_order_center.php
+  (опционально) api/order_public_update.php или аналог
+
+Портал и viewer:
+  client_portal.php
+  order_view.php
+  api/lib/documents_query.php
+
+UI:
+  track.html
+  clients.html
+  api/clients.php
+  js/document_manager.js (если используется для track)
+  master_form.html
+  order_new.html
+  dashboard_app.html
+
+Поиск/списки:
+  api/get_all_documents.php
+  api/search_optimized.php
+
+Документация (по запросу):
+  docs/ACCESS_MODEL.md
+  docs/PROJECT_GUIDE.md
+
+
+Раздел 6. DIFF ПЕРВОГО ЭТАПА (РЕКОМЕНДУЕМЫЙ МИНИМУМ)
+--------------------------------------------------------------------------------
+
+1. API clients.php (GET по client_id): для каждого заказа в ответе добавить client_token
+   (и при необходимости короткий portal_path) для UI.
+
+2. clients.html: для активных заказов — кнопки «Портал» и «Копировать ссылку»
+   (client_portal.php?token=...).
+
+3. track.html: в карточке заказа — те же две кнопки + опционально усечённый токен.
+
+4. documents_query.php: для заказов добавить portal_url на client_portal.php (не убирая сразу
+   order_view — можно две ссылки).
+
+Этот этап закрывает блоки 3–4 и часть 12 без ломки БД.
+
+Следующий этап: жёсткая привязка документов к order_id + постепенное удаление OR document_id
+из client_portal.php после миграции данных.
+
+
+Раздел 7. КРИТИЧЕСКИЕ ПРИНЦИПЫ ИЗ ТЗ (НАПОМИНАНИЕ)
+--------------------------------------------------------------------------------
+
+- Центральная сущность = ORDER; CLIENT привязан к ORDER через orders.client_id.
+- Документы не должны жить отдельно от ORDER (целевое состояние: order_id везде).
+- client_token заказа генерируется один раз, хранится в orders, переиспользуется.
+- Клиентский портал: client_portal.php?token=... — без логина; без закупки/маржи для клиента.
+- Не превращать проект в тяжёлую CRM/ERP; минимум полей, максимум пользы для одного мастера.
+
+
+================================================================================
+Конец файла
+================================================================================

@@ -1,0 +1,416 @@
+================================================================================
+FixariVan — полный отчёт: изменения и текущая структура
+Дата отчёта: 05.04.2026
+Последнее обновление разделов: 27.03.2026 — P2 блоки 5–8 (supply/календарь, JSON lib,
+предупреждения даты, портал), единая загрузка заказа (get_document + портал), аудит;
+см. docs/CHANGES_2026-04-05.txt и docs/AUDIT_SESSION_2026-03-27.txt
+================================================================================
+
+Документ описывает состояние кодовой базы на указанную дату: назначение каталогов,
+основные потоки данных, перечень значимых доработок и согласованность интерфейсов
+(заказы, клиенты, финансы, PDF, портал, отчёты диагностики).
+
+
+--------------------------------------------------------------------------------
+1. Краткое резюме
+--------------------------------------------------------------------------------
+
+  • Единый центр заказа: SQLite + JSON-бэкап, client_token, связь с клиентами,
+    складом (order_lines → order_warehouse_lines), календарём закупок (supply),
+    порталом.
+
+  • Потоки order_new ↔ save_order_fixed ↔ Track согласованы: заявка на закуп
+    (supply_request) и синхронизация склада строятся из структурированных
+    позиций order_lines_json; текстовый блок «Заявка на склад» в Track снят.
+
+  • Склад ↔ заказ: supply_request и supply_urgency хранятся в таблице orders;
+    строки со склада учитываются по явному from_stock, а не только по
+    inventory_item_id; напоминания AUTO_SUPPLY в календаре требуют
+    public_expected_date.
+
+  • Track: при вводе артикула (SKU) — подсказки из каталога склада, автоподстановка
+    наименования и цен (закуп/продажа) при точном совпадении SKU или выборе из
+    списка; при сохранении и при GET заказа строки обогащаются inventory_item_id
+    по SKU (fixarivan_enrich_order_lines_inventory_ids).
+
+  • Список покупок (inventory.html): из очереди закупок — кнопки «Приход»
+    (движение с order_warehouse_line_id) и «Убрать из списка» (скрытие без
+    удаления заказа); привязка к карточке склада подтягивается из order_lines_json
+    по SKU/имени, если в order_warehouse_lines не было inventory_item_id.
+
+  • Приход по строке заказа: строка переводится в «arrived» только когда
+    накопленное количество прихода ≥ qty по строке (order_warehouse_lines.qty_received);
+    после полного прихода пересчитывается parts_status / статус заказа
+    (fixarivan_recompute_order_parts_aggregate).
+
+  • Агрегат parts_status = partial: публичный статус заказа остаётся waiting_parts
+    (не переводится в «в работе»), пока не готовы все строки; чип «частично пришло»
+    на портале и в Track согласованы.
+
+  • inventory.html: поле количества в модалке движения — id adjQtyInput (не
+    adjustQuantity), чтобы не конфликтовать с функцией submit; при «Приход» из
+    списка покупок карточка подгружается по id (ensureInventoryItemForId), если
+    её нет в текущем списке из-за поиска/фильтра.
+
+  • Публичные viewer-страницы и портал: ru / en / fi через document_templates
+    и viewer_i18n.
+
+  • Финансы: finance.html опирается на api/finance.php и finance_lib.php
+    (касса по периоду, расход по parts_purchase_total заказов с датой приёма
+    в периоде, сводные KPI).
+
+  • Отчёты диагностики: основные формы — diagnostic_mobile.html и
+    diagnostic_pc.html + save_report_fixed.php. Отдельная unified-форма
+    diagnostic_report.html удалена как лишняя (нет ссылок, файл не входит в SW).
+
+  • В заказ добавлено поле public_estimated_cost (текст «ориентировочная
+    стоимость работы» для портала и шаблона акта).
+
+  • (дополнение 27.03.2026) Календарь AUTO_SUPPLY: при пустой нормализованной
+    public_expected_date удаляются «зависшие» события (fixarivan_create_supply_reminder).
+
+  • (дополнение 27.03.2026) Единое сохранение JSON заказа на диск: api/lib/order_json_storage.php
+    — save_order_fixed, order_track_order_lines, save_order_supply; пути в order_supply /
+    generate_beautiful_client_act согласованы.
+
+  • (дополнение 27.03.2026) P2 блок 7: supply_warning в order_track_patch; Track и order_new
+    показывают предупреждение, если есть закупка без public_expected_date.
+
+  • (дополнение 27.03.2026) Портал: порядок «документы → позиции»; строки и суммы через
+    order_client_portal.php; единая загрузка featured-заказа с get_document:
+    api/lib/order_document_load.php (merge JSON + enrich строк). Исправлен вызов
+    fixarivan_portal_public_order_lines в client_portal.php (аудит).
+
+
+--------------------------------------------------------------------------------
+2. Структура проекта (верхний уровень)
+--------------------------------------------------------------------------------
+
+Корень сайта (PHP + статика):
+
+  admin/              — панель: login, dashboard, documents, reports, settings
+  api/                — REST/JSON endpoints, SQLite, dompdf, библиотеки lib/
+  config/             — database.php и др.
+  css/                — темы (fixarivan-theme.css)
+  docs/               — аналитика, гайды, отчёты (в т.ч. этот файл)
+  generated_pdfs/     — выход PDF; debug_html — отладочный HTML
+  js/                 — core.js, document_manager.js, inventory_sqlite_override.js …
+  pages/              — legacy/альтернативные формы (akt_priema, diagnostika_* …)
+  storage/            — рабочие данные приложения (см. п. 3)
+  tools/              — backup.php и утилиты
+
+Ключевые страницы в корне:
+
+  index.html / index.php     — вход / лендинг
+  track.html                 — операционный трек заказов и клиентов
+  order_new.html             — создание заказа (мастер-форма, портал, быстрые документы)
+  clients.html               — клиенты и заказы с документами
+  client_portal.php          — клиентский портал по token
+  order_view.php             — акт приёма (viewer по token)
+  receipt_view.php, invoice_view.php, report_view.php — просмотр документов
+  finance.html               — финансовая сводка
+  inventory.html, calendar.html, dashboard_app.html, notes.html …
+  receipt.html, invoice.html — формы квитанции и счёта
+  diagnostic_mobile.html, diagnostic_pc.html — отчёты диагностики
+  master_form.html, client_form.html — прочие формы
+  sw.js                      — service worker (кеш статики; версия CACHE_VERSION)
+  manifest.json              — PWA
+
+
+--------------------------------------------------------------------------------
+3. Хранилище данных (storage/)
+--------------------------------------------------------------------------------
+
+  storage/*.db (через api/sqlite.php) — основная БД SQLite:
+    orders, clients, receipts, invoices, mobile_reports, inventory_*, …
+
+  storage/orders/{document_id}.json     — JSON-бэкап заказа (доп. поля, совместимость)
+  storage/orders_tokens/{token}.json    — дублирование по client_token (legacy/viewer)
+  storage/receipts_tokens/, storage/invoices_tokens/, storage/reports — токены документов
+  storage/company_profile.json          — реквизиты для счетов/PDF
+  storage/security_settings.json
+  storage/tmp/                         — временные файлы (в т.ч. rate limit viewer)
+
+
+--------------------------------------------------------------------------------
+4. API: маршрутизация и ключевые модули
+--------------------------------------------------------------------------------
+
+  api/index.php — карта алиасов на скрипты (save_order → save_order_fixed.php и т.д.)
+
+  Заказы:
+    save_order_fixed.php      — создание/обновление заказа, client_id, warehouse, supply
+    get_document.php          — чтение заказа; подмешивание supply из JSON overlay;
+      для заказов order_lines_json обогащается inventory_item_id по SKU (enrich)
+    order_track_patch.php     — быстрый PATCH статуса/внутреннего комментария (Track)
+    order_track_order_lines.php — сохранение позиций из Track, списание, supply_request;
+      финальный JSON позиций через fixarivan_enrich_order_lines_inventory_ids
+    order_purchase_queue.php  — GET очереди закупок (блок на inventory.html)
+    order_purchase_queue_action.php — POST: убрать строку из списка покупок (dismiss)
+    save_order_supply.php     — ручная заявка на закуп (API; UI в Track не используется)
+    inventory_list.php        — каталог склада; GET с q — поиск с LIMIT (подсказки SKU)
+
+  Клиенты:
+    clients.php               — список клиентов, заказы, счета, квитанции; защита удаления
+
+  Финансы:
+    finance.php               — overview, drilldown, export CSV/JSON
+    lib/finance_lib.php       — расчёты периода, выручка, расход по запчастям, налоговая сетка
+
+  Документы и PDF:
+    save_receipt_ultimate.php, save_invoice.php, save_report_fixed.php
+    generate_dompdf_fixed.php — Dompdf; квитанции через dt_render_document_html('receipt', …)
+    lib/document_templates.php — HTML шаблоны order/receipt/invoice/report, dt_translations
+    lib/pdf_receipt_pipeline.php — сохранение HTML-снимка и вспомогательные функции
+    lib/invoice_i18n.php, invoice_i18n.php — локализация счёта
+
+  Просмотр:
+    lib/viewer_i18n.php       — строки портала и публичных страниц
+    lib/viewer_token_guard.php — rate limit, логирование
+
+  Склад и закупки:
+    lib/order_supply.php      — парсинг заявки, calendar/inventory
+    lib/order_warehouse_sync.php — синхронизация строк заказа со складом
+    lib/order_center.php      — вспомогательное создание заказа/идентификаторов
+
+  lib/documents_query.php, get_all_documents.php — списки документов для UI
+
+
+--------------------------------------------------------------------------------
+5. Изменения по темам (сводка за период, вкл. 05.04.2026)
+--------------------------------------------------------------------------------
+
+5.1 Единый поток заказа (order_new ↔ Track ↔ supply ↔ склад)
+
+  Проблема (устранена): позиции order_lines_json попадали в склад, но цепочка
+  «заявка на закупку» (инвентарь + календарь) срабатывала не всегда; get_document
+  не отдавал supply-поля из JSON; supply_request не всегда попадал в SQLite при
+  сохранении из мастер-формы.
+
+  Решение (базовое):
+    • api/lib/order_supply.php — fixarivan_supply_request_from_order_lines(),
+      fixarivan_apply_supply_effects(); строка считается «со склада» только при
+      явном from_stock (не только при наличии inventory_item_id).
+    • api/save_order_fixed.php — запись supply_request / supply_urgency в INSERT
+      и ON CONFLICT UPDATE; при сохранении из мастер-формы с позициями заявка
+      на закуп пересчитывается из order_lines_json; mergeOrderRecord подмешивает
+      supply_* из overlay.
+    • api/save_order_supply.php — тот же fixarivan_apply_supply_effects().
+    • api/get_document.php — fixarivan_merge_order_json_overlay() для supply_*.
+    • api/order_track_order_lines.php — обновление orders.supply_request из
+      позиций при сохранении из Track.
+
+  Напоминание: событие календаря AUTO_SUPPLY создаётся при наличии
+  public_expected_date у заказа; без даты напоминание не ставится.
+
+5.2 Track (track.html)
+
+  Поиск, фильтры, статус для клиента (SELECT + order_track_patch), внутренний
+  комментарий, быстрые ссылки на квитанцию/счёт/отчёты (mobile/pc), портал,
+  подсветка просрочки по public_expected_date при waiting_parts.
+
+  Таблица «Позиции заказа»: сохранение через order_track_order_lines.php;
+  списание со склада по галочке «Со склада» при совпадении SKU или
+  inventory_item_id.
+
+  Удалён устаревший UI «Заявка на склад» (ручной текст name | qty | type |
+  note и кнопка «Сохранить заявку»): единый источник — позиции заказа; подсказка
+  под таблицей про синхронизацию склада и необходимость даты для календаря.
+
+  Подсказки по артикулу: при вводе SKU запрос к api/inventory_list.php?q=…
+  (выпадающий список: наименование, остаток); под полем — строка «На складе:
+  N шт.»; при выборе из списка или при точном совпадении SKU после blur
+  подставляются наименование, закуп € и продажа € со склада; inventory_item_id
+  в data-inv-id и в сохраняемом JSON. Перед «Сохранить позиции» для всех строк
+  вызывается refreshSkuHintForRow — чтобы не терять привязку без blur.
+  Для строк уже списанных со склада поле SKU только для чтения.
+  get_document при загрузке заказа обогащает order_lines_json id по SKU (как при save).
+
+  Обновление (ранее по проекту): ссылка «Отчёт (форма)» (diagnostic_report.html)
+  удалена — остаются только отчёты тел/планшет и ПК.
+
+5.3 order_new.html
+
+  Подсказки по позициям и ремонту; после сохранения — ссылка клиенту на портал
+  и быстрые документы (без unified diagnostic form).
+
+  Поля портала: статус, ориентировочная дата, комментарий, ориентировочная
+  стоимость работы (publicEstimatedCost → public_estimated_cost).
+
+  Prefill из query: client_name, client_phone, client_email.
+
+5.4 Схема orders (SQLite)
+
+  Миграции в api/sqlite.php: в т.ч. колонка public_estimated_cost TEXT для
+  ориентировочной стоимости работ (текст для клиента); при отсутствии колонок
+  добавляются supply_request TEXT и supply_urgency TEXT (согласованность с
+  закупкой и календарём при хранении только в SQLite).
+
+  save_order_fixed.php, order_center.php — запись поля в INSERT orders.
+
+5.5 Клиентский портал и акт (viewer)
+
+  client_portal.php — отображение public_estimated_cost (ключ work_cost в
+  fixarivan_viewer_portal_ui).
+
+  api/lib/document_templates.php — секция «Информация для клиента» в акте
+  (dt_section_order): public_status, public_expected_date, public_estimated_cost,
+  public_comment; маппинг в dt_merge_data: publicEstimatedCost, publicComment,
+  publicExpectedDate, publicStatus.
+
+5.6 Квитанции, счета, PDF
+
+  Квитанция PDF: шаблон через dt_render_document_html('receipt', …);
+  invoice_view.php использует ui из словаря локализации; merge invoice_i18n +
+    document_templates.
+
+5.7 Финансы (finance.html)
+
+  Логика страницы согласована с API:
+    summary.income ≈ revenue.total (касса за период);
+    summary.expense_parts_manual — сумма parts_purchase_total по заказам с
+      датой приёма в периоде;
+    summary.approx_profit — разница;
+    неоплаченное — квитанции unpaid + счета open.
+
+5.8 Удаление diagnostic_report.html
+
+  Файл diagnostic_report.html удалён; ссылки убраны из order_new.html и
+  track.html; sw.js — исключён из STATIC_FILES, CACHE_VERSION обновлён;
+  update_html_integration.php — убрана запись для этого файла.
+
+  Диагностика по-прежнему: diagnostic_mobile.html, diagnostic_pc.html →
+  save_report_fixed.php.
+
+5.9 Сводка изменений и улучшений за 05.04.2026 (детально)
+
+  Склад и заказ
+    • Исправлена цепочка: позиции заказа → order_warehouse_lines, supply_request
+      в БД, эффекты закупки/календаря; устранены случаи, когда строки с привязкой
+      к складу не участвовали в supply из-за эвристики «только inventory_item_id».
+    • supply_request и supply_urgency персистентны в SQLite (orders); запись при
+      save_order_fixed и пересчёт из позиций при сохранении из Track.
+
+  Track
+    • Убран блок «Заявка на склад» (pipe-формат); осталась таблица позиций и
+      сохранение через order_track_order_lines.php.
+    • UX по SKU: автодополнение из inventory_list, отображение остатка и названия,
+      передача inventory_item_id при сохранении строки.
+
+  API
+    • inventory_list.php: для запросов с параметром q добавлен ORDER BY … LIMIT
+      (по умолчанию до 40 позиций, max 100 через &limit=), чтобы поиск не
+      отдавал весь каталог.
+
+  Эксплуатация
+    • Для напоминаний о закупке в календаре задайте клиенту/заказу
+      public_expected_date (портал или данные заказа).
+
+5.10 Доработки 27.03.2026 — склад, Track, очередь закупок (для оценки работ)
+
+  Цель: согласовать Track с каталогом склада, упростить приход по заказам из
+  списка покупок, корректно переводить статус заказа после полного прихода.
+
+  inventory.html + js/inventory_sqlite_override.js
+    • Блок «Список покупок / Напоминания о заказе»: кнопки «Приход» (модалка
+      движения с pendingOwlArrival → order_warehouse_line_id, order_id в
+      inventory_movement.php) и «Убрать из списка» (POST order_purchase_queue_action.php,
+      таблица purchase_list_dismissals).
+    • window.orderPurchaseQueueLines; сброс pendingOwlArrival в closeAdjustModal.
+
+  api/order_purchase_queue.php
+    • fixarivan_resolve_inventory_item_id_for_order_line() (lib/order_supply.php):
+      id из order_lines_json (SKU / inventory_item_id) или однозначное имя в
+      inventory_items; запись в order_warehouse_lines при первом разрешении.
+
+  api/lib/order_supply.php
+    • Новая функция fixarivan_resolve_inventory_item_id_for_order_line.
+
+  api/sqlite.php
+    • order_warehouse_lines.qty_received; бэкап для старых строк со статусом arrived.
+
+  api/inventory_movement.php
+    • Приход по owl: накопление qty_received; status = arrived только при полном
+      количестве; fixarivan_recompute_order_parts_aggregate всегда;
+      fixarivan_clear_supply_calendar_for_order при полном приходе строки.
+
+  api/order_track_order_lines.php + api/get_document.php
+    • После сборки строк — fixarivan_enrich_order_lines_inventory_ids в JSON;
+      при GET заказа — enrich order_lines_json для отображения в Track.
+
+  track.html
+    • applyInventoryItemToOrderLine, inventoryItemCostFields — автозаполнение
+      полей строки при совпадении SKU с каталогом; обновлён orderLinesHint;
+      перед сохранением позиций — await refreshSkuHintForRow для каждой строки.
+
+  api/index.php
+    • Алиас purchase_queue_action → order_purchase_queue_action.php.
+
+  Критерии оценки (реализация)
+    • Полнота: цепочка SKU → карточка склада → приход → статус заказа закрыта
+      с учётом количества по строке.
+    • Устойчивость: dismiss не ломает заказ в Track; частичный приход не
+      переводит строку в arrived преждевременно.
+    • UX: меньше ручного ввода в Track; меньше «нет привязки к складу» при
+      наличии SKU в позициях заказа.
+
+5.11 Дополнение 27.03.2026 (итерация 2) — модалка прихода, статусы, поиск на складе
+
+  Проблемы (устранены)
+    • Кнопка «Применить» в модалке прихода не вызывала API: у input был id
+      adjustQuantity — в window перекрывалась глобальная функция adjustQuantity
+      из inventory_sqlite_override.js. Решение: id поля → adjQtyInput; submit
+      вызывает window.adjustQuantity().
+    • «Приход» из списка покупок при активном узком поиске: позиция с нужным
+      inventory_item_id отсутствовала в массиве inventory (loadInventory отдаёт
+      только совпадения по q). Решение: ensureInventoryItemForId() — GET
+      inventory_list.php?id=…, merge в inventory; вызывается в
+      openPurchaseArrivalFromQueue и в adjustQuantity перед движением.
+    • Частичная комплектация (одна строка со склада, другая в закупке) переводила
+      заказ в «в работе». Решение: в fixarivan_recompute_order_parts_aggregate
+      при agg === partial → order_status / public_status = waiting_parts (как при
+      waiting); in_progress при полной готовности строк (ready).
+    • В Track не отображался агрегат запчастей (на портале — «частично пришло»).
+      Решение: в groupDocuments передаётся parts_status из orders; в карточке заказа
+      бейдж «Запчасти: …» с теми же смыслами, что чип на client_portal.php.
+
+
+--------------------------------------------------------------------------------
+6. Зависимости и заметки
+--------------------------------------------------------------------------------
+
+  • Service Worker: после деплоя проверить обновление кеша (CACHE_VERSION в sw.js).
+
+  • Документация docs/ORDER_UNIFICATION_ANALYSIS.txt — аналитика по унификации
+    заказов; docs/PROJECT_GUIDE.md, ACCESS_MODEL.md — архитектура и доступ.
+
+  • Legacy формы в pages/ и save_report_ultimate.php могут сосуществовать с
+    save_report_fixed.php — при правках ориентироваться на актуальные endpoints
+    в api/index.php.
+
+
+--------------------------------------------------------------------------------
+7. Итог
+--------------------------------------------------------------------------------
+
+На 05.04.2026 проект представляет собой связку SQLite + файлового storage,
+единые потоки заказа и закупки между order_new и Track (позиции заказа как
+источник правды для склада и supply_request), локализованный портал и PDF на
+document_templates, финансовую сводку с явными правилами периода и отчёты
+диагностики через две основные формы без отдельной «unified» HTML-формы.
+В Track упрощён ввод складских позиций: подсказки по SKU, остаткам и автозаполнение
+цен/названия из каталога; при сохранении и загрузке заказа JSON позиций согласован
+с inventory_items по SKU. На складе (27.03.2026): список покупок с приходом по
+order_warehouse_line_id, dismiss, qty_received; исправлены конфликт id модалки и
+подгрузка карточки по id при фильтре/поиске. Статусы: при partial заказ остаётся
+в ожидании запчастей до готовности всех строк; в Track показан parts_status как
+на портале.
+
+  Дополнение (27.03.2026): закрыты пункты ТЗ P2 по блокам 5–8 в части supply/календаря,
+  дублирования записи JSON, предупреждений о дате, структуры портала и единого источника
+  загрузки заказа для API и портала; подробности — docs/CHANGES_2026-04-05.txt.
+
+
+================================================================================
+Конец отчёта
+================================================================================

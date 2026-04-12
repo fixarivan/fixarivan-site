@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixariVan - Админ Панель</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .btn { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn:hover { background: #0056b3; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 FixariVan - Админ Панель</h1>
+        
+        <div class="section">
+            <h2>📊 База данных</h2>
+            <button class="btn" onclick="testDatabase()">Тест БД</button>
+            <button class="btn btn-danger" onclick="clearDatabase()">Очистить документы</button>
+            <div id="dbStatus"></div>
+        </div>
+        
+        <div class="section">
+            <h2>📦 Склад</h2>
+            <button class="btn" onclick="syncInventory()">Безопасная синхронизация</button>
+            <button class="btn btn-danger" onclick="clearInventory()">Очистить склад</button>
+            <div id="inventoryStatus"></div>
+        </div>
+    </div>
+
+    <script>
+        async function testDatabase() {
+            const status = document.getElementById('dbStatus');
+            status.innerHTML = '<div class="status warning">⏳ Тестирование БД...</div>';
+
+            try {
+                const response = await fetch('./api/health.php', { cache: 'no-store' });
+                const result = await response.json();
+                const d = result.data || {};
+                const ok = result.success === true && d.sqlite_file && d.sqlite_file.reachable === true;
+                if (ok) {
+                    status.innerHTML = `
+                        <div class="status success">
+                            ✅ SQLite доступна (storage/fixarivan.sqlite)<br>
+                            Хранилище: ${d.storage && d.storage.writable ? 'запись OK' : 'нет записи'} ·
+                            pdo_sqlite: ${d.extensions && d.extensions.pdo_sqlite ? 'да' : 'нет'}
+                        </div>
+                    `;
+                } else {
+                    const err = (d.sqlite_file && d.sqlite_file.error) ? d.sqlite_file.error : (result.message || 'Проверка не пройдена');
+                    status.innerHTML = '<div class="status error">❌ Проблемы: ' + err + '</div>';
+                }
+            } catch (error) {
+                status.innerHTML = '<div class="status error">❌ Ошибка: ' + error.message + '</div>';
+            }
+        }
+        
+        async function clearDatabase() {
+            if (!confirm('Вы уверены, что хотите очистить все документы?')) return;
+            
+            const status = document.getElementById('dbStatus');
+            status.innerHTML = '<div class="status warning">⏳ Очистка документов...</div>';
+            
+            try {
+                const response = await fetch('./api/clear_database.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({confirm: 'YES_CLEAR_DATABASE'})
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    status.innerHTML = '<div class="status success">✅ Документы очищены: ' + result.message + '</div>';
+                } else {
+                    status.innerHTML = '<div class="status error">❌ Ошибка: ' + result.message + '</div>';
+                }
+            } catch (error) {
+                status.innerHTML = '<div class="status error">❌ Ошибка: ' + error.message + '</div>';
+            }
+        }
+        
+        async function clearInventory() {
+            if (!confirm('Вы уверены, что хотите очистить весь склад?')) return;
+
+            const status = document.getElementById('inventoryStatus');
+            status.innerHTML = '<div class="status warning">⏳ Очистка склада...</div>';
+
+            try {
+                const response = await fetch('./api/clear_inventory_ultimate.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({confirm: 'YES_DELETE_INVENTORY'})
+                });
+
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const removed = result.total_deleted !== undefined ? `Удалено позиций: ${result.total_deleted}` : '';
+                    status.innerHTML = `<div class="status success">✅ Склад очищен. ${removed}</div>`;
+                } else {
+                    status.innerHTML = '<div class="status error">❌ Ошибка: ' + (result.message || 'Неизвестная ошибка') + '</div>';
+                }
+            } catch (error) {
+                status.innerHTML = '<div class="status error">❌ Ошибка: ' + error.message + '</div>';
+            }
+        }
+
+        async function syncInventory() {
+            const status = document.getElementById('inventoryStatus');
+            status.innerHTML = '<div class="status warning">⏳ Синхронизация склада...</div>';
+
+            try {
+                const response = await fetch('./api/safe_sync_inventory.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({})
+                });
+
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    status.innerHTML = '<div class="status success">✅ Склад синхронизирован: ' + (result.message || 'успех') + '</div>';
+                } else {
+                    status.innerHTML = '<div class="status error">❌ Ошибка синхронизации: ' + (result.message || 'Неизвестная ошибка') + '</div>';
+                }
+            } catch (error) {
+                status.innerHTML = '<div class="status error">❌ Ошибка: ' + error.message + '</div>';
+            }
+        }
+    </script>
+</body>
+</html>

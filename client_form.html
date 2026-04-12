@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixariVan - Акт приёма (Клиент)</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+    <!-- Авторизация удалена для клиентской формы -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .company-info {
+            background: rgba(255, 255, 255, 0.95);
+            margin: 20px auto;
+            max-width: 1000px;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .company-logo {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .logo-square {
+            width: 60px;
+            height: 60px;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 8px;
+        }
+
+        .company-details h2 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .business-id {
+            margin: 5px 0 0 0;
+            color: #888;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .company-contact {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .contact-label {
+            font-weight: 600;
+            color: #555;
+            min-width: 70px;
+        }
+
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .language-switcher {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .lang-btn {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .lang-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        #patternCanvas, #signatureCanvas {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: crosshair;
+            display: block;
+            margin: 10px 0;
+            touch-action: none;
+        }
+
+        .signature-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .signature-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .clear-signature {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .signature-status {
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .signature-status.has-signature {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .checkbox-consent {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+        }
+
+        .checkbox-consent input {
+            margin-top: 3px;
+            transform: scale(1.3);
+        }
+
+        .checkbox-consent label {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #856404;
+        }
+
+        .submit-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .submit-btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .submit-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .message-box {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .message-box.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message-box.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .form-container { padding: 20px; }
+            .company-contact { grid-template-columns: 1fr; }
+            .signature-controls { flex-direction: column; align-items: stretch; }
+            #signatureCanvas { height: 150px !important; }
+            #patternCanvas { width: 100%; height: 250px !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Акт приёма техники</h1>
+            <p>FixariVan - Форма для клиентов</p>
+        </div>
+
+        <div class="company-info">
+            <div class="company-logo">
+                <div class="logo-square">FV</div>
+                <div class="company-details">
+                    <h2>FixariVan</h2>
+                    <p class="business-id">Y-tunnus: 3526510-5</p>
+                </div>
+            </div>
+            <div class="company-contact">
+                <div class="contact-item">
+                    <span class="contact-label">Телефон:</span>
+                    <span>+358 44 954 5263</span>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-label">Email:</span>
+                    <span>fixarivan@gmail.com</span>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-label">Сайт:</span>
+                    <span>www.fixarivan.fi</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-container">
+            <div class="language-switcher">
+                <button class="lang-btn active" data-lang="ru">🇷🇺 RU</button>
+                <button class="lang-btn" data-lang="en">🇬🇧 EN</button>
+                <button class="lang-btn" data-lang="fi">🇫🇮 FI</button>
+            </div>
+
+            <form id="clientForm">
+                <!-- Client Info -->
+                <div class="form-section">
+                    <h2 class="section-title" data-lang="client_info">👤 Информация о клиенте</h2>
+                    <div class="form-group">
+                        <label data-lang="client_name">ФИО *</label>
+                        <input type="text" id="clientName" required>
+                    </div>
+                    <div class="form-group">
+                        <label data-lang="client_phone">Телефон *</label>
+                        <input type="tel" id="clientPhone" required>
+                    </div>
+                    <div class="form-group">
+                        <label data-lang="client_email">Email</label>
+                        <input type="email" id="clientEmail">
+                    </div>
+                </div>
+
+                <!-- Device Info -->
+                <div class="form-section">
+                    <h2 class="section-title" data-lang="device_info">📱 Информация об устройстве</h2>
+                    <div class="form-group">
+                        <label data-lang="device_type">Тип устройства *</label>
+                        <select id="deviceType" required>
+                            <option value="">Выберите тип</option>
+                            <option value="mobile">Смартфон</option>
+                            <option value="tablet">Планшет</option>
+                            <option value="laptop">Ноутбук</option>
+                            <option value="pc">Компьютер</option>
+                            <option value="other">Другое</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label data-lang="device_model">Модель *</label>
+                        <input type="text" id="deviceModel" required>
+                    </div>
+                    <div class="form-group">
+                        <label data-lang="device_password">Пароль устройства</label>
+                        <input type="text" id="devicePassword">
+                    </div>
+                    
+                    <!-- ГРАФИЧЕСКОЕ ПОЛЕ ДЛЯ ПАРОЛЯ -->
+                    <div class="form-group">
+                        <label data-lang="pattern_password">🔐 Графический пароль</label>
+                        <canvas id="patternCanvas" width="300" height="300"></canvas>
+                        <button type="button" class="btn-secondary" onclick="clearPattern()">Очистить графический пароль</button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label data-lang="device_problem">Описание проблемы *</label>
+                        <textarea id="deviceProblem" rows="4" required></textarea>
+                    </div>
+                </div>
+
+                <!-- Digital Signature -->
+                <div class="signature-section">
+                    <h3 class="section-title" data-lang="digital_signature">✍️ Цифровая подпись</h3>
+                    <canvas id="signatureCanvas" width="600" height="200"></canvas>
+                    <div class="signature-controls">
+                        <button type="button" id="clearSignature" class="clear-signature" data-lang="clear">Очистить</button>
+                        <span id="signatureStatus" class="signature-status" data-lang="sig_required">Подпись обязательна</span>
+                    </div>
+                </div>
+
+                <!-- Consent -->
+                <div class="checkbox-consent">
+                    <input type="checkbox" id="consent" required>
+                    <label for="consent" data-lang="consent_text">
+                        Я подтверждаю, что устройство принято на диагностику. FixariVan не несёт ответственности за данные на устройстве. Резервная копия данных выполнена. В случае отказа от ремонта может взиматься плата за диагностику.
+                    </label>
+                </div>
+
+                <div id="messageBox" class="message-box"></div>
+
+                <button type="submit" class="submit-btn" data-lang="submit">Отправить</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Client access must be only through token viewer.
+        (function initTokenGuard() {
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token');
+            const lang = params.get('lang') || 'ru';
+
+            if (token) {
+                window.location.replace(`./order_view.php?token=${encodeURIComponent(token)}&lang=${encodeURIComponent(lang)}`);
+                return;
+            }
+
+            const box = document.getElementById('messageBox');
+            if (box) {
+                box.textContent = 'Акт доступен только по ссылке с token.';
+                box.style.display = 'block';
+            }
+
+            const form = document.getElementById('clientForm');
+            const submitBtn = form?.querySelector('button[type="submit"], .submit-btn');
+            if (submitBtn) submitBtn.disabled = true;
+        })();
+
+        const translations = {
+            ru: {
+                client_info: '👤 Информация о клиенте',
+                client_name: 'ФИО *',
+                client_phone: 'Телефон *',
+                client_email: 'Email',
+                device_info: '📱 Информация об устройстве',
+                device_type: 'Тип устройства *',
+                device_model: 'Модель *',
+                device_password: 'Пароль устройства',
+                pattern_password: '🔐 Графический пароль',
+                device_problem: 'Описание проблемы *',
+                digital_signature: '✍️ Цифровая подпись',
+                clear: 'Очистить',
+                sig_required: 'Подпись обязательна',
+                sig_completed: 'Подпись завершена',
+                consent_text: 'Я подтверждаю, что устройство принято на диагностику. FixariVan не несёт ответственности за данные на устройстве. Резервная копия данных выполнена. В случае отказа от ремонта может взиматься плата за диагностику.',
+                submit: 'Отправить'
+            },
+            en: {
+                client_info: '👤 Client Information',
+                client_name: 'Full Name *',
+                client_phone: 'Phone *',
+                client_email: 'Email',
+                device_info: '📱 Device Information',
+                device_type: 'Device Type *',
+                device_model: 'Model *',
+                device_password: 'Device Password',
+                pattern_password: '🔐 Graphical Password',
+                device_problem: 'Problem Description *',
+                digital_signature: '✍️ Digital Signature',
+                clear: 'Clear',
+                sig_required: 'Signature required',
+                sig_completed: 'Signature completed',
+                consent_text: 'I confirm that the device is accepted for diagnostics. FixariVan is not responsible for data on the device. Data backup has been made. In case of repair refusal, a diagnostic fee may be charged.',
+                submit: 'Submit'
+            },
+            fi: {
+                client_info: '👤 Asiakkaan tiedot',
+                client_name: 'Koko nimi *',
+                client_phone: 'Puhelin *',
+                client_email: 'Sähköposti',
+                device_info: '📱 Laitteen tiedot',
+                device_type: 'Laitteen tyyppi *',
+                device_model: 'Malli *',
+                device_password: 'Laitteen salasana',
+                pattern_password: '🔐 Graafinen salasana',
+                device_problem: 'Ongelma kuvaus *',
+                digital_signature: '✍️ Digitaalinen allekirjoitus',
+                clear: 'Tyhjennä',
+                sig_required: 'Allekirjoitus vaaditaan',
+                sig_completed: 'Allekirjoitus valmis',
+                consent_text: 'Vahvistan, että laite on vastaanotettu diagnostiikkaa varten. FixariVan ei ole vastuussa laitteen tiedoista. Tietojen varmuuskopio on tehty. Korjauksen kieltäytymisestä voidaan periä diagnostiikkamaksu.',
+                submit: 'Lähetä'
+            }
+        };
+
+        let currentLanguage = 'ru';
+        let hasSignature = false;
+        let patternData = '';
+
+        // Language switcher
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const lang = this.getAttribute('data-lang');
+                currentLanguage = lang;
+                
+                document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                Object.keys(translations[lang]).forEach(key => {
+                    const elements = document.querySelectorAll(`[data-lang="${key}"]`);
+                    elements.forEach(el => {
+                        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                            el.placeholder = translations[lang][key];
+                        } else {
+                            el.textContent = translations[lang][key];
+                        }
+                    });
+                });
+            });
+        });
+
+        // Pattern canvas
+        const patternCanvas = document.getElementById('patternCanvas');
+        const patternCtx = patternCanvas.getContext('2d');
+        let isDrawingPattern = false;
+
+        patternCtx.strokeStyle = '#667eea';
+        patternCtx.lineWidth = 3;
+        patternCtx.lineCap = 'round';
+
+        patternCanvas.addEventListener('mousedown', e => {
+            isDrawingPattern = true;
+            const rect = patternCanvas.getBoundingClientRect();
+            patternCtx.beginPath();
+            patternCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        patternCanvas.addEventListener('mousemove', e => {
+            if (!isDrawingPattern) return;
+            const rect = patternCanvas.getBoundingClientRect();
+            patternCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            patternCtx.stroke();
+        });
+
+        patternCanvas.addEventListener('mouseup', () => {
+            isDrawingPattern = false;
+            patternData = patternCanvas.toDataURL();
+        });
+
+        // Touch events for pattern
+        patternCanvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            patternCanvas.dispatchEvent(mouseEvent);
+        });
+
+        patternCanvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            patternCanvas.dispatchEvent(mouseEvent);
+        });
+
+        patternCanvas.addEventListener('touchend', () => {
+            isDrawingPattern = false;
+            patternData = patternCanvas.toDataURL();
+        });
+
+        function clearPattern() {
+            patternCtx.clearRect(0, 0, patternCanvas.width, patternCanvas.height);
+            patternData = '';
+        }
+
+        // Signature canvas
+        const canvas = document.getElementById('signatureCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('touchstart', handleTouch);
+        canvas.addEventListener('touchmove', handleTouch);
+        canvas.addEventListener('touchend', stopDrawing);
+
+        function handleTouch(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 'mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            ctx.beginPath();
+            ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            ctx.stroke();
+            updateSignatureStatus();
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+            updateSignatureStatus();
+        }
+
+        document.getElementById('clearSignature').addEventListener('click', function() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasSignature = false;
+            updateSignatureStatus();
+        });
+
+        function updateSignatureStatus() {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            hasSignature = Array.from(imageData.data).some((v, i) => i % 4 === 3 && v > 0);
+            
+            const status = document.getElementById('signatureStatus');
+            if (hasSignature) {
+                status.textContent = translations[currentLanguage].sig_completed;
+                status.classList.add('has-signature');
+            } else {
+                status.textContent = translations[currentLanguage].sig_required;
+                status.classList.remove('has-signature');
+            }
+        }
+
+        // Form submission
+        document.getElementById('clientForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!hasSignature) {
+                alert('Требуется цифровая подпись!');
+                return;
+            }
+
+            if (!document.getElementById('consent').checked) {
+                alert('Необходимо согласие с условиями!');
+                return;
+            }
+
+            const submitBtn = this.querySelector('.submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Отправка...';
+
+            // Генерируем уникальный код для клиентской формы
+            const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+            const random = Math.random().toString(36).substr(2, 4).toUpperCase();
+            const documentId = `CLIENT-${timestamp}-${random}`;
+
+            const formData = {
+                documentId: documentId, // ДОБАВЛЕНО: documentId для клиентской формы
+                clientName: document.getElementById('clientName').value,
+                clientPhone: document.getElementById('clientPhone').value,
+                clientEmail: document.getElementById('clientEmail').value,
+                deviceType: document.getElementById('deviceType').value,
+                deviceModel: document.getElementById('deviceModel').value,
+                devicePassword: document.getElementById('devicePassword').value,
+                problemDescription: document.getElementById('deviceProblem').value, // ИСПРАВЛЕНО: deviceProblem -> problemDescription
+                patternData: patternData,
+                signatureData: canvas.toDataURL(),
+                clientConsent: true,
+                language: currentLanguage,
+                isMasterForm: false
+            };
+
+            try {
+                const response = await fetch('./api/save_order_fixed.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('Акт успешно создан! PDF скачивается...', 'success');
+                    await generatePDF(formData);
+                    this.reset();
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    clearPattern();
+                    hasSignature = false;
+                } else {
+                    showMessage('Ошибка: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка подключения к серверу', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = translations[currentLanguage].submit;
+            }
+        });
+
+        function showMessage(message, type) {
+            const box = document.getElementById('messageBox');
+            box.textContent = message;
+            box.className = `message-box ${type}`;
+            box.style.display = 'block';
+            setTimeout(() => box.style.display = 'none', 5000);
+        }
+
+        async function generatePDF(data) {
+            try {
+                const response = await fetch('./api/generate_beautiful_client_act.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        documentId: data.documentId,
+                        documentType: 'order'
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.pdf_url) {
+                        window.open(result.pdf_url, '_blank');
+                    } else if (result.download_url) {
+                        const link = document.createElement('a');
+                        link.href = result.download_url;
+                        link.download = result.filename;
+                        link.click();
+                    }
+                } else {
+                    showMessage('Ошибка генерации PDF: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка генерации PDF: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

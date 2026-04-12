@@ -1,0 +1,4 @@
+# Запрет прямого HTTP-доступа к файлам в storage (SQLite, admin_auth.json и т.д.)
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>

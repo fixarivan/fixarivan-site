@@ -1,0 +1,658 @@
+/* FixariVan — мобильная вёрстка: только layout, без смены темы/цветов */
+
+/* -------------------------------------------------------------------------- */
+/* Часть 1–4: глобально на узких экранах (подключается только на нужных страницах) */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    html,
+    body {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* Часть 3: контейнеры не шире экрана */
+    .container,
+    .page,
+    .layout,
+    .card,
+    .top,
+    .controls {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Часть 4: шапки и верхние полосы */
+    header,
+    .header {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Страница: склад — inventory.html (.inventory-page) */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    /* Порядок: шапка страницы → поиск/фильтры → товары → аналитика → графики */
+    .inventory-page .container {
+        display: flex;
+        flex-direction: column;
+        padding-top: 16px;
+        padding-bottom: 24px;
+        padding-left: max(12px, env(safe-area-inset-left, 0px));
+        padding-right: max(12px, env(safe-area-inset-right, 0px));
+    }
+
+    .inventory-page .container > .page-header {
+        order: 1;
+        margin-bottom: 12px;
+        padding: 12px 14px;
+        min-width: 0;
+    }
+
+    .inventory-page .container > .controls {
+        order: 2;
+        margin-bottom: 12px;
+        padding: 12px 14px;
+        min-width: 0;
+    }
+
+    .inventory-page .container > #inventoryGrid {
+        order: 3;
+        margin-bottom: 16px;
+        min-width: 0;
+    }
+
+    .inventory-page .container > .stats-grid:nth-child(2) {
+        order: 4;
+    }
+
+    .inventory-page .container > #salesAnalyticsGrid {
+        order: 5;
+    }
+
+    .inventory-page .container > #usageChartSection {
+        order: 6;
+    }
+
+    .inventory-page .container > #analyticsSummarySection {
+        order: 7;
+    }
+
+    .inventory-page .page-title {
+        font-size: 1.35rem;
+        line-height: 1.2;
+    }
+
+    .inventory-page .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    /* Кнопки действий — сетка 2×2, компактнее */
+    .inventory-page .inventory-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        align-items: stretch;
+        min-width: 0;
+    }
+
+    .inventory-page .inventory-actions .btn {
+        width: 100%;
+        max-width: 100%;
+        margin-bottom: 0;
+        box-sizing: border-box;
+        padding: 10px 12px;
+        font-size: 14px;
+        line-height: 1.25;
+        min-height: 44px;
+    }
+
+    /* Сетка карточек товара */
+    .inventory-page #inventoryGrid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        max-width: 100%;
+        box-sizing: border-box;
+        min-width: 0;
+    }
+
+    .inventory-page #inventoryGrid .item-card.order-queue-card {
+        grid-column: 1 / -1;
+    }
+
+    /* Аналитика: 2 колонки, низкие карточки — внизу страницы */
+    .inventory-page .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 12px;
+        margin-top: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .inventory-page #salesAnalyticsGrid {
+        margin-top: 0 !important;
+    }
+
+    .inventory-page .stat-card {
+        padding: 10px;
+        border-radius: 12px;
+        border-width: 1px;
+    }
+
+    .inventory-page .stat-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .inventory-page .stat-icon {
+        font-size: 28px;
+        line-height: 1;
+        margin-bottom: 6px;
+    }
+
+    .inventory-page .stat-value {
+        font-size: 16px;
+        margin-bottom: 4px;
+        line-height: 1.15;
+    }
+
+    .inventory-page .stat-label {
+        font-size: 11px;
+        line-height: 1.25;
+        font-weight: 600;
+    }
+
+    .inventory-page .stat-content {
+        min-width: 0;
+    }
+
+    /* Поиск и фильтры */
+    .inventory-page .search-container {
+        margin-bottom: 8px;
+        gap: 8px;
+    }
+
+    .inventory-page .search-bar {
+        min-width: 0 !important;
+        padding: 8px 12px;
+        border-radius: 10px;
+    }
+
+    .inventory-page .search-bar input {
+        font-size: 16px;
+    }
+
+    .inventory-page .voice-btn {
+        font-size: 20px;
+    }
+
+    .inventory-page .filter-chips {
+        gap: 6px;
+    }
+
+    .inventory-page .chip {
+        padding: 6px 10px;
+        font-size: 12px;
+        border-radius: 16px;
+        border-width: 1px;
+    }
+
+    .inventory-page .header {
+        flex-wrap: wrap;
+        min-width: 0;
+    }
+
+    .inventory-page .header .nav-links {
+        flex-wrap: wrap;
+        min-width: 0;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .inventory-page .logo {
+        min-width: 0;
+    }
+
+    /* Пустое состояние поиска */
+    .inventory-page .inventory-empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 28px 14px;
+    }
+
+    .inventory-page .inventory-empty-state .inventory-empty-icon {
+        font-size: 40px;
+        margin-bottom: 10px;
+        line-height: 1;
+    }
+
+    .inventory-page .inventory-empty-state h3 {
+        font-size: 1.05rem !important;
+        margin-bottom: 6px !important;
+    }
+
+    .inventory-page .inventory-empty-state p {
+        font-size: 0.88rem !important;
+    }
+
+    /* Графики — компактнее */
+    .inventory-page .chart-container {
+        padding: 12px 14px;
+        margin-bottom: 12px;
+    }
+
+    .inventory-page .chart-title {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+    }
+
+    /* Карточки товаров: чуть плотнее, без раздувания */
+    .inventory-page .item-card {
+        padding: 14px 12px;
+        border-radius: 14px;
+    }
+
+    .inventory-page .item-header {
+        margin-bottom: 10px;
+    }
+
+    .inventory-page .item-name {
+        font-size: 16px;
+        margin-bottom: 8px;
+    }
+
+    .inventory-page .item-details {
+        margin-bottom: 10px;
+        font-size: 13px;
+    }
+
+    .inventory-page .item-quantity {
+        padding: 10px 12px;
+        margin-bottom: 10px;
+    }
+
+    .inventory-page .quantity-value {
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 480px) {
+    .inventory-page .stats-grid,
+    .inventory-page #inventoryGrid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Страница: Track — track.html (.track-page) */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .track-page .top {
+        flex-wrap: wrap;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .track-page .layout {
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .track-page .card {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .track-page .search-row {
+        min-width: 0;
+    }
+
+    .track-page .list {
+        max-width: 100%;
+    }
+
+    .track-page .order-lines-table-wrap {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    body.track-page {
+        padding-left: max(12px, env(safe-area-inset-left, 0px));
+        padding-right: max(12px, env(safe-area-inset-right, 0px));
+    }
+}
+
+@media (max-width: 480px) {
+    .track-page .doc-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .track-page .doc-actions button {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Страница: рабочий стол — dashboard_app.html (.dashboard-page) */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .dashboard-page .container {
+        max-width: 100%;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+        box-sizing: border-box;
+    }
+
+    .dashboard-page .header {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .dashboard-page .nav-grid {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .dashboard-page .metrics-section {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Общие вспомогательные правила (формы, подпись) — без width:100% на все .btn */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        font-size: 14px;
+        margin-bottom: 5px;
+        display: block;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 12px;
+        font-size: 16px;
+        border-radius: 8px;
+        border: 2px solid #ddd;
+    }
+
+    .form-container .btn,
+    .form-container .submit-btn {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 15px;
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+
+    .signature-canvas {
+        width: 100%;
+        max-width: 100%;
+        height: 150px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        touch-action: none;
+    }
+
+    .pattern-canvas {
+        width: 100%;
+        max-width: 100%;
+        height: 200px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        touch-action: none;
+    }
+
+    .modal {
+        padding: 20px;
+        margin: 10px;
+        max-width: calc(100% - 20px);
+        box-sizing: border-box;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .search-input {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 12px;
+        font-size: 16px;
+        border-radius: 8px;
+    }
+
+    .filter-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-bottom: 15px;
+    }
+
+    .filter-tab {
+        flex: 1;
+        min-width: 80px;
+        padding: 10px 5px;
+        font-size: 12px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 10px;
+    }
+}
+
+@media (orientation: portrait) {
+    .signature-canvas,
+    .pattern-canvas {
+        height: 120px;
+    }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+    .signature-canvas,
+    .pattern-canvas {
+        height: 100px;
+    }
+
+    .form-group {
+        margin-bottom: 10px;
+    }
+}
+
+@media (hover: none) and (pointer: coarse) {
+    .nav-card {
+        min-height: 44px;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus,
+    button:focus {
+        outline: 3px solid #1c5fdd;
+        outline-offset: 2px;
+    }
+
+    .nav-card:hover {
+        transform: none;
+        box-shadow: none;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        background: #2a2a2a;
+        color: #ffffff;
+        border-color: #444;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Страница: клиенты — clients.html (.clients-page) */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    body.clients-page {
+        overflow-x: hidden;
+        padding: max(12px, env(safe-area-inset-left, 0px)) max(12px, env(safe-area-inset-right, 0px))
+            max(12px, env(safe-area-inset-bottom, 0px));
+        box-sizing: border-box;
+    }
+
+    .clients-page .top {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .clients-page .top h1 {
+        min-width: 0;
+    }
+
+    .clients-page .layout {
+        min-width: 0;
+    }
+
+    .clients-page .search-row {
+        flex-wrap: wrap;
+        min-width: 0;
+    }
+
+    .clients-page .search-row input {
+        min-width: 0;
+        flex: 1 1 200px;
+    }
+
+    .clients-page .list {
+        max-height: none;
+    }
+
+    .clients-page .order-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .clients-page .order-actions button {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .clients-page .quick-docs {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 420px) {
+    .clients-page .order-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Новый заказ — order_new.html (.order-new-page) */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    body.order-new-page .lines-table-wrap {
+        margin-left: -4px;
+        margin-right: -4px;
+        border-radius: 12px;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Track: iOS input zoom, safe area, компактный верхний блок без гориз. скролла */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    body.track-page {
+        overflow-x: hidden;
+        padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
+        padding-left: max(10px, env(safe-area-inset-left, 0px));
+        padding-right: max(10px, env(safe-area-inset-right, 0px));
+    }
+
+    .track-page .top {
+        min-width: 0;
+        align-items: flex-start;
+    }
+
+    .track-page .top h1 {
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .track-page input,
+    .track-page select,
+    .track-page textarea,
+    .track-page .track-select,
+    .track-page .track-expected-date {
+        font-size: 16px !important;
+    }
+
+    .track-page button,
+    .track-page .primary {
+        min-height: 40px;
+        box-sizing: border-box;
+    }
+
+    .track-page .doc-actions button {
+        min-height: 40px;
+        padding: 8px 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .track-page .track-top-hint {
+        display: none;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Dashboard: нижний safe area (кнопки / контент не упираются в home indicator) */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .dashboard-page .container {
+        padding-bottom: max(28px, env(safe-area-inset-bottom, 20px));
+    }
+
+    .dashboard-page .snake-section {
+        padding-left: max(12px, env(safe-area-inset-left, 0px));
+        padding-right: max(12px, env(safe-area-inset-right, 0px));
+    }
+
+    .dashboard-page .snake-canvas-wrap {
+        max-height: min(65vh, 400px);
+    }
+
+    .dashboard-page .snake-speed-select {
+        font-size: 16px;
+    }
+}

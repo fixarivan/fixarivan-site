@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixariVan - Диагностика ПК</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💻</text></svg>">
+    <script>window.FIXARIVAN_REQUIRE_ADMIN_SESSION = true;</script>
+    <script src="auth_check.js"></script>
+    <script src="js/order_doc_context.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; color: white; }
+        .header h1 { font-size: 2rem; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .header p { font-size: 1.1rem; opacity: 0.9; }
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .language-switcher { display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; }
+        .lang-btn {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .lang-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        .form-section { margin-bottom: 30px; }
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .checkbox-item { display: flex; align-items: center; gap: 8px; }
+        .checkbox-item input[type="checkbox"] { width: auto; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+        .test-btn {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        .test-btn:hover { border-color: #667eea; }
+        .test-btn.good { background: #28a745; color: white; border-color: #28a745; }
+        .test-btn.bad { background: #dc3545; color: white; border-color: #dc3545; }
+        .temperature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .temperature-field { display: flex; flex-direction: column; align-items: center; }
+        .temperature-field label { font-size: 14px; font-weight: 600; margin-bottom: 5px; color: #555; }
+        .temperature-input-container { position: relative; width: 100%; }
+        .temperature-visual {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        .temperature-visual.cool { color: #28a745; }
+        .temperature-visual.warm { color: #ffc107; animation: pulse 1s infinite; }
+        .temperature-visual.hot { color: #dc3545; animation: fire 0.5s infinite; }
+        @keyframes pulse {
+            0%, 100% { transform: translateY(-50%) scale(1); }
+            50% { transform: translateY(-50%) scale(1.1); }
+        }
+        @keyframes fire {
+            0%, 100% { transform: translateY(-50%) scale(1); }
+            25% { transform: translateY(-50%) scale(1.2); }
+            50% { transform: translateY(-50%) scale(1); }
+            75% { transform: translateY(-50%) scale(1.1); }
+        }
+        .temperature-field input {
+            width: 100%;
+            text-align: center;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+        }
+        .star-rating { display: flex; gap: 5px; margin: 10px 0; }
+        .star {
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            filter: grayscale(100%);
+        }
+        .star:hover, .star.active { filter: grayscale(0%); transform: scale(1.1); }
+        .rating-text { margin-top: 10px; font-weight: 600; color: #667eea; }
+        .unique-code-display {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            color: #667eea;
+            letter-spacing: 2px;
+            margin-top: 10px;
+        }
+        .submit-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+        }
+        .submit-btn:hover { background: #5a6fd8; }
+        .submit-btn:disabled { background: #6c757d; cursor: not-allowed; }
+        .message-box { padding: 15px; border-radius: 8px; margin: 20px 0; display: none; }
+        .message-box.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .message-box.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .form-container { padding: 20px; }
+            .checkbox-group { grid-template-columns: 1fr; }
+        }
+    </style>
+    <link rel="stylesheet" href="css/report_forms_ui.css">
+</head>
+<body class="report-form-page">
+    <div class="container">
+        <div class="header">
+            <h1>💻 Отчёт (PC) — диагностика</h1>
+            <p>FixariVan - Профессиональная диагностика</p>
+            <button type="button" onclick="window.location.href='index.php'" style="margin-top: 12px; background: rgba(255,255,255,0.95); border: none; padding: 10px 16px; border-radius: 10px; cursor: pointer; font-weight: 600;">
+                ← Главное меню
+            </button>
+        </div>
+
+        <div class="form-container">
+            <div class="language-switcher">
+                <button class="lang-btn active" data-lang="ru">🇷🇺 Русский</button>
+                <button class="lang-btn" data-lang="en">🇬🇧 English</button>
+                <button class="lang-btn" data-lang="fi">🇫🇮 Suomi</button>
+            </div>
+
+            <form id="pcReportForm">
+                <div id="pcOrderBindBanner" style="display:none;background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:0.9rem;color:#312e81;line-height:1.45;"></div>
+                <div class="form-section">
+                    <div class="form-group">
+                        <label for="documentId" data-lang="document_id">Номер отчёта</label>
+                        <input type="text" id="documentId" name="documentId" readonly>
+                        <input type="hidden" id="orderId" name="orderId">
+                        <input type="hidden" id="orderDocumentId" name="orderDocumentId" value="">
+                        <input type="hidden" id="clientEmail" name="clientEmail">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title" data-lang="client_info">👤 Информация о клиенте</h2>
+                    <div class="form-group">
+                        <label for="clientName" data-lang="client_name">ФИО клиента *</label>
+                        <input type="text" id="clientName" name="clientName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="clientPhone" data-lang="client_phone">Телефон *</label>
+                        <input type="tel" id="clientPhone" name="clientPhone" required>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title" data-lang="computer_info">💻 Информация о компьютере</h2>
+                    <div class="form-group">
+                        <label for="computerType" data-lang="computer_type">Тип *</label>
+                        <select id="computerType" name="computerType" required>
+                            <option value="">Выберите тип</option>
+                            <option value="desktop">Настольный ПК</option>
+                            <option value="laptop">Ноутбук</option>
+                            <option value="all-in-one">Моноблок</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="computerModel" data-lang="computer_model">Модель *</label>
+                        <input type="text" id="computerModel" name="computerModel" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="computerSerial" data-lang="computer_serial">Серийный номер</label>
+                        <input type="text" id="computerSerial" name="computerSerial">
+                    </div>
+                    <div class="form-group">
+                        <label for="operatingSystem" data-lang="os">ОС</label>
+                        <input type="text" id="operatingSystem" name="operatingSystem" placeholder="Windows 11, macOS...">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title" data-lang="hardware_tests">🔧 Тесты компонентов</h2>
+                    <div class="form-group">
+                        <label>Выберите протестированные компоненты</label>
+                        <div class="button-group" id="testButtons">
+                            <button type="button" class="test-btn" data-test="cpu">🔲 CPU</button>
+                            <button type="button" class="test-btn" data-test="ram">💾 RAM</button>
+                            <button type="button" class="test-btn" data-test="gpu">🎮 GPU</button>
+                            <button type="button" class="test-btn" data-test="motherboard">⚡ Мат. плата</button>
+                            <button type="button" class="test-btn" data-test="psu">🔌 БП</button>
+                            <button type="button" class="test-btn" data-test="storage">💽 Диск</button>
+                            <button type="button" class="test-btn" data-test="network">🌐 Сеть</button>
+                            <button type="button" class="test-btn" data-test="usb">🔌 USB</button>
+                            <button type="button" class="test-btn" data-test="wifi">📶 Wi-Fi</button>
+                            <button type="button" class="test-btn" data-test="bluetooth">🔵 Bluetooth</button>
+                            <button type="button" class="test-btn" data-test="sound">🔊 Звук</button>
+                            <button type="button" class="test-btn" data-test="camera">📷 Камера</button>
+                            <button type="button" class="test-btn" data-test="keyboard">⌨️ Клавиатура</button>
+                            <button type="button" class="test-btn" data-test="touchpad">👆 Тачпад</button>
+                            <button type="button" class="test-btn" data-test="display">🖥️ Дисплей</button>
+                            <button type="button" class="test-btn" data-test="cooling">❄️ Охлаждение</button>
+                        </div>
+                        <input type="hidden" id="componentTests" name="componentTests">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title" data-lang="temperatures">🌡️ Температуры</h2>
+                    <div class="temperature-grid">
+                        <div class="temperature-field">
+                            <label data-lang="cpu_temp">CPU (°C)</label>
+                            <div class="temperature-input-container">
+                                <input type="number" id="cpuTemp" name="cpuTemp" placeholder="45" oninput="updateTemperatureVisual('cpuTemp')">
+                                <div id="cpuTempVisual" class="temperature-visual"></div>
+                            </div>
+                        </div>
+                        <div class="temperature-field">
+                            <label data-lang="gpu_temp">GPU (°C)</label>
+                            <div class="temperature-input-container">
+                                <input type="number" id="gpuTemp" name="gpuTemp" placeholder="50" oninput="updateTemperatureVisual('gpuTemp')">
+                                <div id="gpuTempVisual" class="temperature-visual"></div>
+                            </div>
+                        </div>
+                        <div class="temperature-field">
+                            <label data-lang="disk_temp">Disk (°C)</label>
+                            <div class="temperature-input-container">
+                                <input type="number" id="diskTemp" name="diskTemp" placeholder="40" oninput="updateTemperatureVisual('diskTemp')">
+                                <div id="diskTempVisual" class="temperature-visual"></div>
+                            </div>
+                        </div>
+                        <div class="temperature-field">
+                            <label data-lang="ambient_temp">Ambient (°C)</label>
+                            <div class="temperature-input-container">
+                                <input type="number" id="ambientTemp" name="ambientTemp" placeholder="25" oninput="updateTemperatureVisual('ambientTemp')">
+                                <div id="ambientTempVisual" class="temperature-visual"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section" id="batterySection" style="display: none;">
+                    <h2 class="section-title">🔋 Аккумулятор (для ноутбуков)</h2>
+                    <div class="form-group">
+                        <label for="batteryCapacity">Паспортная ёмкость (mAh)</label>
+                        <input type="number" id="batteryCapacity" name="batteryCapacity" placeholder="7300">
+                    </div>
+                    <div class="form-group">
+                        <label for="currentCapacity">Текущая ёмкость (mAh)</label>
+                        <input type="number" id="currentCapacity" name="currentCapacity" placeholder="5800">
+                    </div>
+                    <div class="form-group">
+                        <label for="wearLevel">Износ (%)</label>
+                        <input type="number" id="wearLevel" name="wearLevel" min="0" max="100" placeholder="15">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title" data-lang="software_services">💿 Программные услуги</h2>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="service_os" name="services[]" value="os_install">
+                            <label for="service_os" data-lang="os_install">Установка ОС</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="service_drivers" name="services[]" value="drivers">
+                            <label for="service_drivers" data-lang="driver_install">Установка драйверов</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="service_software" name="services[]" value="software">
+                            <label for="service_software" data-lang="software_install">Установка ПО</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="service_virus" name="services[]" value="virus">
+                            <label for="service_virus" data-lang="virus_removal">Удаление вирусов</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="service_recovery" name="services[]" value="recovery">
+                            <label for="service_recovery" data-lang="data_recovery">Восстановление данных</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="service_optimization" name="services[]" value="optimization">
+                            <label for="service_optimization" data-lang="optimization">Оптимизация</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title" data-lang="diagnosis_results">📋 Результаты диагностики</h2>
+                    <div class="form-group">
+                        <label for="diagnosis" data-lang="diagnosis">Диагноз *</label>
+                        <textarea id="diagnosis" name="diagnosis" rows="4" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="recommendations" data-lang="recommendations">Рекомендации</label>
+                        <textarea id="recommendations" name="recommendations" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="estimatedCost" data-lang="estimated_cost">Примерная стоимость</label>
+                        <input type="text" id="estimatedCost" name="estimatedCost" placeholder="€150">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title">⭐ Общая оценка</h2>
+                    <div class="form-group">
+                        <label>Оценка устройства (1-10 звёзд)</label>
+                        <div class="star-rating" id="starRating">
+                            <span class="star" data-rating="1">⭐</span>
+                            <span class="star" data-rating="2">⭐</span>
+                            <span class="star" data-rating="3">⭐</span>
+                            <span class="star" data-rating="4">⭐</span>
+                            <span class="star" data-rating="5">⭐</span>
+                            <span class="star" data-rating="6">⭐</span>
+                            <span class="star" data-rating="7">⭐</span>
+                            <span class="star" data-rating="8">⭐</span>
+                            <span class="star" data-rating="9">⭐</span>
+                            <span class="star" data-rating="10">⭐</span>
+                        </div>
+                        <input type="hidden" id="deviceRating" name="deviceRating" value="0">
+                        <div id="ratingText" class="rating-text">Выберите оценку</div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title">🎨 Внешнее состояние</h2>
+                    <div class="form-group">
+                        <label>Оценка (1-10 звёзд)</label>
+                        <div class="star-rating" id="conditionStarRating">
+                            <span class="star" data-rating="1">⭐</span>
+                            <span class="star" data-rating="2">⭐</span>
+                            <span class="star" data-rating="3">⭐</span>
+                            <span class="star" data-rating="4">⭐</span>
+                            <span class="star" data-rating="5">⭐</span>
+                            <span class="star" data-rating="6">⭐</span>
+                            <span class="star" data-rating="7">⭐</span>
+                            <span class="star" data-rating="8">⭐</span>
+                            <span class="star" data-rating="9">⭐</span>
+                            <span class="star" data-rating="10">⭐</span>
+                        </div>
+                        <input type="hidden" id="conditionRating" name="conditionRating" value="0">
+                        <div id="conditionRatingText" class="rating-text">Выберите оценку</div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title" data-lang="technician_info">👨‍🔧 Информация о мастере</h2>
+                    <div class="form-group">
+                        <label for="technicianName" data-lang="technician_name">ФИО мастера *</label>
+                        <input type="text" id="technicianName" name="technicianName" value="Sergeev Viacheslav" readonly required>
+                    </div>
+                    <div class="form-group">
+                        <label for="workDate" data-lang="work_date">Дата *</label>
+                        <input type="date" id="workDate" name="workDate" required>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title">🔐 Уникальный код</h2>
+                    <div class="form-group">
+                        <div id="uniqueCode" class="unique-code-display">Генерируется при отправке</div>
+                        <input type="hidden" id="uniqueCodeValue" name="uniqueCode">
+                    </div>
+                </div>
+
+                <div id="messageBox" class="message-box"></div>
+                <button type="submit" class="submit-btn" data-lang="submit_report">Отправить отчёт</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const translations = {
+            ru: {
+                document_id: "Номер отчёта", client_info: "👤 Информация о клиенте", client_name: "ФИО клиента *",
+                client_phone: "Телефон *", computer_info: "💻 Информация о компьютере", computer_type: "Тип *",
+                computer_model: "Модель *", computer_serial: "Серийный номер", os: "ОС",
+                hardware_tests: "🔧 Тесты компонентов", temperatures: "🌡️ Температуры",
+                cpu_temp: "CPU (°C)", gpu_temp: "GPU (°C)", disk_temp: "Disk (°C)", ambient_temp: "Ambient (°C)",
+                software_services: "💿 Программные услуги", os_install: "Установка ОС",
+                driver_install: "Установка драйверов", software_install: "Установка ПО",
+                virus_removal: "Удаление вирусов", data_recovery: "Восстановление данных",
+                optimization: "Оптимизация", diagnosis_results: "📋 Результаты диагностики",
+                diagnosis: "Диагноз *", recommendations: "Рекомендации", estimated_cost: "Примерная стоимость",
+                technician_info: "👨‍🔧 Информация о мастере", technician_name: "ФИО мастера *",
+                work_date: "Дата *", submit_report: "Отправить отчёт"
+            },
+            en: {
+                document_id: "Report Number", client_info: "👤 Client Information", client_name: "Client Name *",
+                client_phone: "Phone *", computer_info: "💻 Computer Information", computer_type: "Type *",
+                computer_model: "Model *", computer_serial: "Serial Number", os: "OS",
+                hardware_tests: "🔧 Hardware Tests", temperatures: "🌡️ Temperatures",
+                cpu_temp: "CPU (°C)", gpu_temp: "GPU (°C)", disk_temp: "Disk (°C)", ambient_temp: "Ambient (°C)",
+                software_services: "💿 Software Services", os_install: "OS Installation",
+                driver_install: "Driver Installation", software_install: "Software Installation",
+                virus_removal: "Virus Removal", data_recovery: "Data Recovery",
+                optimization: "Optimization", diagnosis_results: "📋 Diagnosis Results",
+                diagnosis: "Diagnosis *", recommendations: "Recommendations", estimated_cost: "Estimated Cost",
+                technician_info: "👨‍🔧 Technician Information", technician_name: "Technician Name *",
+                work_date: "Date *", submit_report: "Submit Report"
+            },
+            fi: {
+                document_id: "Raportin numero", client_info: "👤 Asiakkaan tiedot", client_name: "Asiakkaan nimi *",
+                client_phone: "Puhelin *", computer_info: "💻 Tietokoneen tiedot", computer_type: "Tyyppi *",
+                computer_model: "Malli *", computer_serial: "Sarjanumero", os: "Käyttöjärjestelmä",
+                hardware_tests: "🔧 Laitteiston testit", temperatures: "🌡️ Lämpötilat",
+                cpu_temp: "CPU (°C)", gpu_temp: "GPU (°C)", disk_temp: "Levy (°C)", ambient_temp: "Ympäristö (°C)",
+                software_services: "💿 Ohjelmistopalvelut", os_install: "Käyttöjärjestelmän asennus",
+                driver_install: "Ohjainten asennus", software_install: "Ohjelmiston asennus",
+                virus_removal: "Virusten poisto", data_recovery: "Tietojen palautus",
+                optimization: "Optimointi", diagnosis_results: "📋 Diagnoosiohjauksen tulokset",
+                diagnosis: "Diagnoosi *", recommendations: "Suositukset", estimated_cost: "Arvioitu hinta",
+                technician_info: "👨‍🔧 Teknikon tiedot", technician_name: "Teknikon nimi *",
+                work_date: "Päivämäärä *", submit_report: "Lähetä raportti"
+            }
+        };
+
+        let currentLanguage = 'ru';
+
+        function fillFromQueryTrackPc() {
+            const params = new URLSearchParams(window.location.search);
+            const setIf = function (id, v) {
+                const el = document.getElementById(id);
+                if (el && v && !String(el.value || '').trim()) el.value = v;
+            };
+            setIf('clientName', (params.get('client_name') || '').trim());
+            setIf('clientPhone', (params.get('client_phone') || '').trim());
+            setIf('clientEmail', (params.get('client_email') || '').trim());
+            const dm = (params.get('device_model') || params.get('computer_model') || '').trim();
+            setIf('computerModel', dm);
+            const oid = (params.get('order_id') || '').trim();
+            const oel = document.getElementById('orderId');
+            if (oel && oid) oel.value = oid;
+            const od = (params.get('document_id') || '').trim();
+            const odEl = document.getElementById('orderDocumentId');
+            if (odEl && od) odEl.value = od;
+        }
+
+        function applyPcOrderBindBanner(ctx) {
+            const b = document.getElementById('pcOrderBindBanner');
+            if (!b || typeof FixariVanOrderDoc === 'undefined') return;
+            if (FixariVanOrderDoc.hasOrderBinding(ctx)) {
+                b.style.display = 'block';
+                b.style.background = '#eef2ff';
+                b.style.borderColor = '#c7d2fe';
+                b.style.color = '#312e81';
+                b.innerHTML = '<strong>Отчёт (PC) к заказу:</strong> ' + String(ctx.orderId) +
+                    ' · документ ' + String(ctx.documentId);
+            } else {
+                b.style.display = 'block';
+                b.style.background = '#fffbeb';
+                b.style.borderColor = '#fcd34d';
+                b.style.color = '#92400e';
+                b.innerHTML = '<strong>Нет привязки к заказу.</strong> Отчёт сохраняется только с <code>order_id</code> существующего заказа. Откройте из <a href="track.html" style="color:#b45309;font-weight:600;">Track</a> → «Отчёт (PC)».';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            fillFromQueryTrackPc();
+            const ctx = typeof FixariVanOrderDoc !== 'undefined' ? FixariVanOrderDoc.parseQuery() : {};
+            if (FixariVanOrderDoc && FixariVanOrderDoc.hasOrderBinding(ctx)) {
+                document.getElementById('documentId').value = FixariVanOrderDoc.reportDocId(ctx.documentId);
+                const odEl = document.getElementById('orderDocumentId');
+                if (odEl) odEl.value = ctx.documentId;
+            } else {
+                document.getElementById('documentId').value = `PR-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000) + 1000}`;
+            }
+            applyPcOrderBindBanner(ctx);
+            document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
+            generateUniqueCode();
+            initializeLanguageSwitcher();
+            initializeTestButtons();
+            initializeComputerTypeHandler();
+            initializeBatteryWearCalculation();
+            initializeStarRating();
+            initializeConditionStarRating();
+            initializeFormSubmission();
+        });
+
+        function showMessage(message, type = 'info') {
+            const box = document.getElementById('messageBox');
+            if (!box) return;
+            box.textContent = message;
+            box.className = `message-box ${type}`;
+            box.style.display = 'block';
+        }
+
+        const fetchJson = window.FixariVan?.http?.fetchJson ?? (async function(url, options = {}) {
+            const response = await fetch(url, options);
+            const text = await response.text();
+            if (!response.ok) {
+                const snippet = (text || '').trim().slice(0, 200);
+                throw new Error(snippet || `HTTP ${response.status}`);
+            }
+            try {
+                return JSON.parse(text);
+            } catch (error) {
+                const snippet = (text || '').trim().slice(0, 200);
+                throw new Error(snippet || 'Сервер вернул некорректный ответ');
+            }
+        });
+
+        const getValue = (id, fallback = '') => {
+            const el = document.getElementById(id);
+            if (!el) return fallback;
+            return typeof el.value === 'string' ? el.value.trim() : fallback;
+        };
+
+        function generateUniqueCode() {
+            const uniqueCode = `FV-${new Date().getTime().toString(36)}-${Math.random().toString(36).substr(2, 5)}`.toUpperCase();
+            document.getElementById('uniqueCodeValue').value = uniqueCode;
+            document.getElementById('uniqueCode').textContent = uniqueCode;
+        }
+
+        function initializeLanguageSwitcher() {
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentLanguage = this.getAttribute('data-lang');
+                    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    Object.keys(translations[currentLanguage]).forEach(key => {
+                        document.querySelectorAll(`[data-lang="${key}"]`).forEach(el => {
+                            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                                el.placeholder = translations[currentLanguage][key];
+                            } else {
+                                el.textContent = translations[currentLanguage][key];
+                            }
+                        });
+                    });
+                });
+            });
+        }
+
+        function initializeTestButtons() {
+            document.querySelectorAll('.test-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    this.classList.toggle('good');
+                    this.classList.remove('bad');
+                    updateTestSelection();
+                });
+                btn.addEventListener('dblclick', function(e) {
+                    e.preventDefault();
+                    this.classList.toggle('bad');
+                    this.classList.remove('good');
+                    updateTestSelection();
+                });
+            });
+        }
+
+        function updateTestSelection() {
+            const selectedTests = [];
+            document.querySelectorAll('.test-btn').forEach(btn => {
+                if (btn.classList.contains('good')) selectedTests.push(btn.getAttribute('data-test') + ':good');
+                else if (btn.classList.contains('bad')) selectedTests.push(btn.getAttribute('data-test') + ':bad');
+            });
+            document.getElementById('componentTests').value = selectedTests.join(',');
+        }
+
+        function initializeComputerTypeHandler() {
+            document.getElementById('computerType').addEventListener('change', function() {
+                document.getElementById('batterySection').style.display = this.value === 'laptop' ? 'block' : 'none';
+            });
+        }
+
+        function initializeBatteryWearCalculation() {
+            const passportEl = document.getElementById('batteryCapacity');
+            const currentEl = document.getElementById('currentCapacity');
+            const wearEl = document.getElementById('wearLevel');
+
+            if (!passportEl || !currentEl || !wearEl) return;
+
+            const calc = () => {
+                const passport = parseFloat(passportEl.value);
+                const current = parseFloat(currentEl.value);
+                if (!Number.isFinite(passport) || !Number.isFinite(current) || passport <= 0) return;
+
+                // Износ (%) = (1 - current / passport) * 100
+                let wear = (1 - current / passport) * 100;
+                if (!Number.isFinite(wear)) return;
+
+                wear = Math.max(0, Math.min(100, wear));
+                wearEl.value = String(Math.round(wear));
+            };
+
+            passportEl.addEventListener('input', calc);
+            currentEl.addEventListener('input', calc);
+
+            // Initial calculation for prefilled values
+            calc();
+        }
+
+        function updateTemperatureVisual(fieldId) {
+            const input = document.getElementById(fieldId);
+            const visual = document.getElementById(fieldId + 'Visual');
+            const temp = parseInt(input.value);
+            
+            if (!temp || isNaN(temp)) {
+                visual.innerHTML = '';
+                visual.className = 'temperature-visual';
+                return;
+            }
+            
+            if (temp >= 85) {
+                visual.innerHTML = '🔥';
+                visual.className = 'temperature-visual hot';
+            } else if (temp >= 70) {
+                visual.innerHTML = '⚠️';
+                visual.className = 'temperature-visual warm';
+            } else if (temp >= 50) {
+                visual.innerHTML = '🌡️';
+                visual.className = 'temperature-visual warm';
+            } else {
+                visual.innerHTML = '❄️';
+                visual.className = 'temperature-visual cool';
+            }
+        }
+
+        function initializeStarRating() {
+            document.querySelectorAll('#starRating .star').forEach((star, index) => {
+                star.addEventListener('click', () => setRating(index + 1));
+            });
+        }
+
+        function initializeConditionStarRating() {
+            document.querySelectorAll('#conditionStarRating .star').forEach((star, index) => {
+                star.addEventListener('click', () => setConditionRating(index + 1));
+            });
+        }
+
+        function setRating(rating) {
+            document.getElementById('deviceRating').value = rating;
+            document.querySelectorAll('#starRating .star').forEach((star, index) => {
+                star.classList.toggle('active', index < rating);
+            });
+            const texts = ['', 'Плохо', 'Плохо', 'Плохо', 'Удовлетворительно', 'Удовлетворительно', 'Хорошо', 'Хорошо', 'Очень хорошо', 'Очень хорошо', 'Отлично'];
+            document.getElementById('ratingText').textContent = `${rating}/10 - ${texts[rating]}`;
+        }
+
+        function setConditionRating(rating) {
+            document.getElementById('conditionRating').value = rating;
+            document.querySelectorAll('#conditionStarRating .star').forEach((star, index) => {
+                star.classList.toggle('active', index < rating);
+            });
+            const texts = ['', 'Плохо', 'Плохо', 'Плохо', 'Удовлетворительно', 'Удовлетворительно', 'Хорошо', 'Хорошо', 'Очень хорошо', 'Очень хорошо', 'Отлично'];
+            document.getElementById('conditionRatingText').textContent = `${rating}/10 - ${texts[rating]}`;
+        }
+
+        function validatePcReportForm() {
+            const errors = [];
+
+            if (typeof FixariVanOrderDoc !== 'undefined') {
+                const ctx = FixariVanOrderDoc.parseQuery();
+                if (FixariVanOrderDoc.hasOrderBinding(ctx)) {
+                    if (getValue('orderId') !== ctx.orderId) {
+                        errors.push('Отчёт открыт по ссылке заказа: номер заказа должен совпадать. Откройте форму из Track или «Новый заказ».');
+                    }
+                } else if (!getValue('orderId')) {
+                    errors.push('Отчёт привязывается к заказу: откройте форму из Track или «Новый заказ» по ссылке с order_id.');
+                }
+            } else if (!getValue('orderId')) {
+                errors.push('Отчёт привязывается к заказу: откройте форму из Track или «Новый заказ» по ссылке с order_id.');
+            }
+
+            const requiredFields = [
+                { id: 'clientName', label: 'Имя клиента' },
+                { id: 'clientPhone', label: 'Телефон клиента' },
+                { id: 'computerModel', label: 'Модель компьютера' },
+                { id: 'diagnosis', label: 'Диагноз' },
+                { id: 'technicianName', label: 'Имя мастера' },
+                { id: 'workDate', label: 'Дата работы' }
+            ];
+
+            requiredFields.forEach(field => {
+                const value = getValue(field.id);
+                if (!value) {
+                    errors.push(`Поле "${field.label}" обязательно для заполнения`);
+                }
+            });
+
+            const phoneValue = getValue('clientPhone');
+            if (phoneValue && !/^\+?[0-9\s\-()]{7,20}$/.test(phoneValue)) {
+                errors.push('Укажите корректный номер телефона');
+            }
+
+            const ratingValue = parseInt(getValue('deviceRating'), 10);
+            if (!ratingValue || ratingValue < 1) {
+                errors.push('Пожалуйста, поставьте оценку устройству (рейтинг).');
+            }
+
+            // Battery (laptop only):
+            // If user selected laptop, require passport + current capacity and auto-calc wear.
+            const pcType = getValue('computerType');
+            if (pcType === 'laptop') {
+                const passport = parseFloat(getValue('batteryCapacity'));
+                const current = parseFloat(getValue('currentCapacity'));
+                const wearEl = document.getElementById('wearLevel');
+
+                if (!Number.isFinite(passport) || passport <= 0) {
+                    errors.push('Укажите паспортную ёмкость (mAh).');
+                }
+                if (!Number.isFinite(current) || current < 0) {
+                    errors.push('Укажите текущую ёмкость (mAh).');
+                }
+
+                // Auto-calc wearLevel if possible (keeps UI/requirements consistent)
+                if (Number.isFinite(passport) && passport > 0 && Number.isFinite(current)) {
+                    let wear = (1 - current / passport) * 100;
+                    wear = Math.max(0, Math.min(100, wear));
+                    if (wearEl) wearEl.value = String(Math.round(wear));
+                }
+
+                const wearValue = parseFloat(getValue('wearLevel'));
+                if (!Number.isFinite(wearValue)) {
+                    errors.push('Износ (%) будет рассчитан автоматически. Проверьте ёмкости батареи.');
+                }
+            }
+
+            return errors;
+        }
+
+        function initializeFormSubmission() {
+            document.getElementById('pcReportForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const validationErrors = validatePcReportForm();
+                if (validationErrors.length > 0) {
+                    showMessage(validationErrors.join('\n'), 'error');
+                    return;
+                }
+
+                const submitButton = this.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.dataset.originalText = submitButton.textContent;
+                    submitButton.textContent = 'Сохранение...';
+                }
+
+                const today = new Date().toISOString().split('T')[0];
+                const formData = {
+                    documentId: getValue('documentId'),
+                    orderId: getValue('orderId'),
+                    orderDocumentId: getValue('orderDocumentId'),
+                    clientName: getValue('clientName'),
+                    clientPhone: getValue('clientPhone'),
+                    clientEmail: getValue('clientEmail'),
+                    deviceType: getValue('computerType'),
+                    deviceModel: getValue('computerModel'),
+                    deviceSerial: getValue('computerSerial'),
+                    operatingSystem: getValue('operatingSystem'),
+                    componentTests: getValue('componentTests'),
+                    cpuTemp: getValue('cpuTemp'),
+                    gpuTemp: getValue('gpuTemp'),
+                    diskTemp: getValue('diskTemp'),
+                    ambientTemp: getValue('ambientTemp'),
+                    batteryCapacity: getValue('batteryCapacity'),
+                    currentCapacity: getValue('currentCapacity'),
+                    wearLevel: getValue('wearLevel'),
+                    services: Array.from(document.querySelectorAll('input[name="services[]"]:checked')).map(cb => cb.value),
+                    diagnosis: getValue('diagnosis'),
+                    recommendations: getValue('recommendations'),
+                    estimatedCost: getValue('estimatedCost'),
+                    deviceRating: getValue('deviceRating'),
+                    conditionRating: getValue('conditionRating'),
+                    technicianName: getValue('technicianName'),
+                    workDate: getValue('workDate'),
+                    uniqueCode: getValue('uniqueCodeValue'),
+                    placeOfAcceptance: 'FixariVan, Turku',
+                    dateOfAcceptance: today,
+                    language: currentLanguage,
+                    reportType: 'pc'
+                };
+
+                try {
+                    const result = await fetchJson('./api/save_report_fixed.php', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(formData)
+                    });
+
+                    if (result.success) {
+                        showMessage('Отчёт успешно сохранён! Открываем просмотр...', 'success');
+                        if (result.token) {
+                            window.location.href = './report_view.php?token=' + encodeURIComponent(result.token);
+                        } else {
+                            showMessage('Отчёт сохранён, но не получен токен для web-просмотра', 'error');
+                        }
+                    } else {
+                        showMessage('Ошибка: ' + result.message, 'error');
+                    }
+                } catch (error) {
+                    showMessage('Ошибка: ' + error.message, 'error');
+                } finally {
+                    const submitButton = this.querySelector('button[type="submit"]');
+                    if (submitButton && submitButton.dataset.originalText) {
+                        submitButton.disabled = false;
+                        submitButton.textContent = submitButton.dataset.originalText;
+                        delete submitButton.dataset.originalText;
+                    }
+                }
+            });
+        }
+
+    </script>
+    <script src="js/client_autofill.js"></script>
+</body>
+</html>

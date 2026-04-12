@@ -1,0 +1,117 @@
+================================================================================
+FixariVan — анализ соответствия ТЗ PRIORITY FIX (P1) текущему коду
+Дата анализа: 05.04.2026
+Связанные документы:
+  docs/TZ_PRIORITY_FIX_2026-04-05.txt — основное ТЗ (PRIORITY FIX)
+  docs/TZ_PRIORITY_FIX_v2_add_2026-04-05.txt — дополнение v2-add (блоки A–H:
+    запрет fallback по имени, идентификаторы, order_id, дубли заказа, финансы,
+    единый поток, роль Track, тест на две одинаковые позиции)
+================================================================================
+
+Назначение: зафиксировать расхождения, затрагиваемые файлы и порядок работ
+(этап «Анализ» + «Список файлов» + черновик плана по процессу из ТЗ).
+
+--------------------------------------------------------------------------------
+P1 / БЛОК 1 — только inventory_item_id и order_warehouse_line_id
+--------------------------------------------------------------------------------
+
+Текущее состояние (нарушения ТЗ):
+  • api/lib/order_supply.php — fixarivan_resolve_inventory_item_id_for_order_line:
+    сопоставление строки заказа с order_lines_json по имени; fallback «одна
+    позиция в inventory_items по имени».
+  • fixarivan_find_order_warehouse_line_for_arrival — имя + fuzzy match.
+  • fixarivan_resolve_inventory_item_id_for_deduction — имя / fuzzy.
+  • api/order_purchase_queue_action.php — dismiss по (order_id, name_norm).
+  • api/order_purchase_queue.php — фильтр dismiss по name_norm.
+  • inventory_movement.php — при отсутствии owl_id поиск по имени товара.
+
+Уже в сторону ТЗ:
+  • order_lines_json при сохранении из Track обогащается inventory_item_id по SKU
+    (fixarivan_enrich_order_lines_inventory_ids) — ключ SKU, не имя.
+  • Движение с явным order_warehouse_line_id.
+
+План работ (минимальный для Блока 1):
+  1) Хранить в order_warehouse_lines стабильный ключ связи (уже есть id строки);
+     привязку к складу — только через inventory_item_id из JSON/синка, без
+     «угадывания» по имени в PHP.
+  2) Убрать или ограничить: resolve по имени; fuzzy в supply — заменить на
+     явный id или отказ в операции.
+  3) Dismiss списка покупок: заменить на owl_id-only (или хранить owl_id в
+     dismiss), чтобы не зависеть от имени.
+
+Риск: миграция данных и существующие заказы без SKU — потребуется
+     одноразовое заполнение inventory_item_id в Track или ручная правка.
+
+Основные файлы: api/lib/order_supply.php, api/lib/order_warehouse_sync.php,
+  api/order_purchase_queue.php, api/order_purchase_queue_action.php,
+  api/inventory_movement.php, api/order_track_order_lines.php.
+
+--------------------------------------------------------------------------------
+P1 / БЛОК 2 — цены order_lines → order_warehouse_lines → inventory
+--------------------------------------------------------------------------------
+
+Проверить цепочку:
+  • lib/order_warehouse_sync.php — INSERT: purchase_price, sale_price из JSON.
+  • inventory_movement.php / создание карточки — не обнулять цену при приходе,
+    если в строке заказа они заданы.
+  • order_track_order_lines.php — при списании со склада подставляет цены из
+    inventory_items.
+
+Файлы: order_warehouse_sync.php, inventory_sqlite_helpers.php,
+  inventory_list.php (POST/PATCH), save_order_fixed.php.
+
+--------------------------------------------------------------------------------
+P1 / БЛОК 3 — финансы: доход / расход / прибыль по строкам
+--------------------------------------------------------------------------------
+
+Файлы: api/lib/finance_lib.php, api/finance.php, finance.html.
+Сверить: parts_purchase_total / parts_sale_total, order_lines_json,
+  public_estimated_cost, касса по квитанциям — единая формула из ТЗ.
+
+--------------------------------------------------------------------------------
+P1 / БЛОК 4 — estimated_labor_cost (NUMBER), не парсить TEXT
+--------------------------------------------------------------------------------
+
+Текущее состояние:
+  • orders.public_estimated_cost — TEXT (api/sqlite.php, save_order_fixed.php).
+
+План:
+  • Добавить колонку estimated_labor_cost REAL (или DECIMAL) + миграция;
+  • Заполнить из существующего текста, где возможно; портал/UI — число;
+  • Сохранить deprecated public_estimated_cost как TEXT для совместимости
+    или период миграции (решение на этапе реализации).
+
+Файлы: sqlite.php, save_order_fixed.php, order_new.html, track.html,
+  client_portal.php, document_templates.php, finance_lib.php.
+
+--------------------------------------------------------------------------------
+P1 / БЛОК 5 — строгая связь склад ↔ заказ
+--------------------------------------------------------------------------------
+
+Уже есть: sync order_warehouse_lines, recompute parts_status,
+  inventory_movement при owl_id.
+
+Доработать по ТЗ: убрать неявные пути (имя), единый источник событий
+  «сохранение заказа» → sync → статусы.
+
+Файлы: order_warehouse_sync.php, inventory_movement.php, save_order_fixed.php,
+  order_track_order_lines.php.
+
+--------------------------------------------------------------------------------
+P2 — кратко
+--------------------------------------------------------------------------------
+  Блок 6: вынести дубли в lib/ (Track только вызывает API).
+  Блок 7: UI предупреждение при пустом public_expected_date (order_new, Track).
+  Блок 8: client_portal — единый источник данных (get_document / orders API).
+  Блок 9–10: PDF/CSV — сверить с уже сделанными отчётами в REPORT_2026-04-05.txt.
+
+--------------------------------------------------------------------------------
+Рекомендуемый порядок внедрения P1
+--------------------------------------------------------------------------------
+  1) Блок 4 (схема) + Блок 2 (цены) — основа для финансов.
+  2) Блок 1 (убрать имя из логики) + Блок 5 (жёсткая связь).
+  3) Блок 3 (финансы) — после стабильных полей и строк.
+
+--------------------------------------------------------------------------------
+Конец анализа
+================================================================================

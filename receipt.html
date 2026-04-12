@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixariVan - Квитанция</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧾</text></svg>">
+    <script>window.FIXARIVAN_REQUIRE_ADMIN_SESSION = true;</script>
+    <script src="auth_check.js"></script>
+    <script src="js/format_money.js"></script>
+    <script src="js/order_doc_context.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; color: white; }
+        .header h1 { font-size: 2rem; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .company-info {
+            background: rgba(255, 255, 255, 0.95);
+            margin: 20px auto;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .company-logo { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; }
+        .logo-square {
+            width: 60px;
+            height: 60px;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 8px;
+        }
+        .company-details h2 { margin: 0; font-size: 1.8rem; color: #333; font-weight: bold; }
+        .business-id { margin: 5px 0 0 0; color: #888; font-size: 0.9rem; font-weight: 600; }
+        .company-contact {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .contact-label { font-weight: 600; color: #555; min-width: 70px; }
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .language-switcher { display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; }
+        .lang-btn {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .lang-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        .form-section { margin-bottom: 30px; }
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .service-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #e9ecef;
+        }
+        .service-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .add-service-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .remove-service-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .total-section {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .total-amount { font-size: 2rem; font-weight: bold; margin-bottom: 10px; }
+        .signature-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        #signatureCanvas {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: crosshair;
+            display: block;
+            margin: 10px 0;
+            width: 100%;
+            max-width: 600px;
+        }
+        .signature-controls { display: flex; gap: 10px; align-items: center; }
+        .clear-signature {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .signature-status { font-size: 14px; color: #6c757d; }
+        .signature-status.has-signature { color: #28a745; font-weight: bold; }
+        .submit-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+        }
+        .submit-btn:hover { background: #5a6fd8; }
+        .submit-btn:disabled { background: #6c757d; cursor: not-allowed; }
+        .message-box { padding: 15px; border-radius: 8px; margin: 20px 0; display: none; }
+        .message-box.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .message-box.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .muted-hint { color: #64748b; font-size: 0.82rem; display: block; margin-top: 6px; line-height: 1.35; }
+        .link-display { background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 18px 0; word-break: break-all; font-family: monospace; }
+        .link-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .link-btn { background: rgba(255,255,255,0.95); color: #334; border: 1px solid rgba(102,126,234,0.25); padding: 10px 14px; border-radius: 12px; cursor: pointer; font-weight: 700; }
+        .link-btn.primary { background: #667eea; color: white; border: none; }
+        .order-bind-banner {
+            background: linear-gradient(180deg, #eef2ff 0%, #e0e7ff 100%);
+            border: 1px solid #c7d2fe;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 18px;
+            font-size: 0.9rem;
+            color: #312e81;
+            line-height: 1.45;
+        }
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .form-container { padding: 20px; }
+            .form-row { grid-template-columns: 1fr; }
+            .company-contact { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧾 Квитанция об оплате</h1>
+            <p>FixariVan - Документ об оплате</p>
+            <button type="button" onclick="window.location.href='index.php'" style="margin-top: 12px; background: rgba(255,255,255,0.95); border: none; padding: 10px 16px; border-radius: 10px; cursor: pointer; font-weight: 600;">
+                ← Главное меню
+            </button>
+        </div>
+
+        <div class="company-info">
+            <div class="company-logo">
+                <div class="logo-square">FV</div>
+                <div class="company-details">
+                    <h2 id="companyNameView">FixariVan</h2>
+                    <p class="business-id" id="companyYtunnusView">Y-tunnus: 3526510-5</p>
+                </div>
+            </div>
+            <div class="company-contact">
+                <div class="contact-item">
+                    <span class="contact-label">Телефон:</span>
+                    <span id="companyPhoneView">+358 44 954 5263</span>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-label">Email:</span>
+                    <span id="companyEmailView">fixarivan@gmail.com</span>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-label">Сайт:</span>
+                    <span id="companyWebsiteView">www.fixarivan.fi</span>
+                </div>
+                <div class="contact-item" id="companyBankView" style="display:none;">
+                    <span class="contact-label">Банк:</span>
+                    <span id="companyBankLine"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-container">
+            <div class="language-switcher">
+                <button class="lang-btn active" data-lang="ru">🇷🇺 Русский</button>
+                <button class="lang-btn" data-lang="en">🇬🇧 English</button>
+                <button class="lang-btn" data-lang="fi">🇫🇮 Suomi</button>
+            </div>
+
+            <form id="receiptForm">
+                <div id="receiptTrackHint" class="no-print" style="display:none;background:#eff6ff;border:1px solid #93c5fd;color:#1e3a8a;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:0.9rem;line-height:1.45;">
+                    <strong>FixariVan:</strong> чтобы квитанция была привязана к текущему заказу, откройте форму из <a href="track.html">Track</a> — в ссылке будут <code>order_id</code> и акт. Сохранение не создаёт отдельный заказ в SQLite.
+                </div>
+                <div id="orderBindBanner" class="order-bind-banner" style="display:none;"></div>
+                <div class="form-section">
+                    <div class="form-group">
+                        <label for="documentId" data-lang="document_id">Номер квитанции</label>
+                        <input type="text" id="documentId" name="documentId" readonly>
+                        <input type="hidden" id="orderId" name="orderId">
+                        <input type="hidden" id="orderDocumentId" name="orderDocumentId" value="">
+                        <input type="hidden" id="clientTokenBind" name="clientTokenBind" value="">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title" data-lang="client_info">👤 Информация о клиенте</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="clientName" data-lang="client_name">ФИО клиента *</label>
+                            <input type="text" id="clientName" name="clientName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="clientPhone" data-lang="client_phone">Телефон *</label>
+                            <input type="tel" id="clientPhone" name="clientPhone" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="clientEmail" data-lang="client_email">Email</label>
+                        <input type="email" id="clientEmail" name="clientEmail">
+                    </div>
+                    <div class="form-group">
+                        <label for="deviceModel" data-lang="device_model">Модель устройства</label>
+                        <input type="text" id="deviceModel" name="deviceModel" placeholder="iPhone 15, ThinkPad X1…">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title" data-lang="payment_info">💳 Информация об оплате</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="paymentMethod" data-lang="payment_method">Способ оплаты *</label>
+                            <select id="paymentMethod" name="paymentMethod" required>
+                                <option value="" data-lang="select_payment">Выберите</option>
+                                <option value="holvi_terminal" data-lang="holvi_terminal">Holvi Terminal</option>
+                                <option value="cash" data-lang="cash">Наличные</option>
+                                <option value="bank_transfer" data-lang="bank_transfer">Банковский перевод</option>
+                                <option value="card" data-lang="card">Карта</option>
+                                <option value="mobilepay" data-lang="mobilepay">MobilePay</option>
+                                <option value="other" data-lang="other">Другое</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="paymentStatus" data-lang="payment_status">Статус оплаты *</label>
+                            <select id="paymentStatus" name="paymentStatus" required>
+                                <option value="paid" data-lang="paid">Оплачено</option>
+                                <option value="pending" data-lang="pending">Ожидает</option>
+                                <option value="partial" data-lang="partial">Частично</option>
+                                <option value="cancelled" data-lang="cancelled">Отменено</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="paymentDate" data-lang="payment_date">Дата оплаты *</label>
+                            <input type="date" id="paymentDate" name="paymentDate" required>
+                        </div>
+                        <div class="form-group" id="amountPaidWrap" style="display:none;">
+                            <label for="amountPaid" data-lang="amount_paid">Оплачено (€) *</label>
+                            <input type="number" id="amountPaid" name="amountPaid" min="0" step="0.01" placeholder="0.00">
+                            <small class="muted-hint" data-lang="amount_paid_hint">Для частичной оплаты укажите сумму; в отчётах доход считается по этому полю, не по общей сумме.</small>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="paymentNote" data-lang="payment_note">Комментарий к оплате</label>
+                        <input type="text" id="paymentNote" name="paymentNote" placeholder="Например: оплата через терминал, чек №...">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title" data-lang="services">🛠️ Выполненные услуги</h2>
+                    <button type="button" class="add-service-btn" onclick="addService()" data-lang="add_service">+ Добавить услугу</button>
+                    <div id="servicesList"></div>
+                </div>
+
+                <div class="total-section">
+                    <div data-lang="total_amount">Общая сумма:</div>
+                    <div class="total-amount" id="totalAmount">0,00 €</div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title" data-lang="additional_info">📝 Дополнительно</h2>
+                    <div class="form-group">
+                        <label for="warrantyTerms" data-lang="warranty_terms">Условия / гарантия</label>
+                        <textarea id="warrantyTerms" name="warrantyTerms" rows="4"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes" data-lang="notes">Примечания</label>
+                        <textarea id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2 class="section-title" data-lang="technician_info">👨‍🔧 Мастер</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="technicianName" data-lang="technician_name">ФИО мастера *</label>
+                            <input type="text" id="technicianName" name="technicianName" value="Sergeev Viacheslav" readonly required>
+                        </div>
+                        <div class="form-group">
+                            <label for="receiptDate" data-lang="receipt_date">Дата выдачи *</label>
+                            <input type="date" id="receiptDate" name="receiptDate" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="signature-section">
+                    <h3 class="section-title" data-lang="digital_signature">✍️ Подпись мастера</h3>
+                    <canvas id="signatureCanvas" width="600" height="200"></canvas>
+                    <div class="signature-controls">
+                        <button type="button" id="clearSignature" class="clear-signature" data-lang="clear_signature">Очистить</button>
+                        <span id="signatureStatus" class="signature-status" data-lang="signature_required">Подпись обязательна</span>
+                    </div>
+                </div>
+
+                <div id="messageBox" class="message-box"></div>
+                <button type="submit" class="submit-btn" data-lang="submit_receipt">Отправить квитанцию</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="receiptLinkSection" style="display:none; padding: 0 20px 28px 20px;">
+        <div class="link-display" id="receiptClientLink"></div>
+        <div class="link-actions">
+            <button type="button" class="link-btn primary" onclick="copyReceiptLink()">📋 Копировать ссылку</button>
+            <button type="button" class="link-btn" onclick="openReceiptViewer()">👁️ Открыть квитанцию</button>
+        </div>
+    </div>
+
+    <script>
+        const translations = {
+            ru: {
+                document_id: "Номер квитанции", client_info: "👤 Информация о клиенте",
+                client_name: "ФИО клиента *", client_phone: "Телефон *", client_email: "Email",
+                device_model: "Модель устройства",
+                payment_info: "💳 Информация об оплате", payment_method: "Способ оплаты *",
+                payment_status: "Статус оплаты *", payment_note: "Комментарий к оплате",
+                select_payment: "Выберите", holvi_terminal: "Holvi Terminal", cash: "Наличные", card: "Карта",
+                bank_transfer: "Банковский перевод", mobilepay: "MobilePay", other: "Другое",
+                paid: "Оплачено", pending: "Ожидает", partial: "Частично", cancelled: "Отменено",
+                payment_date: "Дата оплаты *",
+                amount_paid: "Оплачено (€) *",
+                amount_paid_hint: "Для частичной оплаты укажите сумму; в отчётах доход считается по этому полю, не по общей сумме.",
+                amount_paid_required: "Укажите сумму частичной оплаты (€).",
+                services: "🛠️ Выполненные услуги", add_service: "+ Добавить услугу",
+                service_name: "Название услуги", service_description: "Описание",
+                service_price: "Цена (€)", total_amount: "Общая сумма:",
+                additional_info: "📝 Дополнительно", notes: "Примечания", warranty_terms: "Условия / гарантия",
+                technician_info: "👨‍🔧 Мастер", technician_name: "ФИО мастера *",
+                receipt_date: "Дата выдачи *", digital_signature: "✍️ Подпись мастера",
+                clear_signature: "Очистить", signature_required: "Подпись обязательна",
+                signature_completed: "Подпись готова", submit_receipt: "Отправить квитанцию",
+                remove_service: "Удалить",
+                default_warranty_terms: "🛠️ Условия / гарантия:\nГарантия 30 дней на выполненные работы.\nНе распространяется на механические повреждения."
+            },
+            en: {
+                document_id: "Receipt Number", client_info: "👤 Client Information",
+                client_name: "Client Name *", client_phone: "Phone *", client_email: "Email",
+                device_model: "Device model",
+                payment_info: "💳 Payment Information", payment_method: "Payment Method *",
+                payment_status: "Payment Status *", payment_note: "Payment Note",
+                select_payment: "Select", holvi_terminal: "Holvi Terminal", cash: "Cash", card: "Card",
+                bank_transfer: "Bank Transfer", mobilepay: "MobilePay", other: "Other",
+                paid: "Paid", pending: "Pending", partial: "Partially paid", cancelled: "Cancelled",
+                payment_date: "Payment Date *",
+                amount_paid: "Amount paid (€) *",
+                amount_paid_hint: "For partial payment, enter the amount; reports use this value, not the receipt total.",
+                amount_paid_required: "Enter the partial payment amount (€).",
+                services: "🛠️ Services Provided", add_service: "+ Add Service",
+                service_name: "Service Name", service_description: "Description",
+                service_price: "Price (€)", total_amount: "Total Amount:",
+                additional_info: "📝 Additional", notes: "Notes", warranty_terms: "Terms / warranty",
+                technician_info: "👨‍🔧 Technician", technician_name: "Technician Name *",
+                receipt_date: "Receipt Date *", digital_signature: "✍️ Technician Signature",
+                clear_signature: "Clear", signature_required: "Signature required",
+                signature_completed: "Signature completed", submit_receipt: "Submit Receipt",
+                remove_service: "Remove",
+                default_warranty_terms: "🛠️ Terms / warranty:\n30-day warranty on completed work.\nDoes not cover mechanical damage."
+            },
+            fi: {
+                document_id: "Kuitin numero", client_info: "👤 Asiakkaan tiedot",
+                client_name: "Asiakkaan nimi *", client_phone: "Puhelin *", client_email: "Sähköposti",
+                device_model: "Laitteen malli",
+                payment_info: "💳 Maksutiedot", payment_method: "Maksutapa *",
+                payment_status: "Maksun tila *", payment_note: "Maksun kommentti",
+                select_payment: "Valitse", holvi_terminal: "Holvi Terminal", cash: "Käteinen", card: "Kortti",
+                bank_transfer: "Tilisiirto", mobilepay: "MobilePay", other: "Muu",
+                paid: "Maksettu", pending: "Odottaa", partial: "Osittainen", cancelled: "Peruttu",
+                payment_date: "Maksupäivä *",
+                amount_paid: "Maksettu summa (€) *",
+                amount_paid_hint: "Osamaksussa: merkitse summa; raporteissa käytetään tätä, ei koko loppusummaa.",
+                amount_paid_required: "Anna osamaksun summa (€).",
+                services: "🛠️ Tarjotut palvelut", add_service: "+ Lisää palvelu",
+                service_name: "Palvelun nimi", service_description: "Kuvaus",
+                service_price: "Hinta (€)", total_amount: "Kokonaissumma:",
+                additional_info: "📝 Lisätiedot", notes: "Huomautukset", warranty_terms: "Ehdot / takuu",
+                technician_info: "👨‍🔧 Teknikko", technician_name: "Teknikon nimi *",
+                receipt_date: "Kuittipäivä *", digital_signature: "✍️ Teknikon allekirjoitus",
+                clear_signature: "Tyhjennä", signature_required: "Allekirjoitus vaaditaan",
+                signature_completed: "Allekirjoitus valmis", submit_receipt: "Lähetä kuitti",
+                remove_service: "Poista",
+                default_warranty_terms: "🛠️ Ehdot / takuu:\n30 päivän takuu suoritetulle työlle.\nEi koske mekaanisia vaurioita."
+            }
+        };
+
+        let currentLanguage = 'ru';
+        let hasSignature = false;
+        let serviceCounter = 0;
+        let currentReceiptToken = '';
+        let autoFilledWarrantyText = '';
+
+        const fetchJson = window.FixariVan?.http?.fetchJson ?? (async function(url, options = {}) {
+            const response = await fetch(url, options);
+            const text = await response.text();
+            if (!response.ok) {
+                const snippet = (text || '').trim().slice(0, 200);
+                throw new Error(snippet || `HTTP ${response.status}`);
+            }
+            try {
+                return JSON.parse(text);
+            } catch (error) {
+                const snippet = (text || '').trim().slice(0, 200);
+                throw new Error(snippet || 'Сервер вернул некорректный ответ');
+            }
+        });
+
+        const getValue = (id, fallback = '') => {
+            const el = document.getElementById(id);
+            if (!el) return fallback;
+            return typeof el.value === 'string' ? el.value.trim() : fallback;
+        };
+        const firstOrderLineName = (lines) => {
+            if (!Array.isArray(lines)) return '';
+            for (const ln of lines) {
+                const name = String(ln?.name || ln?.title || '').trim();
+                if (name) return name;
+            }
+            return '';
+        };
+        const resolveReceiptOrderDisplayName = (order, lines) => {
+            const d = order || {};
+            const type = String(d.order_type || d.orderType || 'repair').toLowerCase().trim();
+            const deviceModel = String(d.device_model || d.deviceModel || '').trim();
+            const deviceType = String(d.device_type || d.deviceType || '').trim();
+            const description = String(d.problem_description || d.problemDescription || '').trim();
+            const comment = String(d.public_comment || d.publicComment || '').trim();
+            const firstLine = firstOrderLineName(lines);
+            if (type === 'sale') {
+                return description || firstLine || 'Продажа';
+            }
+            if (type === 'custom') {
+                if (description && comment) return `${description} — ${comment}`;
+                return description || comment || firstLine || 'Нестандартный заказ';
+            }
+            return deviceModel || deviceType || 'Заказ';
+        };
+
+        function applyModeFromQuery() {
+            const params = new URLSearchParams(window.location.search);
+            const mode = (params.get('mode') || '').toLowerCase();
+            if (mode !== 'invoice') return;
+            const h1 = document.querySelector('.header h1');
+            const p = document.querySelector('.header p');
+            if (h1) h1.textContent = '📄 Счёт на оплату';
+            if (p) p.textContent = 'FixariVan - Документ для оплаты';
+            const status = document.getElementById('paymentStatus');
+            if (status) status.value = 'pending';
+        }
+
+        /** Привязка к заказу из Track / «Новый заказ»: document_id + order_id + client_token. */
+        window.__receiptOrderBinding = null;
+
+        function fillClientFromQuery() {
+            const params = new URLSearchParams(window.location.search);
+            const map = [
+                ['clientName', 'client_name'],
+                ['clientPhone', 'client_phone'],
+                ['clientEmail', 'client_email'],
+                ['deviceModel', 'device_model'],
+                ['orderId', 'order_id']
+            ];
+            map.forEach(([id, key]) => {
+                const val = (params.get(key) || '').trim();
+                const el = document.getElementById(id);
+                if (val && el && !el.value) el.value = val;
+            });
+            const docOrder = (params.get('document_id') || '').trim();
+            const tok = (params.get('client_token') || '').trim();
+            const odEl = document.getElementById('orderDocumentId');
+            const ctEl = document.getElementById('clientTokenBind');
+            if (docOrder && odEl && !odEl.value) odEl.value = docOrder;
+            if (tok && ctEl && !ctEl.value) ctEl.value = tok;
+        }
+
+        /**
+         * Предзаполнение услуг из заказа, если статус «Готово» / «Выдано» (done / delivered).
+         * Мастер проверяет суммы и подписывает.
+         */
+        async function prefillReceiptFromOrderIfReady() {
+            const runDefault = () => { addService(); };
+            const toNumberOrZero = (v) => {
+                if (v == null || v === '') return 0;
+                const n = Number(String(v).replace(',', '.').trim());
+                return Number.isFinite(n) ? n : 0;
+            };
+            const servicesList = document.getElementById('servicesList');
+            if (!servicesList) {
+                runDefault();
+                return;
+            }
+            const params = new URLSearchParams(window.location.search || '');
+            if (params.get('prefill') === '0' || params.get('prefill') === 'false') {
+                runDefault();
+                return;
+            }
+            const ctx = typeof FixariVanOrderDoc !== 'undefined' ? FixariVanOrderDoc.parseQuery() : { documentId: '', orderId: '' };
+            if (!FixariVanOrderDoc || !FixariVanOrderDoc.hasOrderBinding(ctx)) {
+                runDefault();
+                return;
+            }
+            try {
+                const res = await fetchJson(`./api/get_document.php?id=${encodeURIComponent(ctx.documentId)}&type=order`);
+                const d = res && res.data ? res.data : {};
+                const rawSt = String(d.public_status || d.order_status || '').toLowerCase().trim();
+                const legacyDone = { 'готово': 1, 'выдано': 1, 'готово.': 1, 'выдан.': 1 };
+                const pubNorm = rawSt.replace(/\s+/g, '');
+                const isDoneOrder =
+                    pubNorm === 'done' ||
+                    pubNorm === 'delivered' ||
+                    legacyDone[rawSt] === 1 ||
+                    legacyDone[pubNorm] === 1;
+                if (!isDoneOrder) {
+                    runDefault();
+                    return;
+                }
+                let lines = [];
+                if (typeof d.order_lines_json === 'string') {
+                    try {
+                        lines = JSON.parse(d.order_lines_json || '[]');
+                    } catch (e) {
+                        lines = [];
+                    }
+                } else if (Array.isArray(d.order_lines_json)) {
+                    lines = d.order_lines_json;
+                }
+                if (!Array.isArray(lines)) {
+                    lines = [];
+                }
+                const resolvedReceiptTitle = resolveReceiptOrderDisplayName(d, lines);
+                const deviceModelEl = document.getElementById('deviceModel');
+                if (deviceModelEl && resolvedReceiptTitle) {
+                    deviceModelEl.value = resolvedReceiptTitle;
+                }
+                const orderType = String(d.order_type || d.orderType || '').toLowerCase().trim();
+                const isRepairOrder = (orderType === '' || orderType === 'repair');
+                const estimatedLaborCost = toNumberOrZero(
+                    d.public_estimated_cost ?? d.publicEstimatedCost ?? d.estimated_labor_cost ?? d.estimatedLaborCost ?? 0
+                );
+                servicesList.innerHTML = '';
+                serviceCounter = 0;
+                let added = 0;
+                for (const ln of lines) {
+                    const name = String(ln.name || ln.title || '').trim();
+                    if (!name) {
+                        continue;
+                    }
+                    const qty = Number(ln.qty ?? ln.quantity ?? 1) || 1;
+                    const sale = Number(ln.sale ?? ln.sale_price ?? ln.price ?? 0) || 0;
+                    const priceLine = sale * qty;
+                    const parts = [];
+                    if (qty !== 1) {
+                        parts.push(`Кол-во: ${qty}`);
+                    }
+                    if (ln.sku) {
+                        parts.push(`SKU: ${ln.sku}`);
+                    }
+                    const desc = parts.join(' · ');
+                    addService(name, desc, priceLine);
+                    added++;
+                }
+                // Для заказов типа repair добавляем отдельную строку работ.
+                if (isRepairOrder) {
+                    addService('Repair service', '', estimatedLaborCost);
+                    added++;
+                }
+                if (added === 0) {
+                    runDefault();
+                    return;
+                }
+                const banner = document.getElementById('orderBindBanner');
+                if (banner && banner.style.display !== 'none') {
+                    const hint = document.createElement('div');
+                    hint.style.marginTop = '8px';
+                    hint.style.color = '#166534';
+                    hint.textContent = 'Строки услуг подставлены из заказа (статус «Готово»). Проверьте суммы и подпишите.';
+                    banner.appendChild(hint);
+                }
+                const notesEl = document.getElementById('notes');
+                if (notesEl && !String(notesEl.value || '').trim()) {
+                    const oid = String(d.order_id || ctx.orderId || '').trim();
+                    notesEl.value = oid
+                        ? `Заказ ${oid}. Данные из заказа (статус «Готово»).`
+                        : 'Данные из заказа (статус «Готово»).';
+                }
+                updateTotal();
+            } catch (e) {
+                console.warn('prefillReceiptFromOrderIfReady', e);
+                runDefault();
+            }
+        }
+
+        function applyReceiptOrderBindingUi() {
+            const ctx = typeof FixariVanOrderDoc !== 'undefined' ? FixariVanOrderDoc.parseQuery() : { documentId: '', orderId: '', clientToken: '' };
+            const banner = document.getElementById('orderBindBanner');
+            const trackHint = document.getElementById('receiptTrackHint');
+            if (!banner) return;
+            if (FixariVanOrderDoc && FixariVanOrderDoc.hasOrderBinding(ctx)) {
+                if (trackHint) trackHint.style.display = 'none';
+                window.__receiptOrderBinding = {
+                    orderDocumentId: ctx.documentId,
+                    orderId: ctx.orderId,
+                    clientToken: ctx.clientToken || ''
+                };
+                const od = document.getElementById('orderDocumentId');
+                const ct = document.getElementById('clientTokenBind');
+                if (od) od.value = ctx.documentId;
+                if (ct && ctx.clientToken) ct.value = ctx.clientToken;
+                banner.style.display = 'block';
+                banner.innerHTML =
+                    '<strong>Заказ:</strong> ' + String(ctx.orderId) +
+                    ' · <span class="muted-hint" style="display:inline;">документ ' + String(ctx.documentId) + '</span>' +
+                    (ctx.clientToken ? ' · токен портала передан в ссылке' : '');
+            } else {
+                banner.style.display = 'none';
+                window.__receiptOrderBinding = null;
+                if (trackHint) trackHint.style.display = 'block';
+            }
+        }
+
+        function restoreReceiptBoundFieldsAfterReset() {
+            const b = window.__receiptOrderBinding;
+            if (!b || !b.orderDocumentId) return;
+            const docEl = document.getElementById('documentId');
+            const oidEl = document.getElementById('orderId');
+            const odEl = document.getElementById('orderDocumentId');
+            const ctEl = document.getElementById('clientTokenBind');
+            if (docEl && typeof FixariVanOrderDoc !== 'undefined') {
+                docEl.value = FixariVanOrderDoc.receiptDocId(b.orderDocumentId);
+            }
+            if (oidEl) oidEl.value = b.orderId;
+            if (odEl) odEl.value = b.orderDocumentId;
+            if (ctEl && b.clientToken) ctEl.value = b.clientToken;
+        }
+
+        async function loadCompanyProfile() {
+            try {
+                const result = await fetchJson('./api/company_profile.php', { credentials: 'same-origin' });
+                const p = result && result.profile ? result.profile : {};
+                const setText = (id, value) => {
+                    const el = document.getElementById(id);
+                    if (el && value) el.textContent = value;
+                };
+                setText('companyNameView', p.company_name);
+                setText('companyPhoneView', p.company_phone);
+                setText('companyEmailView', p.company_email);
+                setText('companyWebsiteView', p.company_website);
+                if (p.y_tunnus) {
+                    setText('companyYtunnusView', `Y-tunnus: ${p.y_tunnus}`);
+                }
+                const bankLine = [p.bank_name, p.iban ? `IBAN: ${p.iban}` : '', p.bic ? `BIC: ${p.bic}` : '']
+                    .filter(Boolean)
+                    .join(' • ');
+                if (bankLine) {
+                    setText('companyBankLine', bankLine);
+                    const wrap = document.getElementById('companyBankView');
+                    if (wrap) wrap.style.display = 'flex';
+                }
+            } catch (_) {}
+        }
+
+        function helsinkiDateInputValue() {
+            // Дата для форм должна идти по Europe/Helsinki, без UTC-сдвига.
+            const parts = new Intl.DateTimeFormat('sv-SE', {
+                timeZone: 'Europe/Helsinki',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).formatToParts(new Date());
+            const map = {};
+            parts.forEach((p) => { map[p.type] = p.value; });
+            return `${map.year}-${map.month}-${map.day}`;
+        }
+
+        function showMessage(message, type) {
+            const box = document.getElementById('messageBox');
+            if (!box) return;
+            box.textContent = message;
+            box.className = `message-box ${type}`;
+            box.style.display = 'block';
+        }
+
+        function getDefaultWarrantyTerms(lang) {
+            const dict = translations[lang] || translations.ru;
+            return String(dict.default_warranty_terms || '').trim();
+        }
+
+        function applyDefaultWarrantyTerms(forceReplaceAuto = false) {
+            const termsEl = document.getElementById('warrantyTerms');
+            if (!termsEl) return;
+            const current = String(termsEl.value || '');
+            const nextDefault = getDefaultWarrantyTerms(currentLanguage);
+            if (!current.trim()) {
+                termsEl.value = nextDefault;
+                autoFilledWarrantyText = nextDefault;
+                return;
+            }
+            if (forceReplaceAuto && autoFilledWarrantyText && current.trim() === autoFilledWarrantyText.trim()) {
+                termsEl.value = nextDefault;
+                autoFilledWarrantyText = nextDefault;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            fillClientFromQuery();
+            const ctx = typeof FixariVanOrderDoc !== 'undefined' ? FixariVanOrderDoc.parseQuery() : {};
+            if (FixariVanOrderDoc && FixariVanOrderDoc.hasOrderBinding(ctx)) {
+                document.getElementById('documentId').value = FixariVanOrderDoc.receiptDocId(ctx.documentId);
+            } else {
+                document.getElementById('documentId').value = `RCT-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000) + 1000}`;
+            }
+            applyReceiptOrderBindingUi();
+            const today = helsinkiDateInputValue();
+            document.getElementById('paymentDate').value = today;
+            document.getElementById('receiptDate').value = today;
+            initializeLanguageSwitcher();
+            initializeSignatureCanvas();
+            initializeFormSubmission();
+            applyModeFromQuery();
+            loadCompanyProfile();
+            await prefillReceiptFromOrderIfReady();
+            applyDefaultWarrantyTerms(false);
+            syncAmountPaidUi();
+            const ps = document.getElementById('paymentStatus');
+            if (ps) ps.addEventListener('change', syncAmountPaidUi);
+        });
+
+        function syncAmountPaidUi() {
+            const st = document.getElementById('paymentStatus');
+            const wrap = document.getElementById('amountPaidWrap');
+            if (!st || !wrap) return;
+            const partial = st.value === 'partial';
+            wrap.style.display = partial ? 'block' : 'none';
+            if (!partial) {
+                const inp = document.getElementById('amountPaid');
+                if (inp) inp.value = '';
+            }
+        }
+
+        function initializeLanguageSwitcher() {
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentLanguage = this.getAttribute('data-lang');
+                    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    Object.keys(translations[currentLanguage]).forEach(key => {
+                        document.querySelectorAll(`[data-lang="${key}"]`).forEach(el => {
+                            if (el.tagName === 'BUTTON' || el.tagName === 'LABEL' || el.tagName === 'OPTION' || el.tagName === 'DIV' || el.tagName === 'H2' || el.tagName === 'H3' || el.tagName === 'SPAN' || el.tagName === 'SMALL') {
+                                el.textContent = translations[currentLanguage][key];
+                            }
+                        });
+                    });
+                    applyDefaultWarrantyTerms(true);
+                    updateSignatureStatus();
+                    updateTotal();
+                });
+            });
+        }
+
+        function addService(prefillName, prefillDesc, prefillPrice) {
+            serviceCounter++;
+            const serviceDiv = document.createElement('div');
+            serviceDiv.className = 'service-item';
+            serviceDiv.id = `service-${serviceCounter}`;
+            serviceDiv.innerHTML = `
+                <div class="service-header">
+                    <input type="text" name="serviceNames[]" placeholder="${translations[currentLanguage].service_name}" required style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <button type="button" class="remove-service-btn" onclick="removeService(${serviceCounter})">${translations[currentLanguage].remove_service}</button>
+                </div>
+                <textarea name="serviceDescriptions[]" placeholder="${translations[currentLanguage].service_description}" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;"></textarea>
+                <div class="form-group">
+                    <label>${translations[currentLanguage].service_price}</label>
+                    <input type="number" name="servicePrices[]" step="0.01" min="0" placeholder="0.00" onchange="updateTotal()" required style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+            `;
+            document.getElementById('servicesList').appendChild(serviceDiv);
+            const nameInp = serviceDiv.querySelector('input[name="serviceNames[]"]');
+            const descInp = serviceDiv.querySelector('textarea[name="serviceDescriptions[]"]');
+            const priceInp = serviceDiv.querySelector('input[name="servicePrices[]"]');
+            if (prefillName != null && prefillName !== '' && nameInp) {
+                nameInp.value = String(prefillName);
+            }
+            if (prefillDesc != null && prefillDesc !== '' && descInp) {
+                descInp.value = String(prefillDesc);
+            }
+            if (prefillPrice != null && prefillPrice !== '' && priceInp) {
+                const n = Number(prefillPrice);
+                if (!Number.isNaN(n)) {
+                    priceInp.value = String(n);
+                }
+            }
+            updateTotal();
+        }
+
+        function removeService(id) {
+            const serviceDiv = document.getElementById(`service-${id}`);
+            if (serviceDiv) {
+                serviceDiv.remove();
+                updateTotal();
+            }
+        }
+
+        function updateTotal() {
+            const prices = document.querySelectorAll('input[name="servicePrices[]"]');
+            let total = 0;
+            prices.forEach(priceInput => {
+                total += parseFloat(priceInput.value) || 0;
+            });
+            document.getElementById('totalAmount').textContent = formatMoney(total, currentLanguage);
+        }
+
+        function initializeSignatureCanvas() {
+            const canvas = document.getElementById('signatureCanvas');
+            const ctx = canvas.getContext('2d');
+            let isDrawing = false;
+
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            canvas.addEventListener('mousedown', (e) => {
+                isDrawing = true;
+                const rect = canvas.getBoundingClientRect();
+                ctx.beginPath();
+                ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isDrawing) return;
+                const rect = canvas.getBoundingClientRect();
+                ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+                ctx.stroke();
+                updateSignatureStatus();
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                isDrawing = false;
+                updateSignatureStatus();
+            });
+
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                ctx.beginPath();
+                ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+                isDrawing = true;
+            });
+
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!isDrawing) return;
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+                ctx.stroke();
+                updateSignatureStatus();
+            });
+
+            canvas.addEventListener('touchend', () => {
+                isDrawing = false;
+                updateSignatureStatus();
+            });
+
+            document.getElementById('clearSignature').addEventListener('click', () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                hasSignature = false;
+                updateSignatureStatus();
+            });
+        }
+
+        function updateSignatureStatus() {
+            const canvas = document.getElementById('signatureCanvas');
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            let hasContent = false;
+            
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                if (imageData.data[i + 3] > 0) {
+                    hasContent = true;
+                    break;
+                }
+            }
+            
+            hasSignature = hasContent;
+            const status = document.getElementById('signatureStatus');
+            if (hasSignature) {
+                status.textContent = translations[currentLanguage].signature_completed;
+                status.classList.add('has-signature');
+            } else {
+                status.textContent = translations[currentLanguage].signature_required;
+                status.classList.remove('has-signature');
+            }
+        }
+
+        function initializeFormSubmission() {
+            document.getElementById('receiptForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                if (!hasSignature) {
+                    alert('Требуется подпись мастера!');
+                    return;
+                }
+
+                const bind = window.__receiptOrderBinding;
+                if (bind && bind.orderId) {
+                    const curOid = getValue('orderId');
+                    if (!curOid || curOid !== bind.orderId) {
+                        alert('Квитанция открыта по ссылке заказа: номер заказа должен совпадать (' + bind.orderId + '). Обновите страницу по ссылке из Track или «Новый заказ».');
+                        return;
+                    }
+                }
+
+                if (getValue('paymentStatus') === 'partial') {
+                    const raw = getValue('amountPaid');
+                    const ap = parseFloat(raw.replace(',', '.'));
+                    if (raw === '' || isNaN(ap) || ap < 0) {
+                        alert(translations[currentLanguage].amount_paid_required || 'Укажите сумму частичной оплаты (€).');
+                        return;
+                    }
+                }
+
+                const serviceNames = Array.from(document.querySelectorAll('input[name="serviceNames[]"]')).map(i => i.value);
+                const serviceDescriptions = Array.from(document.querySelectorAll('textarea[name="serviceDescriptions[]"]')).map(i => i.value);
+                const servicePrices = Array.from(document.querySelectorAll('input[name="servicePrices[]"]')).map(i => parseFloat(i.value) || 0);
+                
+                const services = [];
+                for (let i = 0; i < serviceNames.length; i++) {
+                    if (serviceNames[i].trim()) {
+                        services.push({
+                            name: serviceNames[i],
+                            description: serviceDescriptions[i] || '',
+                            price: servicePrices[i]
+                        });
+                    }
+                }
+
+                const total = servicePrices.reduce((sum, price) => sum + price, 0);
+
+                const notesText = getValue('notes');
+                const warrantyTermsText = getValue('warrantyTerms');
+                const combinedNotes = [notesText, warrantyTermsText].filter(Boolean).join('\n\n');
+
+                const payload = {
+                    documentId: getValue('documentId'),
+                    orderId: getValue('orderId'),
+                    orderDocumentId: getValue('orderDocumentId'),
+                    clientToken: getValue('clientTokenBind') || undefined,
+                    clientName: getValue('clientName'),
+                    clientPhone: getValue('clientPhone'),
+                    clientEmail: getValue('clientEmail'),
+                    deviceModel: getValue('deviceModel'),
+                    paymentMethod: getValue('paymentMethod'),
+                    paymentStatus: getValue('paymentStatus'),
+                    paymentDate: getValue('paymentDate'),
+                    paymentNote: getValue('paymentNote'),
+                    services,
+                    totalAmount: total,
+                    notes: combinedNotes,
+                    technicianName: getValue('technicianName'),
+                    receiptDate: getValue('receiptDate'),
+                    signatureData: document.getElementById('signatureCanvas')?.toDataURL() || null,
+                    language: currentLanguage
+                };
+                if (getValue('paymentStatus') === 'partial') {
+                    payload.amountPaid = parseFloat((getValue('amountPaid') || '').replace(',', '.')) || 0;
+                }
+
+                try {
+                    const saveResult = await fetchJson('./api/save_receipt_ultimate.php', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (saveResult && saveResult.success === false) {
+                        throw new Error(saveResult.message || 'Ошибка сохранения квитанции');
+                    }
+                    if (saveResult && saveResult.sqlite_warning) {
+                        console.warn('save_receipt_ultimate sqlite_warning:', saveResult.sqlite_warning);
+                    }
+
+                    currentReceiptToken = saveResult.client_token || '';
+                    if (!currentReceiptToken) {
+                        throw new Error('client_token не вернулся после сохранения квитанции');
+                    }
+
+                    // Show viewer link (token-based). PDF is secondary and must not block this flow.
+                    const viewerPath = window.location.pathname.replace('receipt.html', 'receipt_view.php');
+                    const viewerLink = `${window.location.origin + viewerPath}?token=${encodeURIComponent(currentReceiptToken)}&lang=${encodeURIComponent(currentLanguage)}`;
+
+                    document.getElementById('receiptClientLink').textContent = viewerLink;
+                    document.getElementById('receiptLinkSection').style.display = 'block';
+
+                    showMessage('Квитанция успешно сохранена!', 'success');
+
+                    try {
+                        const pdfResult = await fetchJson('./api/generate_dompdf_fixed.php', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                documentId: payload.documentId,
+                                documentType: 'receipt',
+                                language: currentLanguage,
+                                data: payload
+                            })
+                        });
+                        if (pdfResult && pdfResult.success) {
+                            const link = pdfResult.pdf_url || pdfResult.download_url;
+                            if (link) window.open(link, '_blank');
+                        }
+                    } catch (pdfErr) {
+                        // Ignore PDF errors.
+                    }
+
+                    e.target.reset();
+                    const canvas = document.getElementById('signatureCanvas');
+                    const ctx2 = canvas?.getContext('2d');
+                    if (ctx2) {
+                        ctx2.clearRect(0, 0, canvas.width, canvas.height);
+                    }
+                    hasSignature = false;
+                    updateSignatureStatus();
+                    if (window.__receiptOrderBinding && window.__receiptOrderBinding.orderDocumentId) {
+                        restoreReceiptBoundFieldsAfterReset();
+                    } else {
+                        document.getElementById('documentId').value = `RCT-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000) + 1000}`;
+                    }
+                    const today = helsinkiDateInputValue();
+                    document.getElementById('paymentDate').value = today;
+                    document.getElementById('receiptDate').value = today;
+                    serviceCounter = 0;
+                    document.getElementById('servicesList').innerHTML = '';
+                    addService();
+                } catch (error) {
+                    console.error('Receipt error:', error);
+                    showMessage('Ошибка: ' + error.message, 'error');
+                }
+            });
+        }
+
+        function copyReceiptLink() {
+            const link = document.getElementById('receiptClientLink').textContent.trim();
+            if (!link) {
+                alert('Сначала сохраните квитанцию.');
+                return;
+            }
+            navigator.clipboard.writeText(link).then(() => {
+                alert('Ссылка скопирована!');
+            });
+        }
+
+        function openReceiptViewer() {
+            const link = document.getElementById('receiptClientLink').textContent.trim();
+            if (!link) {
+                alert('Сначала сохраните квитанцию.');
+                return;
+            }
+            window.open(link, '_blank');
+        }
+    </script>
+    <script src="js/client_autofill.js"></script>
+</body>
+</html>

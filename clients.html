@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>FixariVan — клиенты</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#070b14">
+    <script>window.FIXARIVAN_REQUIRE_ADMIN_SESSION = true;</script>
+    <script src="auth_check.js"></script>
+    <script src="js/ui_helpers.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: radial-gradient(circle at top, #0F1629 0%, #0B0F1A 60%);
+            color: #eef2ff;
+            padding: 16px;
+        }
+        a { color:#93c5fd; }
+        .top { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
+        .layout { display:grid; grid-template-columns: 340px 1fr; gap:16px; max-width:1300px; margin:0 auto; }
+        @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
+        .card {
+            background: #161D2F;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.2s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            background: #1C2540;
+        }
+        .layout > aside.card { margin-bottom: 0; }
+        .client-main { min-width: 0; }
+        .search-row { display:flex; gap:8px; margin-bottom:10px; }
+        input, textarea {
+            width:100%;
+            padding:10px 12px;
+            border-radius:8px;
+            border:1px solid rgba(255,255,255,0.08);
+            background:#141A2B;
+            color:#e5e7eb;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #6C8CFF;
+            box-shadow: 0 0 0 1px rgba(108,140,255,0.3);
+            background: #182033;
+        }
+        textarea { min-height:80px; resize:vertical; }
+        button {
+            padding:9px 13px;
+            border-radius:8px;
+            border:1px solid rgba(255,255,255,0.12);
+            background:rgba(255,255,255,0.06);
+            color:#e5e7eb;
+            cursor:pointer;
+            font-size:0.9rem;
+            transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+        }
+        button:hover { background: #1C2540; transform: translateY(-1px); }
+        button.primary { background:#315fd8; border-color:#6C8CFF; color:#fff; }
+        button.primary:hover { background:#3a6cf3; border-color:#85a1ff; }
+        button.secondary { background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.14); }
+        button.danger { background:#4a1e28; border-color:#a83b55; color:#ffd7df; }
+        button.danger:hover { background:#5b2530; border-color:#cf4a69; }
+        .list { max-height:72vh; overflow:auto; }
+        .item {
+            padding:12px;
+            border-radius:10px;
+            border:1px solid rgba(255,255,255,0.06);
+            background:#161D2F;
+            margin-bottom:8px;
+            cursor:pointer;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+        .item:hover { background:#182033; border-color:rgba(255,255,255,0.1); }
+        .item.active {
+            background:#1C2540;
+            border-color:rgba(108,140,255,0.45);
+            box-shadow: 0 0 0 1px rgba(108,140,255,0.25);
+        }
+        .muted { color:rgba(255,255,255,0.6); font-size:0.9rem; }
+        .section-title { margin:0 0 10px 0; color: rgba(255,255,255,0.9); }
+        .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        @media (max-width: 720px){ .grid-2 { grid-template-columns:1fr; } }
+        .client-head { margin-bottom: 4px; }
+        .client-name { font-size: 1.65rem; font-weight: 800; color: rgba(255,255,255,0.92); line-height: 1.2; }
+        .client-meta { margin-top: 8px; display:flex; flex-wrap:wrap; gap:14px; }
+        .client-meta-item { color: rgba(255,255,255,0.6); font-size: 0.92rem; }
+        .stat-chips { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 0 0; }
+        .chip-stat {
+            font-size:0.82rem;
+            padding:5px 11px;
+            border-radius:999px;
+            background:rgba(108,140,255,0.14);
+            border:1px solid rgba(108,140,255,0.35);
+            color: rgba(255,255,255,0.86);
+        }
+        .quick-docs { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; }
+        .quick-docs button { justify-content: center; }
+        .form-actions-main { display:flex; gap:8px; margin-top:12px; }
+        .danger-actions { margin-top: 12px; }
+        .order-card { border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px 14px; margin-bottom:12px; background:rgba(0,0,0,0.22); }
+        .order-card.done { border-color:rgba(34,197,94,0.35); background:rgba(34,197,94,0.06); }
+        .order-card-head { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px; }
+        .order-id { font-weight:800; font-size:1.02rem; letter-spacing:0.02em; }
+        .badge-row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+        .badge { font-size:0.75rem; padding:3px 8px; border-radius:999px; border:1px solid rgba(255,255,255,0.15); }
+        .badge.pub { background:rgba(59,130,246,0.15); border-color:rgba(96,165,250,0.45); }
+        .badge.parts { background:rgba(245,158,11,0.12); border-color:rgba(251,191,36,0.4); }
+        .order-meta { font-size:0.88rem; margin-top:4px; line-height:1.45; }
+        .order-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+        .order-actions button { font-size:0.82rem; padding:6px 10px; }
+        .nest { margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.1); }
+        .nest h5 { margin:0 0 6px 0; font-size:0.82rem; font-weight:700; color:#a5b4fc; text-transform:uppercase; letter-spacing:0.04em; }
+        .nest ul { list-style:none; margin:0; padding:0; }
+        .nest li { font-size:0.88rem; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+        .nest li:last-child { border-bottom:none; }
+        .empty-orders {
+            padding:18px;
+            border-radius:10px;
+            background:#1C2540;
+            border:1px dashed rgba(255,255,255,0.12);
+            font-size:0.92rem;
+            text-align:center;
+            color: rgba(255,255,255,0.6);
+        }
+        .empty-orders .btn-empty-create { margin-top: 10px; }
+        label { display:block; margin-bottom:6px; color: rgba(255,255,255,0.6); font-size: 0.88rem; }
+        .left-meta { margin-top: 6px; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; color: rgba(255,255,255,0.6); font-size:0.84rem; }
+    </style>
+    <link rel="stylesheet" href="css/fixarivan-theme.css">
+    <link rel="stylesheet" href="mobile_fixes.css">
+</head>
+<body class="fv-page clients-page">
+    <div class="top">
+        <h1 style="margin:0;">👥 Клиенты</h1>
+        <nav><a href="dashboard_app.html">← Рабочий стол</a></nav>
+    </div>
+
+    <div class="layout">
+        <aside class="card">
+            <div class="search-row">
+                <input type="text" id="q" placeholder="Поиск: имя, телефон, email, client_id, заказ, акт">
+                <button id="btnSearch">Найти</button>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:10px;">
+                <button class="primary" id="btnNew">+ Новый клиент</button>
+                <button id="btnReload">Обновить</button>
+            </div>
+            <div id="clientsList" class="list"><div class="muted">Загрузка…</div></div>
+        </aside>
+
+        <main class="client-main">
+            <section class="card">
+                <div class="client-head">
+                    <div class="client-name" id="detailsTitle">Новый клиент</div>
+                    <div class="client-meta">
+                        <span class="client-meta-item" id="summaryPhone">Телефон: —</span>
+                        <span class="client-meta-item" id="summaryEmail">Email: —</span>
+                    </div>
+                </div>
+                <div class="stat-chips" id="statChips">
+                    <span class="chip-stat" id="chipActive">Активных заказов: 0</span>
+                    <span class="chip-stat" id="chipWait">Ожидание запчастей: 0</span>
+                </div>
+            </section>
+
+            <section class="card">
+                <h3 class="section-title">Действия</h3>
+                <div class="quick-docs">
+                    <button type="button" id="btnNewOrderBlank">➕ Новый заказ</button>
+                    <button type="button" id="btnNewOrder">📝 Новый акт</button>
+                    <button type="button" id="btnNewReceipt">🧾 Квитанция</button>
+                    <button type="button" id="btnNewInvoice">📄 Счёт</button>
+                </div>
+            </section>
+
+            <section class="card">
+                <h3 class="section-title">Данные клиента</h3>
+                <form id="clientForm">
+                    <input type="hidden" id="fClientId">
+                    <div class="grid-2">
+                        <div>
+                            <label>ФИО</label>
+                            <input type="text" id="fFullName" required>
+                        </div>
+                        <div>
+                            <label>Телефон</label>
+                            <input type="text" id="fPhone">
+                        </div>
+                    </div>
+                    <div class="grid-2" style="margin-top:10px;">
+                        <div>
+                            <label>Email</label>
+                            <input type="email" id="fEmail">
+                        </div>
+                        <div>
+                            <label>Client ID</label>
+                            <input type="text" id="fClientIdVisible" disabled>
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label>Заметки</label>
+                        <textarea id="fNotes"></textarea>
+                    </div>
+                    <div class="form-actions-main">
+                        <button type="submit" class="primary">Сохранить</button>
+                        <button type="button" id="btnReset" class="secondary">Очистить</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="card">
+                <h3 class="section-title">Заказы клиента</h3>
+                <p class="muted" id="ordersPlaceholder">Выберите клиента слева или создайте нового.</p>
+                <div id="ordersContainer"></div>
+            </section>
+
+            <section class="card">
+                <h3 class="section-title">Опасные действия</h3>
+                <div class="danger-actions">
+                    <button type="button" id="btnDeleteClient" class="danger">Удалить клиента</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const fetchJson = window.FixariVan?.http?.fetchJson ?? (async function(url, options = {}) {
+            const response = await fetch(url, options);
+            const text = await response.text();
+            if (!response.ok) throw new Error((text || '').trim().slice(0, 200) || ('HTTP ' + response.status));
+            const parsed = JSON.parse(text || '{}');
+            if (parsed && parsed.success === false) throw new Error(parsed.message || 'Ошибка запроса');
+            return parsed;
+        });
+        const showToast = window.FixariVan?.ui?.showToast ?? function(m){ alert(m); };
+
+        const state = { clients: [], activeId: '' };
+        function esc(s) {
+            const d = document.createElement('div');
+            d.textContent = String(s ?? '');
+            return d.innerHTML;
+        }
+        function dataBlock(r){ return (r && typeof r.data === 'object' && r.data) ? r.data : {}; }
+        function buildClientQuery() {
+            const q = new URLSearchParams();
+            const name = (document.getElementById('fFullName').value || '').trim();
+            const phone = (document.getElementById('fPhone').value || '').trim();
+            const email = (document.getElementById('fEmail').value || '').trim();
+            if (name) q.set('client_name', name);
+            if (phone) q.set('client_phone', phone);
+            if (email) q.set('client_email', email);
+            return q.toString();
+        }
+
+        function orderIsDone(o) {
+            const s = String(o.status || o.order_status || '').toLowerCase();
+            return ['completed', 'cancelled', 'signed', 'done'].includes(s);
+        }
+
+        function renderNestDocs(title, rows, mapLine) {
+            if (!rows || !rows.length) return '';
+            return `<div class="nest"><h5>${esc(title)}</h5><ul>${rows.map(mapLine).join('')}</ul></div>`;
+        }
+
+        function renderOrderCard(g) {
+            const o = g.order || {};
+            const oid = String(o.order_id || '').trim();
+            const docId = String(o.document_id || '').trim();
+            const dev = o.device_model || '—';
+            const pub = o.public_status || o.order_status || o.status || '—';
+            const parts = o.parts_status || '';
+            const est = g.estimate_total != null ? ('≈ ' + Number(g.estimate_total).toFixed(2) + ' € (позиции)') : '';
+            const done = orderIsDone(o);
+            const recs = g.receipts || [];
+            const invs = g.invoices || [];
+            const reps = g.reports || [];
+
+            const receiptsHtml = renderNestDocs('Квитанции', recs, (x) =>
+                `<li>🧾 ${esc(x.receipt_number || x.document_id || '—')} <span class="muted">• ${esc(x.status || '—')}</span></li>`
+            );
+            const invoicesHtml = renderNestDocs('Счета', invs, (x) =>
+                `<li>📄 ${esc(x.invoice_id || x.document_id || '—')} <span class="muted">• ${esc(x.status || '—')}</span></li>`
+            );
+            const reportsHtml = renderNestDocs('Диагностика', reps, (x) =>
+                `<li>📱 ${esc(x.report_id || '—')} <span class="muted">${esc(x.model || x.device_type || '—')}</span></li>`
+            );
+
+            const trackUrl = 'track.html?q=' + encodeURIComponent(oid || docId);
+
+            return `
+            <div class="order-card${done ? ' done' : ''}">
+                <div class="order-card-head">
+                    <div>
+                        <div class="order-id">${esc(oid || docId || '—')}</div>
+                        <div class="order-meta muted">${esc(dev)}</div>
+                        ${est ? `<div class="order-meta">${esc(est)}</div>` : ''}
+                    </div>
+                    <div class="badge-row">
+                        <span class="badge pub">${esc(pub)}</span>
+                        ${parts ? `<span class="badge parts">Запчасти: ${esc(parts)}</span>` : ''}
+                    </div>
+                </div>
+                <div class="order-actions">
+                    <button type="button" class="btn-open-track" data-url="${esc(trackUrl)}">Открыть в Track</button>
+                    <button type="button" class="btn-portal-open" data-doc="${esc(docId)}" data-oid="${esc(oid)}">Портал клиента</button>
+                    <button type="button" class="btn-portal-copy" data-doc="${esc(docId)}" data-oid="${esc(oid)}">Копировать ссылку</button>
+                    <button type="button" class="btn-new-order-here" data-q="${esc(buildClientQuery())}">Новый заказ</button>
+                </div>
+                ${receiptsHtml}${invoicesHtml}${reportsHtml}
+            </div>`;
+        }
+
+        function renderOrdersBlock(d) {
+            const ph = document.getElementById('ordersPlaceholder');
+            const box = document.getElementById('ordersContainer');
+            const activeOrders = Array.isArray(d.active_orders) ? d.active_orders : [];
+            const waitingParts = Array.isArray(d.waiting_parts) ? d.waiting_parts : [];
+            document.getElementById('chipActive').textContent = 'Активных заказов: ' + activeOrders.length;
+            document.getElementById('chipWait').textContent = 'Ожидание запчастей: ' + waitingParts.length;
+
+            const groups = Array.isArray(d.orders_with_docs) ? d.orders_with_docs : null;
+            ph.style.display = 'none';
+            if (groups && groups.length) {
+                box.innerHTML = groups.map(renderOrderCard).join('');
+                return;
+            }
+            const h = d.history || {};
+            const flat = h.orders || [];
+            if (!flat.length) {
+                box.innerHTML = `<div class="empty-orders">Нет заказов<br><button type="button" class="btn-empty-create btn-new-order-here" data-q="${esc(buildClientQuery())}">Создать заказ</button></div>`;
+                return;
+            }
+            box.innerHTML = flat.map((o) => renderOrderCard({
+                order: o,
+                estimate_total: null,
+                receipts: [],
+                invoices: [],
+                reports: []
+            })).join('');
+        }
+
+        async function loadClients() {
+            const q = (document.getElementById('q').value || '').trim();
+            const url = './api/clients.php' + (q ? ('?q=' + encodeURIComponent(q)) : '');
+            const r = await fetchJson(url, { credentials: 'same-origin' });
+            const rows = Array.isArray(r.clients) ? r.clients : (Array.isArray(dataBlock(r).clients) ? dataBlock(r).clients : []);
+            state.clients = rows;
+            renderList();
+        }
+
+        function renderList() {
+            const box = document.getElementById('clientsList');
+            if (!state.clients.length) {
+                box.innerHTML = '<div class="muted">Клиентов пока нет</div>';
+                return;
+            }
+            box.innerHTML = state.clients.map((c) => {
+                const active = c.client_id === state.activeId ? ' active' : '';
+                const ordersCount = Number(c.orders_count ?? c.total_orders ?? c.active_orders_count ?? 0);
+                return `<div class="item${active}" data-id="${esc(c.client_id)}">
+                    <strong>${esc(c.full_name || 'Без имени')}</strong>
+                    <div class="muted">${esc(c.email || '—')}</div>
+                    <div class="left-meta">
+                        <span>${esc(c.phone || '—')}</span>
+                        <span>Заказов: ${esc(ordersCount)}</span>
+                    </div>
+                </div>`;
+            }).join('');
+            box.querySelectorAll('.item[data-id]').forEach((el) => {
+                el.addEventListener('click', () => openClient(el.getAttribute('data-id') || ''));
+            });
+        }
+
+        function updateClientSummary(c, stats) {
+            const name = String(c?.full_name || '').trim();
+            const phone = String(c?.phone || '').trim();
+            const email = String(c?.email || '').trim();
+            document.getElementById('detailsTitle').textContent = name || 'Новый клиент';
+            document.getElementById('summaryPhone').textContent = 'Телефон: ' + (phone || '—');
+            document.getElementById('summaryEmail').textContent = 'Email: ' + (email || '—');
+            const activeCount = Number(stats?.activeCount ?? 0);
+            const waitCount = Number(stats?.waitCount ?? 0);
+            document.getElementById('chipActive').textContent = 'Активных заказов: ' + activeCount;
+            document.getElementById('chipWait').textContent = 'Ожидание запчастей: ' + waitCount;
+        }
+
+        function resetForm() {
+            state.activeId = '';
+            document.getElementById('fClientId').value = '';
+            document.getElementById('fClientIdVisible').value = '';
+            document.getElementById('fFullName').value = '';
+            document.getElementById('fPhone').value = '';
+            document.getElementById('fEmail').value = '';
+            document.getElementById('fNotes').value = '';
+            document.getElementById('ordersContainer').innerHTML = '';
+            document.getElementById('ordersPlaceholder').style.display = 'block';
+            updateClientSummary({}, { activeCount: 0, waitCount: 0 });
+            renderList();
+            setTimeout(() => {
+                const f = document.getElementById('fFullName');
+                if (f) f.focus();
+            }, 0);
+        }
+
+        async function openClient(clientId) {
+            if (!clientId) return;
+            const r = await fetchJson('./api/clients.php?client_id=' + encodeURIComponent(clientId), { credentials: 'same-origin' });
+            const d = dataBlock(r);
+            const c = d.client || {};
+            state.activeId = c.client_id || clientId;
+
+            document.getElementById('fClientId').value = c.client_id || '';
+            document.getElementById('fClientIdVisible').value = c.client_id || '';
+            document.getElementById('fFullName').value = c.full_name || '';
+            document.getElementById('fPhone').value = c.phone || '';
+            document.getElementById('fEmail').value = c.email || '';
+            document.getElementById('fNotes').value = c.notes || '';
+            const activeOrders = Array.isArray(d.active_orders) ? d.active_orders : [];
+            const waitingParts = Array.isArray(d.waiting_parts) ? d.waiting_parts : [];
+            updateClientSummary(c, { activeCount: activeOrders.length, waitCount: waitingParts.length });
+
+            renderOrdersBlock(d);
+            renderList();
+        }
+
+        async function saveClient(e) {
+            e.preventDefault();
+            const body = {
+                action: 'save',
+                client_id: (document.getElementById('fClientId').value || '').trim(),
+                full_name: (document.getElementById('fFullName').value || '').trim(),
+                phone: (document.getElementById('fPhone').value || '').trim(),
+                email: (document.getElementById('fEmail').value || '').trim(),
+                notes: (document.getElementById('fNotes').value || '').trim()
+            };
+            if (!body.full_name) {
+                showToast('Нужно указать ФИО', 'warning');
+                return;
+            }
+            const r = await fetchJson('./api/clients.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const cid = String(r.client_id || dataBlock(r).client_id || '').trim();
+            showToast('Клиент сохранён', 'success');
+            await loadClients();
+            if (cid) await openClient(cid);
+        }
+
+        document.getElementById('btnSearch').addEventListener('click', () => loadClients().catch((e) => showToast(e.message, 'error')));
+        document.getElementById('btnReload').addEventListener('click', () => loadClients().catch((e) => showToast(e.message, 'error')));
+        document.getElementById('btnNew').addEventListener('click', resetForm);
+        document.getElementById('btnReset').addEventListener('click', resetForm);
+        document.getElementById('btnNewOrderBlank').addEventListener('click', () => {
+            const query = buildClientQuery();
+            window.location.href = 'order_new.html' + (query ? ('?' + query) : '');
+        });
+        document.getElementById('btnNewOrder').addEventListener('click', () => {
+            const query = buildClientQuery();
+            window.location.href = 'master_form.html' + (query ? ('?' + query) : '');
+        });
+        document.getElementById('btnNewReceipt').addEventListener('click', () => {
+            const query = buildClientQuery();
+            window.location.href = 'receipt.html' + (query ? ('?' + query) : '');
+        });
+        document.getElementById('btnNewInvoice').addEventListener('click', () => {
+            const query = buildClientQuery();
+            window.location.href = 'invoice.html' + (query ? ('?' + query) : '');
+        });
+        document.getElementById('btnDeleteClient').addEventListener('click', async () => {
+            const cid = (document.getElementById('fClientId').value || '').trim();
+            if (!cid) {
+                showToast('Сначала выберите клиента', 'warning');
+                return;
+            }
+            if (!confirm('Удалить клиента ' + cid + '?')) return;
+            const pass = prompt('Введите пароль удаления:');
+            if (!pass) return;
+            const r = await fetchJson('./api/clients.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete', client_id: cid, delete_password: pass })
+            });
+            if (!r.success) {
+                showToast(r.message || 'Ошибка удаления', 'error');
+                return;
+            }
+            showToast('Клиент удалён', 'success');
+            resetForm();
+            await loadClients();
+        });
+        document.getElementById('clientForm').addEventListener('submit', (e) => saveClient(e).catch((err) => showToast(err.message || 'Ошибка', 'error')));
+
+        async function clientsResolvePortalUrl(docId, orderId) {
+            if (!docId && !orderId) return '';
+            const res = await fetch('./api/order_ensure_token.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ documentId: docId || '', orderId: orderId || '' })
+            });
+            const json = await res.json();
+            if (!json || json.success !== true) return '';
+            const d = json.data && typeof json.data === 'object' ? json.data : json;
+            return String((d && d.portal_url) ? d.portal_url : '').trim();
+        }
+
+        document.addEventListener('click', async (e) => {
+            const trackBtn = e.target.closest('.btn-open-track');
+            if (trackBtn) {
+                e.preventDefault();
+                const u = trackBtn.getAttribute('data-url');
+                if (u) window.open(u, '_blank', 'noopener');
+                return;
+            }
+            const newHere = e.target.closest('.btn-new-order-here');
+            if (newHere) {
+                e.preventDefault();
+                const q = newHere.getAttribute('data-q') || '';
+                window.location.href = 'order_new.html' + (q ? ('?' + q) : '');
+                return;
+            }
+            const open = e.target.closest('#ordersContainer .btn-portal-open');
+            const copy = e.target.closest('#ordersContainer .btn-portal-copy');
+            const btn = open || copy;
+            if (!btn) return;
+            e.preventDefault();
+            const docId = btn.getAttribute('data-doc') || '';
+            const oid = btn.getAttribute('data-oid') || '';
+            btn.disabled = true;
+            try {
+                const u = await clientsResolvePortalUrl(docId, oid);
+                if (!u) {
+                    showToast('Не удалось получить ссылку портала', 'error');
+                    return;
+                }
+                if (open) {
+                    window.open(u, '_blank', 'noopener');
+                } else if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(u);
+                    showToast('Ссылка скопирована', 'success');
+                } else {
+                    prompt('Ссылка:', u);
+                }
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => { loadClients().catch((e) => showToast(e.message, 'error')); });
+    </script>
+</body>
+</html>

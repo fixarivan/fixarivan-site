@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixariVan — календарь</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#e8eef9">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>">
+    <script>window.FIXARIVAN_REQUIRE_ADMIN_SESSION = true;</script>
+    <script src="auth_check.js"></script>
+    <script src="js/ui_helpers.js"></script>
+    <style>
+        :root {
+            --cal-bg: #e8eef9;
+            --cal-bg-2: #f0f4fc;
+            --cal-surface: #ffffff;
+            --cal-text: #0f172a;
+            --cal-muted: #475569;
+            --cal-border: #cbd5e1;
+            --cal-border-light: #e2e8f0;
+            --cal-accent: #2563eb;
+            --cal-accent-soft: #dbeafe;
+            --cal-shadow: 0 4px 24px rgba(15, 23, 42, 0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(165deg, var(--cal-bg) 0%, var(--cal-bg-2) 45%, #f8fafc 100%);
+            min-height: 100vh;
+            color: var(--cal-text);
+            padding: 20px;
+            line-height: 1.45;
+        }
+        a { color: var(--cal-accent); font-weight: 500; }
+        a:hover { text-decoration: underline; }
+        .cal-top {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 24px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .cal-top h1 { font-size: 1.5rem; font-weight: 700; color: var(--cal-text); letter-spacing: -0.02em; }
+        .cal-top nav a { margin-left: 12px; }
+        .cal-wrap {
+            display: grid;
+            grid-template-columns: 1fr minmax(280px, 380px);
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        @media (max-width: 900px) {
+            .cal-wrap { grid-template-columns: 1fr; }
+        }
+        .cal-main {
+            background: var(--cal-surface);
+            border: 1px solid var(--cal-border-light);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--cal-shadow);
+        }
+        .cal-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .cal-nav h2 { font-size: 1.2rem; font-weight: 700; color: var(--cal-text); }
+        .cal-nav button {
+            background: var(--cal-surface);
+            border: 1px solid var(--cal-border);
+            color: var(--cal-text);
+            width: 40px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+        .cal-nav button:hover { background: var(--cal-accent-soft); border-color: var(--cal-accent); }
+        .cal-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin-bottom: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--cal-muted);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+        .cal-cell {
+            aspect-ratio: 1;
+            min-height: 40px;
+            border-radius: 10px;
+            border: 1px solid var(--cal-border-light);
+            background: #fafbfc;
+            color: var(--cal-text);
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 6px;
+        }
+        .cal-cell:hover { background: #f1f5f9; border-color: var(--cal-border); }
+        .cal-cell.muted {
+            opacity: 0.45;
+            background: #f8fafc;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        .cal-cell.today {
+            outline: 2px solid var(--cal-accent);
+            outline-offset: 0;
+            background: #eff6ff;
+        }
+        .cal-cell.selected {
+            background: var(--cal-accent-soft);
+            border-color: var(--cal-accent);
+            color: #1e3a8a;
+        }
+        .cal-cell .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #d97706;
+            margin-top: 4px;
+        }
+        .view-switch { display: flex; gap: 8px; margin-bottom: 12px; }
+        .view-switch .btn {
+            border: 1px solid var(--cal-border);
+            background: #f8fafc;
+            color: var(--cal-text);
+        }
+        .view-switch .btn.active {
+            background: var(--cal-accent);
+            border-color: var(--cal-accent);
+            color: #fff;
+        }
+        .day-list-main { list-style: none; margin-top: 8px; }
+        .day-list-main li {
+            background: #f8fafc;
+            border: 1px solid var(--cal-border-light);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            color: var(--cal-text);
+        }
+        .day-list-main .meta { color: var(--cal-muted); font-size: 0.85rem; margin-top: 4px; }
+        #dayListTitle { color: var(--cal-text); font-size: 1rem; margin-bottom: 8px; }
+        .filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+        .filter-row label { color: var(--cal-muted); font-size: 0.9rem; font-weight: 500; }
+        .filter-row select {
+            flex: 1;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--cal-border);
+            background: var(--cal-surface);
+            color: var(--cal-text);
+        }
+        .link-chip {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: var(--cal-accent-soft);
+            border: 1px solid #93c5fd;
+            font-size: 0.75rem;
+            color: #1e40af;
+            font-weight: 500;
+        }
+        .cal-side {
+            background: var(--cal-surface);
+            border: 1px solid var(--cal-border-light);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: var(--cal-shadow);
+        }
+        .cal-side h3 { font-size: 1.08rem; margin-bottom: 12px; font-weight: 700; color: var(--cal-text); }
+        .cal-err { color: #b91c1c; font-size: 0.9rem; margin-bottom: 10px; font-weight: 500; }
+        #dayEventsList { list-style: none; margin-bottom: 12px; max-height: 220px; overflow-y: auto; }
+        #dayEventsList li {
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            border-radius: 10px;
+            background: #f8fafc;
+            border: 1px solid var(--cal-border-light);
+            cursor: pointer;
+            font-size: 0.92rem;
+            color: var(--cal-text);
+        }
+        #dayEventsList li:hover { background: #f1f5f9; border-color: var(--cal-border); }
+        #dayEventsList li.active {
+            outline: 2px solid var(--cal-accent);
+            outline-offset: 0;
+            background: var(--cal-accent-soft);
+        }
+        .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .btn {
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--cal-border);
+            background: #f8fafc;
+            color: var(--cal-text);
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+        .btn-primary { background: var(--cal-accent); border-color: var(--cal-accent); color: #fff; }
+        .btn-primary:hover { background: #1d4ed8; border-color: #1d4ed8; }
+        .btn-danger { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+        .btn-danger:hover { background: #fee2e2; }
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; font-size: 0.82rem; color: var(--cal-muted); font-weight: 600; margin-bottom: 4px; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 9px 11px;
+            border-radius: 8px;
+            border: 1px solid var(--cal-border);
+            background: var(--cal-surface);
+            color: var(--cal-text);
+            font-size: 0.9rem;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--cal-accent);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+        .form-group textarea { min-height: 72px; resize: vertical; }
+        .form-group input[type="checkbox"] { width: auto; margin-right: 8px; }
+        .form-inline { display: flex; align-items: center; gap: 8px; }
+        #eventFormPanel { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--cal-border-light); }
+        #eventFormPanel h4 { font-size: 0.95rem; margin-bottom: 10px; color: var(--cal-text); font-weight: 700; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="cal-top">
+        <h1>📅 Календарь</h1>
+        <nav>
+            <a href="dashboard_app.html">← Рабочий стол</a>
+        </nav>
+    </div>
+
+    <div class="cal-wrap">
+        <div class="cal-main">
+            <div class="cal-nav">
+                <button type="button" id="prevMonth" aria-label="Предыдущий месяц">‹</button>
+                <h2 id="monthLabel"></h2>
+                <button type="button" id="nextMonth" aria-label="Следующий месяц">›</button>
+            </div>
+            <div class="view-switch">
+                <button type="button" class="btn active" id="btnViewMonth">Месяц</button>
+                <button type="button" class="btn" id="btnViewDayList">Список дня</button>
+            </div>
+            <div id="monthViewWrap">
+                <div class="cal-weekdays">
+                    <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+                </div>
+                <div class="cal-grid" id="calGrid"></div>
+            </div>
+            <div id="dayListViewWrap" class="hidden">
+                <h3 id="dayListTitle">Список событий</h3>
+                <ul class="day-list-main" id="dayListMain"></ul>
+            </div>
+        </div>
+
+        <aside class="cal-side">
+            <h3 id="dayTitle">Выберите день</h3>
+            <div id="calApiError" class="cal-err hidden"></div>
+            <div class="filter-row">
+                <label for="statusFilter">Фильтр:</label>
+                <select id="statusFilter">
+                    <option value="all">Все статусы</option>
+                    <option value="planned">Запланировано</option>
+                    <option value="done">Выполнено</option>
+                    <option value="cancelled">Отменено</option>
+                </select>
+            </div>
+            <ul id="dayEventsList"></ul>
+            <button type="button" class="btn btn-primary" id="btnNewEvent">+ Новое событие</button>
+
+            <div id="eventFormPanel" class="hidden">
+                <h4 id="formTitle">Событие</h4>
+                <form id="eventForm">
+                    <input type="hidden" id="fEventId" value="" />
+                    <div class="form-group">
+                        <label for="fTitle">Название</label>
+                        <input type="text" id="fTitle" required maxlength="500" />
+                    </div>
+                    <div class="form-group form-inline">
+                        <input type="checkbox" id="fAllDay" />
+                        <label for="fAllDay" style="margin:0;">Весь день</label>
+                    </div>
+                    <div class="form-group" id="wrapStartDate">
+                        <label for="fStartDate">Дата</label>
+                        <input type="date" id="fStartDate" />
+                    </div>
+                    <div class="form-group hidden" id="wrapStartDt">
+                        <label for="fStartDt">Начало</label>
+                        <input type="datetime-local" id="fStartDt" />
+                    </div>
+                    <div class="form-group" id="wrapEndDt">
+                        <label for="fEndDt">Окончание (необязательно)</label>
+                        <input type="datetime-local" id="fEndDt" />
+                    </div>
+                    <div class="form-group">
+                        <label for="fStatus">Статус</label>
+                        <select id="fStatus">
+                            <option value="planned">Запланировано</option>
+                            <option value="done">Выполнено</option>
+                            <option value="cancelled">Отменено</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fNotes">Заметки</label>
+                        <textarea id="fNotes"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="fLinkType">Связь с документом</label>
+                        <select id="fLinkType">
+                            <option value="">Без привязки</option>
+                            <option value="order">Акт приёма</option>
+                            <option value="receipt">Квитанция</option>
+                            <option value="report">Диагностика</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fLinkId">ID документа (например ORD-..., REC-..., REP-...)</label>
+                        <input type="text" id="fLinkId" maxlength="120" />
+                    </div>
+                    <div class="btn-row">
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                        <button type="button" class="btn hidden" id="btnOpenLinkedDoc">Открыть документ</button>
+                        <button type="button" class="btn btn-danger hidden" id="btnDelete">Удалить</button>
+                        <button type="button" class="btn" id="btnCancelForm">Отмена</button>
+                    </div>
+                </form>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        const fetchJson = (window.FixariVan && window.FixariVan.http && typeof window.FixariVan.http.fetchJson === 'function')
+            ? window.FixariVan.http.fetchJson
+            : async function(url, options = {}) {
+                const response = await fetch(url, options);
+                const text = await response.text();
+                if (!response.ok) {
+                    const snippet = (text || '').trim().slice(0, 200);
+                    throw new Error(snippet || `HTTP ${response.status}`);
+                }
+                try {
+                    const parsed = JSON.parse(text);
+                    if (parsed && typeof parsed === 'object' && Object.prototype.hasOwnProperty.call(parsed, 'success') && parsed.success === false) {
+                        const msg = parsed.message || (Array.isArray(parsed.errors) && parsed.errors[0]) || 'Ошибка запроса';
+                        throw new Error(msg);
+                    }
+                    return parsed;
+                } catch (error) {
+                    if (error instanceof SyntaxError) {
+                        const snippet = (text || '').trim().slice(0, 200);
+                        throw new Error(snippet || 'Сервер вернул некорректный ответ');
+                    }
+                    throw error;
+                }
+            };
+
+        const showToast = (window.FixariVan && window.FixariVan.ui && typeof window.FixariVan.ui.showToast === 'function')
+            ? window.FixariVan.ui.showToast
+            : function(msg) { alert(msg); };
+
+        const MONTH_NAMES = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+
+        function pad2(n) { return n < 10 ? '0' + n : String(n); }
+
+        function dateKeyFromParts(y, m, d) {
+            return y + '-' + pad2(m) + '-' + pad2(d);
+        }
+
+        function dateKeyFromDate(dt) {
+            return dateKeyFromParts(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+        }
+
+        function parseMonthStr(s) {
+            const m = /^(\d{4})-(\d{2})$/.exec((s || '').trim());
+            if (!m) return null;
+            const y = Number(m[1]);
+            const mo = Number(m[2]);
+            if (mo < 1 || mo > 12) return null;
+            return { y, m: mo };
+        }
+
+        function todayKey() {
+            const t = new Date();
+            return dateKeyFromDate(t);
+        }
+
+        function eventLocalDateKey(iso) {
+            if (!iso) return '';
+            const s = String(iso).trim();
+            const m = /^(\d{4}-\d{2}-\d{2})/.exec(s);
+            if (m) {
+                return m[1];
+            }
+            const d = new Date(iso);
+            if (Number.isNaN(d.getTime())) return '';
+            return dateKeyFromDate(d);
+        }
+
+        function isoToDatetimeLocal(iso) {
+            const d = new Date(iso);
+            if (Number.isNaN(d.getTime())) return '';
+            return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+        }
+
+        function localDayStartIso(dateStr) {
+            const p = (dateStr || '').split('-').map(Number);
+            if (p.length !== 3 || p.some((x) => Number.isNaN(x))) return '';
+            const dt = new Date(p[0], p[1] - 1, p[2], 0, 0, 0, 0);
+            return dt.toISOString();
+        }
+
+        function fromDatetimeLocal(val) {
+            if (!val) return '';
+            const d = new Date(val);
+            return Number.isNaN(d.getTime()) ? '' : d.toISOString();
+        }
+
+        const state = {
+            viewMonth: '',
+            selectedDate: '',
+            events: [],
+            editingId: null,
+            statusFilter: 'all',
+            viewMode: 'month'
+        };
+
+        function monthStrFromKey(dateKey) {
+            return dateKey.slice(0, 7);
+        }
+
+        function setApiError(msg) {
+            const el = document.getElementById('calApiError');
+            if (!el) return;
+            if (!msg) {
+                el.textContent = '';
+                el.classList.add('hidden');
+                return;
+            }
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+
+        function humanizeApiError(err) {
+            const raw = String((err && err.message) || 'Ошибка');
+            if (raw.includes('403') || raw.toLowerCase().includes('forbidden')) {
+                return 'Доступ запрещён. Обновите страницу и войдите как администратор.';
+            }
+            if (raw.toLowerCase().includes('не найдено')) {
+                return 'Запись не найдена.';
+            }
+            return raw;
+        }
+
+        async function loadMonth(monthStr) {
+            setApiError('');
+            try {
+                const result = await fetchJson('./api/calendar_events.php?month=' + encodeURIComponent(monthStr), { credentials: 'same-origin' });
+                const block = result.data && typeof result.data === 'object' ? result.data : {};
+                const list = Array.isArray(block.events) ? block.events : (Array.isArray(result.events) ? result.events : []);
+                state.events = list;
+                state.viewMonth = monthStr;
+                renderMonthLabel();
+                renderGrid();
+                renderDayPanel();
+            } catch (e) {
+                console.error(e);
+                const msg = humanizeApiError(e);
+                setApiError(msg);
+                showToast('Календарь: ' + msg, 'error');
+            }
+        }
+
+        function eventsForDate(dateKey) {
+            return state.events.filter((ev) => {
+                if (eventLocalDateKey(ev.starts_at) !== dateKey) return false;
+                if (state.statusFilter === 'all') return true;
+                return String(ev.status || '') === state.statusFilter;
+            });
+        }
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function eventStatusRu(st) {
+            if (st === 'done') return 'Выполнено';
+            if (st === 'cancelled') return 'Отменено';
+            return 'Запланировано';
+        }
+
+        function setViewMode(mode) {
+            state.viewMode = mode === 'day' ? 'day' : 'month';
+            const monthWrap = document.getElementById('monthViewWrap');
+            const dayWrap = document.getElementById('dayListViewWrap');
+            const bMonth = document.getElementById('btnViewMonth');
+            const bDay = document.getElementById('btnViewDayList');
+            if (monthWrap) monthWrap.classList.toggle('hidden', state.viewMode !== 'month');
+            if (dayWrap) dayWrap.classList.toggle('hidden', state.viewMode !== 'day');
+            if (bMonth) bMonth.classList.toggle('active', state.viewMode === 'month');
+            if (bDay) bDay.classList.toggle('active', state.viewMode === 'day');
+            renderMainDayList();
+        }
+
+        function renderMainDayList() {
+            const title = document.getElementById('dayListTitle');
+            const list = document.getElementById('dayListMain');
+            if (!title || !list) return;
+            if (!state.selectedDate) {
+                title.textContent = 'Список событий';
+                list.innerHTML = '<li>Выберите день в календаре.</li>';
+                return;
+            }
+            const [y, m, d] = state.selectedDate.split('-').map(Number);
+            const pretty = new Date(y, m - 1, d);
+            title.textContent = pretty.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            const evs = eventsForDate(state.selectedDate);
+            if (!evs.length) {
+                list.innerHTML = '<li>Нет событий по текущему фильтру.</li>';
+                return;
+            }
+            list.innerHTML = evs.map((ev) => {
+                const hasLink = ev.link_type && ev.link_id;
+                return `<li>
+                    <strong>${escapeHtml(ev.title || 'Без названия')}</strong>
+                    <div class="meta">${escapeHtml(formatEventTime(ev))} • ${escapeHtml(eventStatusRu(ev.status || 'planned'))}</div>
+                    ${hasLink ? `<div class="link-chip">Связь: ${escapeHtml(ev.link_type)} / ${escapeHtml(ev.link_id)}</div>` : ''}
+                </li>`;
+            }).join('');
+        }
+
+        function renderMonthLabel() {
+            const p = parseMonthStr(state.viewMonth);
+            const el = document.getElementById('monthLabel');
+            if (!el || !p) return;
+            el.textContent = MONTH_NAMES[p.m - 1] + ' ' + p.y;
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('calGrid');
+            if (!grid) return;
+            const p = parseMonthStr(state.viewMonth);
+            if (!p) return;
+
+            const first = new Date(p.y, p.m - 1, 1);
+            const last = new Date(p.y, p.m, 0);
+            const startPad = (first.getDay() + 6) % 7;
+            const daysInMonth = last.getDate();
+            const prevMonthLast = new Date(p.y, p.m - 1, 0).getDate();
+
+            const cells = [];
+            for (let i = startPad - 1; i >= 0; i--) {
+                const d = prevMonthLast - i;
+                const pm = p.m === 1 ? 12 : p.m - 1;
+                const py = p.m === 1 ? p.y - 1 : p.y;
+                cells.push({ key: dateKeyFromParts(py, pm, d), muted: true });
+            }
+            for (let d = 1; d <= daysInMonth; d++) {
+                cells.push({ key: dateKeyFromParts(p.y, p.m, d), muted: false });
+            }
+            const tail = (7 - (cells.length % 7)) % 7;
+            let nm = p.m + 1;
+            let ny = p.y;
+            if (nm > 12) { nm = 1; ny++; }
+            for (let d = 1; d <= tail; d++) {
+                cells.push({ key: dateKeyFromParts(ny, nm, d), muted: true });
+            }
+
+            const tk = todayKey();
+            grid.innerHTML = cells.map((c) => {
+                const dayNum = Number(c.key.slice(8, 10));
+                const hasEv = state.events.some((ev) => {
+                    if (eventLocalDateKey(ev.starts_at) !== c.key) return false;
+                    if (state.statusFilter === 'all') return true;
+                    return String(ev.status || '') === state.statusFilter;
+                });
+                const isToday = c.key === tk;
+                const isSel = c.key === state.selectedDate;
+                const cls = ['cal-cell']
+                    .concat(c.muted ? ['muted'] : [])
+                    .concat(isToday ? ['today'] : [])
+                    .concat(isSel ? ['selected'] : [])
+                    .join(' ');
+                return '<button type="button" class="' + cls + '" data-date="' + c.key + '"><span>' + dayNum + '</span>' + (hasEv ? '<span class="dot"></span>' : '') + '</button>';
+            }).join('');
+
+            grid.querySelectorAll('.cal-cell').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const dk = btn.getAttribute('data-date');
+                    if (!dk) return;
+                    state.selectedDate = dk;
+                    hideForm();
+                    renderGrid();
+                    renderDayPanel();
+                });
+            });
+        }
+
+        function renderDayPanel() {
+            const title = document.getElementById('dayTitle');
+            const list = document.getElementById('dayEventsList');
+            if (!title || !list) return;
+
+            if (!state.selectedDate) {
+                title.textContent = 'Выберите день';
+                list.innerHTML = '';
+                return;
+            }
+
+            const [y, mo, d] = state.selectedDate.split('-').map(Number);
+            const pretty = new Date(y, mo - 1, d);
+            title.textContent = pretty.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+            const evs = eventsForDate(state.selectedDate);
+            if (!evs.length) {
+                list.innerHTML = '<li style="cursor:default;color:#64748b;background:#f8fafc;border:1px dashed #cbd5e1;">Нет событий по выбранному фильтру</li>';
+            } else {
+                list.innerHTML = evs.map((ev) => {
+                    const id = ev.event_id || '';
+                    const active = state.editingId === id ? ' active' : '';
+                    const t = escapeHtml(ev.title || '');
+                    const tm = formatEventTime(ev);
+                    const link = (ev.link_type && ev.link_id) ? `<div class="link-chip">🔗 ${escapeHtml(ev.link_type)} / ${escapeHtml(ev.link_id)}</div>` : '';
+                    return '<li class="' + active.trim() + '" data-eid="' + id.replace(/"/g, '&quot;') + '"><strong>' + t + '</strong><br><span style="color:#64748b;font-size:0.85rem;">' + tm + '</span>' + link + '</li>';
+                }).join('');
+                list.querySelectorAll('li[data-eid]').forEach((li) => {
+                    li.addEventListener('click', () => {
+                        const eid = li.getAttribute('data-eid');
+                        const ev = state.events.find((e) => (e.event_id || '') === eid);
+                        if (ev) openEdit(ev);
+                    });
+                });
+            }
+            renderMainDayList();
+        }
+
+        function formatEventTime(ev) {
+            if (!ev || !ev.starts_at) return '—';
+            if (ev.all_day === 1 || ev.all_day === true || ev.all_day === '1') {
+                return 'Весь день';
+            }
+            const d = new Date(ev.starts_at);
+            if (Number.isNaN(d.getTime())) return '—';
+            return d.toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function toggleAllDayUi() {
+            const ad = document.getElementById('fAllDay');
+            const wrapDate = document.getElementById('wrapStartDate');
+            const wrapDt = document.getElementById('wrapStartDt');
+            const wrapEnd = document.getElementById('wrapEndDt');
+            if (!ad || !wrapDate || !wrapDt || !wrapEnd) return;
+            const on = ad.checked;
+            wrapDate.classList.toggle('hidden', !on);
+            wrapDt.classList.toggle('hidden', on);
+            wrapEnd.classList.toggle('hidden', on);
+        }
+
+        function hideForm() {
+            state.editingId = null;
+            const panel = document.getElementById('eventFormPanel');
+            if (panel) panel.classList.add('hidden');
+            const delBtn = document.getElementById('btnDelete');
+            if (delBtn) delBtn.classList.add('hidden');
+        }
+
+        function openNew() {
+            if (!state.selectedDate) {
+                state.selectedDate = todayKey();
+                const mk = monthStrFromKey(state.selectedDate);
+                if (mk !== state.viewMonth) {
+                    loadMonth(mk).then(() => {
+                        state.editingId = 'new';
+                        fillNewForm();
+                    });
+                    return;
+                }
+                renderGrid();
+            }
+            state.editingId = 'new';
+            fillNewForm();
+        }
+
+        function fillNewForm() {
+            const panel = document.getElementById('eventFormPanel');
+            const formTitle = document.getElementById('formTitle');
+            const fId = document.getElementById('fEventId');
+            const delBtn = document.getElementById('btnDelete');
+            if (panel) panel.classList.remove('hidden');
+            if (formTitle) formTitle.textContent = 'Новое событие';
+            if (fId) fId.value = '';
+            if (delBtn) delBtn.classList.add('hidden');
+
+            document.getElementById('fTitle').value = '';
+            document.getElementById('fAllDay').checked = false;
+            document.getElementById('fStartDate').value = state.selectedDate || todayKey();
+            document.getElementById('fStartDt').value = (state.selectedDate || todayKey()) + 'T09:00';
+            document.getElementById('fEndDt').value = '';
+            document.getElementById('fStatus').value = 'planned';
+            document.getElementById('fNotes').value = '';
+            document.getElementById('fLinkType').value = '';
+            document.getElementById('fLinkId').value = '';
+            document.getElementById('btnOpenLinkedDoc').classList.add('hidden');
+            toggleAllDayUi();
+            renderDayPanel();
+        }
+
+        function openEdit(ev) {
+            state.editingId = ev.event_id || null;
+            const panel = document.getElementById('eventFormPanel');
+            const formTitle = document.getElementById('formTitle');
+            const fId = document.getElementById('fEventId');
+            const delBtn = document.getElementById('btnDelete');
+            if (panel) panel.classList.remove('hidden');
+            if (formTitle) formTitle.textContent = 'Редактирование';
+            if (fId) fId.value = ev.event_id || '';
+            if (delBtn) delBtn.classList.remove('hidden');
+
+            document.getElementById('fTitle').value = ev.title || '';
+            const allDay = ev.all_day === 1 || ev.all_day === true || ev.all_day === '1';
+            document.getElementById('fAllDay').checked = allDay;
+            if (allDay) {
+                const dk = eventLocalDateKey(ev.starts_at) || state.selectedDate;
+                document.getElementById('fStartDate').value = dk;
+            } else {
+                document.getElementById('fStartDt').value = isoToDatetimeLocal(ev.starts_at);
+            }
+            document.getElementById('fEndDt').value = ev.ends_at ? isoToDatetimeLocal(ev.ends_at) : '';
+            document.getElementById('fStatus').value = ev.status || 'planned';
+            document.getElementById('fNotes').value = ev.notes || '';
+            document.getElementById('fLinkType').value = ev.link_type || '';
+            document.getElementById('fLinkId').value = ev.link_id || '';
+            const openBtn = document.getElementById('btnOpenLinkedDoc');
+            if (openBtn) {
+                const hasLink = !!(ev.link_type && ev.link_id);
+                openBtn.classList.toggle('hidden', !hasLink);
+            }
+            toggleAllDayUi();
+            renderDayPanel();
+        }
+
+        function collectPayload() {
+            const title = (document.getElementById('fTitle').value || '').trim();
+            const allDay = document.getElementById('fAllDay').checked;
+            let startsAt = '';
+            if (allDay) {
+                const ds = document.getElementById('fStartDate').value;
+                startsAt = localDayStartIso(ds);
+            } else {
+                startsAt = fromDatetimeLocal(document.getElementById('fStartDt').value);
+            }
+            const endVal = document.getElementById('fEndDt').value;
+            const endsAt = allDay ? '' : (endVal ? fromDatetimeLocal(endVal) : '');
+            const status = document.getElementById('fStatus').value;
+            const notes = (document.getElementById('fNotes').value || '').trim();
+            const eventId = (document.getElementById('fEventId').value || '').trim();
+            const linkType = (document.getElementById('fLinkType').value || '').trim();
+            const linkId = (document.getElementById('fLinkId').value || '').trim();
+
+            return {
+                action: 'save',
+                title,
+                starts_at: startsAt,
+                ends_at: endsAt,
+                all_day: allDay ? 1 : 0,
+                status,
+                notes,
+                link_type: linkType,
+                link_id: linkId,
+                event_id: eventId || undefined
+            };
+        }
+
+        async function openLinkedDocument() {
+            const linkType = (document.getElementById('fLinkType').value || '').trim();
+            const linkId = (document.getElementById('fLinkId').value || '').trim();
+            if (!linkType || !linkId) {
+                showToast('Укажите связь с документом', 'warning');
+                return;
+            }
+            try {
+                const result = await fetchJson('./api/get_document.php?id=' + encodeURIComponent(linkId) + '&type=' + encodeURIComponent(linkType), { credentials: 'same-origin' });
+                const data = result.data && typeof result.data === 'object' ? result.data : {};
+                const viewerUrl = data.viewer_url || result.viewer_url || '';
+                if (viewerUrl) {
+                    window.open(viewerUrl, '_blank', 'noopener');
+                    return;
+                }
+                showToast('Для документа нет viewer URL', 'warning');
+            } catch (err) {
+                showToast(err.message || 'Не удалось открыть документ', 'error');
+            }
+        }
+
+        function updateOpenLinkedButtonVisibility() {
+            const openBtn = document.getElementById('btnOpenLinkedDoc');
+            if (!openBtn) return;
+            const linkType = (document.getElementById('fLinkType').value || '').trim();
+            const linkId = (document.getElementById('fLinkId').value || '').trim();
+            openBtn.classList.toggle('hidden', !(linkType && linkId));
+        }
+
+        document.getElementById('prevMonth').addEventListener('click', () => {
+            const p = parseMonthStr(state.viewMonth);
+            if (!p) return;
+            let m = p.m - 1;
+            let y = p.y;
+            if (m < 1) { m = 12; y--; }
+            loadMonth(dateKeyFromParts(y, m, 1).slice(0, 7));
+        });
+
+        document.getElementById('nextMonth').addEventListener('click', () => {
+            const p = parseMonthStr(state.viewMonth);
+            if (!p) return;
+            let m = p.m + 1;
+            let y = p.y;
+            if (m > 12) { m = 1; y++; }
+            loadMonth(dateKeyFromParts(y, m, 1).slice(0, 7));
+        });
+
+        document.getElementById('btnNewEvent').addEventListener('click', () => openNew());
+        document.getElementById('btnViewMonth').addEventListener('click', () => setViewMode('month'));
+        document.getElementById('btnViewDayList').addEventListener('click', () => setViewMode('day'));
+        document.getElementById('statusFilter').addEventListener('change', (e) => {
+            state.statusFilter = e.target && e.target.value ? e.target.value : 'all';
+            renderGrid();
+            renderDayPanel();
+        });
+        document.getElementById('btnOpenLinkedDoc').addEventListener('click', openLinkedDocument);
+        document.getElementById('fLinkType').addEventListener('change', updateOpenLinkedButtonVisibility);
+        document.getElementById('fLinkId').addEventListener('input', updateOpenLinkedButtonVisibility);
+
+        document.getElementById('fAllDay').addEventListener('change', toggleAllDayUi);
+
+        document.getElementById('btnCancelForm').addEventListener('click', () => {
+            hideForm();
+            renderDayPanel();
+        });
+
+        document.getElementById('btnDelete').addEventListener('click', async () => {
+            const eid = (document.getElementById('fEventId').value || '').trim();
+            if (!eid || !confirm('Удалить событие?')) return;
+            try {
+                await fetchJson('./api/calendar_events.php', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'delete', event_id: eid })
+                });
+                showToast('Событие удалено', 'success');
+                hideForm();
+                await loadMonth(state.viewMonth);
+            } catch (e) {
+                showToast(humanizeApiError(e), 'error');
+            }
+        });
+
+        document.getElementById('eventForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = collectPayload();
+            if (!body.title || !body.starts_at) {
+                showToast('Укажите название и время', 'warning');
+                return;
+            }
+            try {
+                await fetchJson('./api/calendar_events.php', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                showToast('Сохранено', 'success');
+                hideForm();
+                await loadMonth(state.viewMonth);
+                const evParam = new URLSearchParams(window.location.search).get('event');
+                if (evParam) {
+                    history.replaceState(null, '', 'calendar.html');
+                }
+            } catch (err) {
+                showToast(humanizeApiError(err), 'error');
+            }
+        });
+
+        async function applyQueryParams() {
+            const q = new URLSearchParams(window.location.search);
+            const monthQ = q.get('month');
+            const dateQ = q.get('date');
+            const eventQ = q.get('event');
+            const newQ = q.get('new');
+            const viewQ = q.get('view');
+
+            let month = monthQ && parseMonthStr(monthQ) ? monthQ : null;
+            let sel = dateQ && /^\d{4}-\d{2}-\d{2}$/.test(dateQ) ? dateQ : null;
+
+            if (!month && sel) month = monthStrFromKey(sel);
+            if (!month) month = todayKey().slice(0, 7);
+            if (!sel) sel = todayKey();
+
+            state.viewMonth = month;
+            state.selectedDate = sel;
+            setViewMode(viewQ === 'day' ? 'day' : 'month');
+
+            await loadMonth(month);
+
+            if (eventQ) {
+                let ev = state.events.find((x) => (x.event_id || '') === eventQ);
+                if (!ev) {
+                    try {
+                        const r = await fetchJson('./api/calendar_events.php?event_id=' + encodeURIComponent(eventQ), { credentials: 'same-origin' });
+                        const block = r.data && typeof r.data === 'object' ? r.data : {};
+                        const row = block.event || r.event;
+                        if (row && row.starts_at) {
+                            const dk = eventLocalDateKey(row.starts_at);
+                            const mk = dk ? monthStrFromKey(dk) : (block.month || r.month || '');
+                            if (mk && mk !== state.viewMonth) {
+                                state.viewMonth = mk;
+                                state.selectedDate = dk || sel;
+                                await loadMonth(mk);
+                            }
+                            ev = state.events.find((x) => (x.event_id || '') === eventQ) || row;
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        showToast(err.message || 'Событие не найдено', 'warning');
+                    }
+                }
+                if (ev) {
+                    state.selectedDate = eventLocalDateKey(ev.starts_at) || sel;
+                    renderGrid();
+                    openEdit(ev);
+                }
+            } else if (newQ === '1') {
+                openNew();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if ('serviceWorker' in navigator) {
+                const host = window.location.hostname;
+                const isLocal = host === 'localhost' || host === '127.0.0.1';
+                if (isLocal) {
+                    navigator.serviceWorker.getRegistrations().then((regs) => {
+                        regs.forEach((r) => r.unregister());
+                    }).catch(() => {});
+                    if (window.caches && typeof window.caches.keys === 'function') {
+                        window.caches.keys().then((keys) => Promise.all(keys.map((k) => window.caches.delete(k)))).catch(() => {});
+                    }
+                } else {
+                    navigator.serviceWorker.register('./sw.js').catch(() => {});
+                }
+            }
+            applyQueryParams();
+        });
+    </script>
+</body>
+</html>
