@@ -16,13 +16,15 @@
         gap: 10px;
     }
     
-    .logo {
+    /* Дашборд: не трогаем .logo на других страницах (inventory и т.д.) */
+    .dashboard-page .logo.logo--wordmark {
         flex-direction: column;
         text-align: center;
+        align-items: center;
     }
-    
-    .logo-wordmark {
-        font-size: clamp(1.5rem, 6vw, 2rem) !important;
+
+    .dashboard-page .logo-wordmark {
+        font-size: clamp(1.5rem, 6vw, 2.35rem);
     }
     
     /* Form optimizations */
@@ -209,7 +211,7 @@
         padding: 10px;
     }
     
-    .logo .logo-wordmark {
+    .dashboard-page .logo .logo-wordmark {
         font-size: 1.5rem;
     }
     

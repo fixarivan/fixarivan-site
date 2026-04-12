@@ -125,37 +125,7 @@
             50% { transform: scale(1.2); }
         }
 
-        /* Текстовый логотип (без картинки / «FV»-плитки) */
-        .logo.logo--wordmark {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
-            margin-bottom: 22px;
-        }
-
-        .logo-wordmark {
-            display: block;
-            font-size: clamp(2.5rem, 6vw, 3.75rem);
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            line-height: 1.05;
-            margin: 0;
-            text-shadow: 0 2px 14px rgba(108, 92, 231, 0.45);
-            background: linear-gradient(90deg, #eef2ff, #c7d2fe 45%, #a5b4fc);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            border-bottom: 2px solid rgba(199, 210, 254, 0.35);
-            padding-bottom: 4px;
-        }
-
-        .logo-tagline {
-            font-size: clamp(0.95rem, 2vw, 1.15rem);
-            color: rgba(255, 255, 255, 0.62);
-            letter-spacing: 0.02em;
-            margin: 0;
-        }
+        /* Логотип: стили в css/fixarivan-theme.css (body.fv-dashboard .logo-*) */
 
         /* Statistics Cards */
         .stats-grid {
@@ -749,9 +719,6 @@
                 padding: 28px 14px 36px;
             }
             .header { padding-top: 36px; padding-bottom: 16px; margin-bottom: 28px; }
-            .logo-wordmark { font-size: clamp(1.75rem, 7vw, 2.35rem); }
-            .logo-tagline { font-size: 0.88rem; }
-            .logo.logo--wordmark { margin-bottom: 14px; }
             .metrics-section { padding: 14px 12px; margin-bottom: 18px; }
             .metrics-header { flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 14px; }
             .metrics-title { font-size: 1.05rem; }
