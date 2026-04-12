@@ -1,0 +1,51 @@
+name: Deploy FixariVan
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check commit message for [deploy]
+        id: check_commit
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MSG"
+          if [[ "$COMMIT_MSG" != *"[deploy]"* ]]; then
+            echo "No [deploy] tag found. Skipping deploy."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Deploy tag found."
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stop if no deploy tag
+        if: steps.check_commit.outputs.skip == 'true'
+        run: exit 0
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          echo "${{ secrets.KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/id_rsa -p 21098 fixawcab@162.0.217.157 "echo connected"
+
+      - name: Run deploy.sh on server
+        run: |
+          ssh -i ~/.ssh/id_rsa -p 21098 fixawcab@162.0.217.157 "
+            cd /home/fixawcab/public_html/fixarivan.space &&
+            ./deploy.sh
+          "
