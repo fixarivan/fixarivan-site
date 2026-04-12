@@ -13,17 +13,17 @@
     --fv-radius: 14px;
     --fv-link: #93c5fd;
     --fv-accent: #6366f1;
-    /* Dashboard wordmark: сине‑фиолетовый, без лишнего шума */
+    /* Dashboard wordmark: зелёный градиент */
     --fv-logo-gradient: linear-gradient(
         120deg,
-        #93c5fd 0%,
-        #60a5fa 22%,
-        #6366f1 52%,
-        #8b5cf6 88%,
-        #a78bfa 100%
+        #a7f3d0 0%,
+        #4ade80 22%,
+        #22c55e 52%,
+        #16a34a 88%,
+        #047857 100%
     );
-    --fv-logo-glow: rgba(99, 102, 241, 0.42);
-    --fv-logo-glow-soft: rgba(139, 92, 246, 0.22);
+    --fv-logo-glow: rgba(34, 197, 94, 0.45);
+    --fv-logo-glow-soft: rgba(74, 222, 128, 0.26);
 }
 
 html {
@@ -92,7 +92,7 @@ body.fv-dashboard .logo-mark {
     flex-shrink: 0;
     display: block;
     border-radius: 0.45rem;
-    filter: drop-shadow(0 2px 14px rgba(99, 102, 241, 0.4));
+    filter: drop-shadow(0 2px 14px rgba(34, 197, 94, 0.42));
 }
 
 body.fv-dashboard .logo-wordmark {

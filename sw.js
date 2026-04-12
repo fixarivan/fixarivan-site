@@ -1,7 +1,7 @@
 // FixariVan Service Worker — static/asset cache only; API is never cached.
 // Bump CACHE_VERSION after deploy so clients drop stale bundles.
 
-const CACHE_VERSION = 'v1.10-dashboard-astronaut-2026-04-12';
+const CACHE_VERSION = 'v1.11-logo-green-gradient-2026-04-12';
 const CACHE_NAME = 'fixarivan-' + CACHE_VERSION;
 const STATIC_CACHE = 'fixarivan-static-' + CACHE_VERSION;
 const DYNAMIC_CACHE = 'fixarivan-dynamic-' + CACHE_VERSION;
