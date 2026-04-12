@@ -1,10 +1,4 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/fixawcob/public_html/fixarivan.space
-    - rsync -av --delete \
-      --exclude '.git' \
-      --exclude 'storage/' \
-      --exclude 'logs/' \
-      --exclude 'database/' \
-      --exclude '.env' \
-      ./ $DEPLOYPATH
+    - rsync -av --delete --exclude '.git' --exclude 'storage/' --exclude 'logs/' --exclude 'database/' --exclude '.env' ./ $DEPLOYPATH
