@@ -240,12 +240,23 @@ sync_clone_to_live() {
     return 1
   fi
 
+  local db="${REMOTE_PATH}/storage/fixarivan.sqlite"
+  local before_hash=""
+  if [[ -f "$db" ]]; then
+    if command -v sha256sum >/dev/null 2>&1; then
+      before_hash="$(sha256sum "$db" | awk '{print $1}')"
+    elif command -v shasum >/dev/null 2>&1; then
+      before_hash="$(shasum -a 256 "$db" | awk '{print $1}')"
+    fi
+  fi
+
   local -a rsync_args=(
     -a
     --exclude='.git'
     --exclude='.github'
     --exclude='node_modules'
     --exclude='.env'
+    --exclude='config.local.php'
     --exclude='storage'
   )
 
@@ -258,8 +269,28 @@ sync_clone_to_live() {
       --exclude='.github' \
       --exclude='node_modules' \
       --exclude='.env' \
+      --exclude='config.local.php' \
       --exclude='storage' \
       . | tar -C "$REMOTE_PATH" -xf -
+  fi
+
+  # If SQLite existed before sync, it must be byte-identical after (storage/ is never synced from git).
+  if [[ -n "$before_hash" ]]; then
+    if [[ ! -f "$db" ]]; then
+      err "FATAL: ${db} disappeared after sync. Restore storage from ${BACKUP_PATH} (see docs/GIT_DEPLOY_SAFE.md)."
+      return 1
+    fi
+    local after_hash=""
+    if command -v sha256sum >/dev/null 2>&1; then
+      after_hash="$(sha256sum "$db" | awk '{print $1}')"
+    elif command -v shasum >/dev/null 2>&1; then
+      after_hash="$(shasum -a 256 "$db" | awk '{print $1}')"
+    fi
+    if [[ "$before_hash" != "$after_hash" ]]; then
+      err "FATAL: SQLite hash changed after sync (deploy bug or concurrent write). Restore from ${BACKUP_PATH}."
+      return 1
+    fi
+    ok "SQLite integrity check OK (unchanged after sync)"
   fi
 }
 
