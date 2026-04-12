@@ -23,8 +23,8 @@
         align-items: center;
     }
 
-    .dashboard-page .logo-wordmark {
-        font-size: clamp(1.5rem, 6vw, 2.35rem);
+    .dashboard-page .logo-brand-img {
+        max-width: min(100%, 17rem);
     }
     
     /* Form optimizations */
@@ -211,8 +211,8 @@
         padding: 10px;
     }
     
-    .dashboard-page .logo .logo-wordmark {
-        font-size: 1.5rem;
+    .dashboard-page .logo-brand-img {
+        max-width: min(100%, 15rem);
     }
     
     .stats-grid {
