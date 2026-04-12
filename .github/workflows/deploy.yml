@@ -41,17 +41,27 @@ jobs:
 
       - name: Test SSH connection
         run: |
-          ssh -i ~/.ssh/id_rsa -p 21098 fixawcab@162.0.217.157 "echo connected"
+          ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 "echo connected"
 
-      - name: Upload deploy.sh
+      - name: Upload repository to server (tmp_deploy)
         run: |
-          scp -i ~/.ssh/id_rsa -P 21098 -o BatchMode=yes \
-            deploy.sh \
-            fixawcab@162.0.217.157:/home/fixawcab/public_html/fixarivan.space/deploy.sh
+          ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 "mkdir -p /home/fixawcab/tmp_deploy"
+          scp -r \
+            -i ~/.ssh/id_rsa \
+            -P 21098 \
+            -o BatchMode=yes \
+            . \
+            fixawcab@162.0.217.157:/home/fixawcab/tmp_deploy/
 
-      - name: Run deploy.sh on server
+      - name: Install into public_html and run deploy.sh
         run: |
-          ssh -i ~/.ssh/id_rsa -p 21098 fixawcab@162.0.217.157 "
-            cd /home/fixawcab/public_html/fixarivan.space &&
-            bash deploy.sh
-          "
+          ssh -i ~/.ssh/id_rsa -p 21098 -o BatchMode=yes fixawcab@162.0.217.157 '
+            set -euo pipefail
+            TARGET="/home/fixawcab/public_html/fixarivan.space"
+            SRC="/home/fixawcab/tmp_deploy"
+            mkdir -p "$TARGET"
+            rm -rf "${TARGET:?}"/*
+            cp -a "${SRC}/." "$TARGET/"
+            export FIXARIVAN_DEPLOY_ON_SERVER=1
+            bash "${TARGET}/deploy.sh"
+          '

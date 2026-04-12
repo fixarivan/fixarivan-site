@@ -359,6 +359,16 @@ main() {
     step "DRY RUN MODE"
   fi
 
+  # GitHub Actions (or similar) already copied the tree to REMOTE_PATH; only chmod/permissions.
+  if [[ "${FIXARIVAN_DEPLOY_ON_SERVER:-}" == "1" ]]; then
+    step "Server-side deploy: skipping SSH backup/upload (files already on host)"
+    finalize
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      ok "Dry run finished (no remote changes)."
+    fi
+    return 0
+  fi
+
   check_connection
   backup
   clean
