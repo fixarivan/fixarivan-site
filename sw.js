@@ -1,7 +1,7 @@
 // FixariVan Service Worker — static/asset cache only; API is never cached.
 // Bump CACHE_VERSION after deploy so clients drop stale bundles.
 
-const CACHE_VERSION = 'v1.8-tz-2026-04-05';
+const CACHE_VERSION = 'v1.9-favicon-logo-2026-04-12';
 const CACHE_NAME = 'fixarivan-' + CACHE_VERSION;
 const STATIC_CACHE = 'fixarivan-static-' + CACHE_VERSION;
 const DYNAMIC_CACHE = 'fixarivan-dynamic-' + CACHE_VERSION;
@@ -11,7 +11,9 @@ const STATIC_FILES = [
     '/index.html',
     '/index.php',
     '/manifest.json',
+    '/favicon.svg',
     '/assets/icons/icon.svg',
+    '/assets/icons/logo-mark.svg',
     '/master_form.html',
     '/client_form.html',
     '/receipt.html',

@@ -67,14 +67,32 @@ body.fv-dashboard .recent-section {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
 }
 
-/* Текстовый логотип (без плитки «FV»): минимализм, градиент + лёгкое свечение */
+/* Логотип: марк + слово FixariVan (градиент на тексте) */
 body.fv-dashboard .logo.logo--wordmark {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.4rem;
     margin: 0 auto 1.5rem;
-    max-width: min(100%, 28rem);
+    max-width: min(100%, 32rem);
+}
+
+body.fv-dashboard .logo-wordmark-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+body.fv-dashboard .logo-mark {
+    width: clamp(2.35rem, 7.5vw, 3.1rem);
+    height: auto;
+    flex-shrink: 0;
+    display: block;
+    border-radius: 0.45rem;
+    filter: drop-shadow(0 2px 14px rgba(99, 102, 241, 0.4));
 }
 
 body.fv-dashboard .logo-wordmark {
