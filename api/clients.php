@@ -16,6 +16,7 @@ require_once __DIR__ . '/lib/require_admin_session.php';
 require_once __DIR__ . '/sqlite.php';
 require_once __DIR__ . '/lib/api_response.php';
 require_once __DIR__ . '/lib/order_center.php';
+require_once __DIR__ . '/lib/client_search.php';
 require_once __DIR__ . '/lib/order_client_portal.php';
 require_once __DIR__ . '/lib/security_settings.php';
 
@@ -187,39 +188,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     $q = trim((string)($_GET['q'] ?? ''));
     $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
-    if ($limit < 1) $limit = 1;
-    if ($limit > 500) $limit = 500;
+    if ($limit < 1) {
+        $limit = 1;
+    }
+    if ($limit > 500) {
+        $limit = 500;
+    }
 
-    if ($q === '') {
-        $stmt = $pdo->query(
-            'SELECT client_id, full_name, phone, email, updated_at
-             FROM clients
-             ORDER BY updated_at DESC
-             LIMIT ' . (int)$limit
-        );
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        api_json_send(true, ['clients' => $rows], null, [], ['clients' => $rows]);
+    $mode = isset($_GET['mode']) ? strtolower(trim((string)$_GET['mode'])) : 'full';
+    if (!in_array($mode, ['full', 'suggest'], true)) {
+        $mode = 'full';
+    }
+
+    if ($q === '' && $mode === 'suggest') {
+        api_json_send(true, ['clients' => []], null, [], ['clients' => []]);
         exit;
     }
 
-    $like = '%' . $q . '%';
-    $stmt = $pdo->prepare(
-        'SELECT DISTINCT c.client_id, c.full_name, c.phone, c.email, c.updated_at
-         FROM clients c
-         LEFT JOIN orders o ON o.client_id = c.id
-         WHERE c.full_name LIKE :q
-            OR IFNULL(c.phone, \'\') LIKE :q
-            OR IFNULL(c.email, \'\') LIKE :q
-            OR c.client_id LIKE :q
-            OR IFNULL(o.device_model, \'\') LIKE :q
-            OR IFNULL(o.problem_description, \'\') LIKE :q
-            OR IFNULL(o.order_id, \'\') LIKE :q
-            OR IFNULL(o.document_id, \'\') LIKE :q
-         ORDER BY c.updated_at DESC
-         LIMIT ' . (int)$limit
-    );
-    $stmt->execute([':q' => $like]);
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $rows = fixarivan_client_search_clients($pdo, $q, ['mode' => $mode, 'limit' => $limit]);
+    } catch (Throwable $e) {
+        api_json_send(false, null, 'Поиск клиентов: ' . $e->getMessage(), []);
+        exit;
+    }
     api_json_send(true, ['clients' => $rows], null, [], ['clients' => $rows]);
     exit;
 }

@@ -91,6 +91,7 @@
         <h1 id="trackH1" style="margin:0;">🔍 Track</h1>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <span class="muted track-top-hint" style="font-size:.82rem;max-width:420px;">Интерфейс Track на русском. Язык клиентского портала задаётся в карточке заказа (для каждого заказа отдельно).</span>
+            <a href="inventory.html" id="trackNavInventory">Космический склад</a>
             <a href="dashboard_app.html">← <span id="trackNavDash">Рабочий стол</span></a>
         </div>
     </div>
@@ -118,6 +119,7 @@
         <main class="card">
             <h2 id="clientTitle" style="margin:0 0 8px 0;">Карточка клиента</h2>
             <div id="clientMeta" class="muted" style="margin-bottom:10px;">Выберите клиента слева</div>
+            <div id="clientQuickActions" class="track-quick" style="display:none; margin-bottom:12px;"></div>
             <div id="ordersTree"><div class="muted">—</div></div>
         </main>
     </div>
@@ -133,7 +135,10 @@
 
         const TRACK_LANG = {
             h1: '🔍 Track: клиент → заказы → документы',
+            navInventory: 'Космический склад',
             navDash: 'Рабочий стол',
+            clientQuickNewOrder: 'Новый заказ с этим клиентом',
+            clientQuickStock: 'Склад',
             searchPh: 'Поиск: имя, телефон, email, устройство, проблема, заказ, номер акта, комментарии',
             find: 'Найти',
             fAll: 'Все', fActive: 'Активные', fWait: 'Ожидание', fDone: 'Завершённые',
@@ -342,6 +347,8 @@
             const T = trackT();
             const h1 = document.getElementById('trackH1');
             if (h1) h1.textContent = T.h1;
+            const ni = document.getElementById('trackNavInventory');
+            if (ni) ni.textContent = T.navInventory;
             const nd = document.getElementById('trackNavDash');
             if (nd) nd.textContent = T.navDash;
             const q = document.getElementById('qGlobal');
@@ -645,14 +652,26 @@
             const groups = filterGroups();
             const g = groups.find((x) => x.key === state.activeKey);
             const tree = document.getElementById('ordersTree');
+            const quickBar = document.getElementById('clientQuickActions');
             if (!g){
                 document.getElementById('clientTitle').textContent = T.clientTitle;
                 document.getElementById('clientMeta').textContent = T.clientPick;
+                if (quickBar) { quickBar.style.display = 'none'; quickBar.innerHTML = ''; }
                 tree.innerHTML = '<div class="muted">—</div>';
                 return;
             }
             document.getElementById('clientTitle').textContent = g.client_name;
             document.getElementById('clientMeta').textContent = `${g.client_phone || '—'} • ${g.client_email || '—'} • ${T.sOrders}: ${g.orders.length}`;
+            if (quickBar) {
+                const qs = new URLSearchParams();
+                if (g.client_name) qs.set('client_name', g.client_name);
+                if (g.client_phone) qs.set('client_phone', g.client_phone);
+                if (g.client_email) qs.set('client_email', g.client_email);
+                const qstr = qs.toString();
+                quickBar.style.display = 'flex';
+                quickBar.innerHTML = `<a href="order_new.html${qstr ? '?' + qstr : ''}">${esc(T.clientQuickNewOrder)}</a>` +
+                    `<a href="inventory.html">${esc(T.clientQuickStock)}</a>`;
+            }
             tree.innerHTML = g.orders.map((o) => {
                 const orderDoc = o.documents.find((d) => d.type === 'order');
                 const orderDocId = orderDoc ? String(orderDoc.document_id || '') : '';
