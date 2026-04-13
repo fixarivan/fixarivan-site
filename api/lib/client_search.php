@@ -98,9 +98,10 @@ function fixarivan_client_search_clients_full(PDO $pdo, string $q, int $limit): 
     $q = trim($q);
     if ($q === '') {
         $stmt = $pdo->query(
-            'SELECT client_id, full_name, phone, email, updated_at
-             FROM clients
-             ORDER BY updated_at DESC
+            'SELECT c.client_id, c.full_name, c.phone, c.email, c.updated_at,
+                    (SELECT COUNT(*) FROM orders o WHERE o.client_id = c.id) AS orders_count
+             FROM clients c
+             ORDER BY c.updated_at DESC
              LIMIT ' . (int)$limit
         );
 
@@ -138,7 +139,8 @@ function fixarivan_client_search_clients_full(PDO $pdo, string $q, int $limit): 
     }
 
     $sql = 'SELECT DISTINCT c.client_id, c.full_name, c.phone, c.email,
-                   COALESCE(NULLIF(TRIM(c.updated_at), \'\'), \'\') AS updated_at
+                   COALESCE(NULLIF(TRIM(c.updated_at), \'\'), \'\') AS updated_at,
+                   (SELECT COUNT(*) FROM orders o2 WHERE o2.client_id = c.id) AS orders_count
             FROM clients c
             LEFT JOIN orders o ON o.client_id = c.id
             WHERE (' . implode(' OR ', $parts) . ')

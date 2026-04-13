@@ -453,6 +453,28 @@
             return `<select class="track-select track-pub-status" data-doc="${esc(orderDocId)}" aria-label="${esc(T.stClient)}">${opts}</select>`;
         }
 
+        function invoiceStatusSelectHtml(docId, current) {
+            const id = String(docId || '').trim();
+            if (!id) return '';
+            const optsList = [
+                { v: 'draft', label: 'Черновик' },
+                { v: 'issued', label: 'Выставлен' },
+                { v: 'paid', label: 'Оплачен' },
+                { v: 'overdue', label: 'Просрочен' },
+                { v: 'partially_paid', label: 'Частично оплачен' },
+                { v: 'cancelled', label: 'Отменён' },
+            ];
+            const cur = String(current || '').toLowerCase();
+            const resolved = optsList.some((o) => o.v === cur) ? cur : 'draft';
+            const opts = optsList.map((opt) =>
+                `<option value="${esc(opt.v)}"${resolved === opt.v ? ' selected' : ''}>${esc(opt.label)}</option>`
+            ).join('');
+            return `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:6px;">
+                <span class="muted" style="font-size:.85rem;">Статус счёта:</span>
+                <select class="track-select track-invoice-status" data-doc="${esc(id)}" aria-label="Статус счёта">${opts}</select>
+            </div>`;
+        }
+
         async function patchOrderTrack(docId, payload) {
             const body = { documentId: docId, ...payload };
             const res = await fetch('./api/order_track_patch.php', {
@@ -777,6 +799,7 @@
                                 <strong>${typeLabel(d.type)} ${esc(d.display_id || d.document_id || '')}</strong>
                                 <div class="muted">${esc(d.status || '—')} • ${esc(d.date_created || '')}</div>
                                 ${formatPaymentMiniLine(d)}
+                                ${String(d.type || '').toLowerCase() === 'invoice' ? invoiceStatusSelectHtml(d.document_id, d.status) : ''}
                                 <div class="doc-actions">
                                     <button onclick="viewDoc('${esc(d.document_id)}','${esc(d.type)}')">👁️ ${esc(T.view)}</button>
                                     <button onclick="editDoc('${esc(d.document_id)}','${esc(d.type)}')">✏️ ${esc(T.edit)}</button>
@@ -915,6 +938,29 @@
                         await loadAll();
                     } finally {
                         btn.disabled = false;
+                    }
+                });
+            });
+            root.querySelectorAll('.track-invoice-status').forEach((sel) => {
+                sel.addEventListener('change', async () => {
+                    const docId = sel.getAttribute('data-doc') || '';
+                    if (!docId) return;
+                    sel.disabled = true;
+                    try {
+                        const res = await fetch('./api/invoice_patch_status.php', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ document_id: docId, status: sel.value }),
+                        });
+                        const json = await res.json();
+                        if (!json || json.success !== true) throw new Error(json?.message || 'Ошибка сохранения');
+                        await loadAll();
+                    } catch (e) {
+                        alert(e.message || 'Ошибка');
+                        await loadAll();
+                    } finally {
+                        sel.disabled = false;
                     }
                 });
             });

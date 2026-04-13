@@ -169,6 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
 
         $invSql = 'SELECT document_id, order_id, invoice_id, client_id, total_amount, status,
+                        IFNULL(client_token, \'\') AS client_token,
                         COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS updated_at
                  FROM invoices';
         $invMerged = [];

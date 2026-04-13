@@ -121,8 +121,15 @@
         .nest { margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.1); }
         .nest h5 { margin:0 0 6px 0; font-size:0.82rem; font-weight:700; color:#a5b4fc; text-transform:uppercase; letter-spacing:0.04em; }
         .nest ul { list-style:none; margin:0; padding:0; }
-        .nest li { font-size:0.88rem; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+        .nest li { font-size:0.88rem; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
         .nest li:last-child { border-bottom:none; }
+        .inv-doc-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:6px; }
+        .inv-doc-actions a {
+            font-size:0.82rem; padding:5px 9px; border-radius:8px; text-decoration:none;
+            border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#e5e7eb;
+        }
+        .inv-doc-actions a:hover { background:rgba(59,130,246,0.18); border-color:rgba(96,165,250,0.45); }
+        .inv-doc-actions button { font-size:0.82rem; padding:5px 9px; }
         .empty-orders {
             padding:18px;
             border-radius:10px;
@@ -168,8 +175,8 @@
                     </div>
                 </div>
                 <div class="stat-chips" id="statChips">
-                    <span class="chip-stat" id="chipActive">Активных заказов: 0</span>
-                    <span class="chip-stat" id="chipWait">Ожидание запчастей: 0</span>
+                    <span class="chip-stat" id="chipActive">Активных заказов: —</span>
+                    <span class="chip-stat" id="chipWait">Ожидание запчастей: —</span>
                 </div>
             </section>
 
@@ -271,6 +278,30 @@
             return `<div class="nest"><h5>${esc(title)}</h5><ul>${rows.map(mapLine).join('')}</ul></div>`;
         }
 
+        function invoiceViewerHref(token) {
+            const t = String(token || '').trim();
+            return t ? ('invoice_view.php?token=' + encodeURIComponent(t)) : '';
+        }
+        function invoicePortalHref(token) {
+            const t = String(token || '').trim();
+            return t ? ('client_portal.php?token=' + encodeURIComponent(t)) : '';
+        }
+        function invoiceActionsHtml(x) {
+            const docId = String(x.document_id || '').trim();
+            const tok = String(x.client_token || '').trim();
+            const view = invoiceViewerHref(tok);
+            const portal = invoicePortalHref(tok);
+            const edit = docId ? ('invoice.html?document_id=' + encodeURIComponent(docId)) : '';
+            const parts = [];
+            if (view) parts.push(`<a href="${esc(view)}" target="_blank" rel="noopener">👁 Просмотр</a>`);
+            if (portal) parts.push(`<a href="${esc(portal)}" target="_blank" rel="noopener">🌐 Портал</a>`);
+            if (edit) parts.push(`<a href="${esc(edit)}" target="_blank" rel="noopener">✏ Редактировать</a>`);
+            if (portal) {
+                parts.push(`<button type="button" class="btn-inv-copy-inv" data-portal="${esc(portal)}">📋 Копировать ссылку</button>`);
+            }
+            return parts.length ? `<div class="inv-doc-actions">${parts.join('')}</div>` : '';
+        }
+
         /** Счета, попавшие в карточку клиента по client_id/телефону, но не сгруппированы ни с одним заказом */
         function renderOrphanInvoicesCard(rows) {
             if (!rows || !rows.length) return '';
@@ -282,7 +313,7 @@
                     </div>
                 </div>
                 ${renderNestDocs('Счета', rows, (x) =>
-                    `<li>📄 ${esc(x.invoice_id || x.document_id || '—')} <span class="muted">• ${esc(x.status || '—')}</span></li>`
+                    `<li><div>📄 <strong>${esc(x.invoice_id || x.document_id || '—')}</strong> <span class="muted">• ${esc(x.status || '—')}</span></div>${invoiceActionsHtml(x)}</li>`
                 )}
             </div>`;
         }
@@ -304,7 +335,7 @@
                 `<li>🧾 ${esc(x.receipt_number || x.document_id || '—')} <span class="muted">• ${esc(x.status || '—')}</span></li>`
             );
             const invoicesHtml = renderNestDocs('Счета', invs, (x) =>
-                `<li>📄 ${esc(x.invoice_id || x.document_id || '—')} <span class="muted">• ${esc(x.status || '—')}</span></li>`
+                `<li><div>📄 <strong>${esc(x.invoice_id || x.document_id || '—')}</strong> <span class="muted">• ${esc(x.status || '—')}</span></div>${invoiceActionsHtml(x)}</li>`
             );
             const reportsHtml = renderNestDocs('Диагностика', reps, (x) =>
                 `<li>📱 ${esc(x.report_id || '—')} <span class="muted">${esc(x.model || x.device_type || '—')}</span></li>`
@@ -378,6 +409,9 @@
             const rows = Array.isArray(r.clients) ? r.clients : (Array.isArray(dataBlock(r).clients) ? dataBlock(r).clients : []);
             state.clients = rows;
             renderList();
+            if (!state.activeId) {
+                updateClientSummary({}, { chipsPlaceholder: true });
+            }
         }
 
         function renderList() {
@@ -410,6 +444,11 @@
             document.getElementById('detailsTitle').textContent = name || 'Новый клиент';
             document.getElementById('summaryPhone').textContent = 'Телефон: ' + (phone || '—');
             document.getElementById('summaryEmail').textContent = 'Email: ' + (email || '—');
+            if (stats && stats.chipsPlaceholder) {
+                document.getElementById('chipActive').textContent = 'Активных заказов: —';
+                document.getElementById('chipWait').textContent = 'Ожидание запчастей: —';
+                return;
+            }
             const activeCount = Number(stats?.activeCount ?? 0);
             const waitCount = Number(stats?.waitCount ?? 0);
             document.getElementById('chipActive').textContent = 'Активных заказов: ' + activeCount;
@@ -426,7 +465,7 @@
             document.getElementById('fNotes').value = '';
             document.getElementById('ordersContainer').innerHTML = '';
             document.getElementById('ordersPlaceholder').style.display = 'block';
-            updateClientSummary({}, { activeCount: 0, waitCount: 0 });
+            updateClientSummary({}, { chipsPlaceholder: true });
             renderList();
             setTimeout(() => {
                 const f = document.getElementById('fFullName');
@@ -537,6 +576,26 @@
         }
 
         document.addEventListener('click', async (e) => {
+            const copyInv = e.target.closest('.btn-inv-copy-inv');
+            if (copyInv) {
+                e.preventDefault();
+                const u = copyInv.getAttribute('data-portal') || '';
+                if (!u) {
+                    showToast('Нет ссылки портала', 'warning');
+                    return;
+                }
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(u);
+                        showToast('Ссылка скопирована', 'success');
+                    } else {
+                        prompt('Ссылка:', u);
+                    }
+                } catch (_) {
+                    prompt('Ссылка:', u);
+                }
+                return;
+            }
             const trackBtn = e.target.closest('.btn-open-track');
             if (trackBtn) {
                 e.preventDefault();
