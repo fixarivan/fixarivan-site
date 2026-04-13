@@ -138,18 +138,45 @@
             }
         }
         
-        .notification-icon {
+        .header-top-actions {
             position: absolute;
             top: 0;
             right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 10;
+        }
+        .notification-icon {
+            position: relative;
             font-size: 32px;
             cursor: pointer;
             padding: 8px;
             transition: transform 0.3s ease;
+            line-height: 1;
         }
-        
         .notification-icon:hover {
             transform: scale(1.1);
+        }
+        .header-logout-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(239, 68, 68, 0.45);
+            background: rgba(239, 68, 68, 0.16);
+            color: #fee2e2;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            white-space: nowrap;
+            transition: background 0.2s ease, transform 0.15s ease;
+        }
+        .header-logout-btn:hover {
+            background: rgba(239, 68, 68, 0.28);
+            transform: translateY(-1px);
         }
         
         .notification-badge {
@@ -983,6 +1010,8 @@
                 padding: 28px 14px 36px;
             }
             .header { padding-top: 36px; padding-bottom: 16px; margin-bottom: 28px; }
+            .header-top-actions { right: 8px; gap: 4px; }
+            .header-logout-btn { padding: 6px 8px; font-size: 0.75rem; }
             .metrics-section { padding: 14px 12px; margin-bottom: 18px; }
             .metrics-header { flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 14px; }
             .metrics-title { font-size: 1.05rem; }
@@ -1327,46 +1356,6 @@
         }
 
         /* Календарь на дашборде */
-        .system-actions-section {
-            margin-top: 16px;
-            margin-bottom: 28px;
-            background: rgba(15, 23, 42, 0.38);
-            border: 1px solid rgba(148, 163, 184, 0.22);
-            border-radius: 14px;
-            padding: 14px 16px;
-        }
-        .system-actions-head {
-            color: rgba(226, 232, 240, 0.86);
-            font-size: 0.88rem;
-            font-weight: 700;
-            letter-spacing: 0.03em;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-        }
-        .system-actions-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .system-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 10px 14px;
-            border-radius: 10px;
-            border: 1px solid rgba(239, 68, 68, 0.45);
-            background: rgba(239, 68, 68, 0.16);
-            color: #fee2e2;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            transition: background 0.2s ease, transform 0.15s ease;
-        }
-        .system-btn:hover {
-            background: rgba(239, 68, 68, 0.26);
-            transform: translateY(-1px);
-        }
         .dash-calendar-section {
             margin-bottom: 28px;
         }
@@ -1677,9 +1666,12 @@
 
     <div class="container">
         <div class="header">
-            <div class="notification-icon" onclick="showNotifications()">
-                🔔
-                <span class="notification-badge" id="notifCount" hidden>0</span>
+            <div class="header-top-actions">
+                <div class="notification-icon" onclick="showNotifications()" role="button" tabindex="0" aria-label="Уведомления">
+                    🔔
+                    <span class="notification-badge" id="notifCount" hidden>0</span>
+                </div>
+                <button type="button" class="header-logout-btn" onclick="window.location.href='admin/logout.php'" title="Выйти из системы">🚪 Выйти</button>
             </div>
             <div class="notification-panel" id="notificationPanel">
                 <div class="notification-panel-header">
@@ -1862,14 +1854,6 @@
                 <div class="nav-card-desc">Смена логина и пароля администратора (без дублирования рабочего стола)</div>
             </a>
         </div>
-
-        <section class="system-actions-section">
-            <div class="system-actions-head">Настройки безопасности и системные действия</div>
-            <div class="system-actions-row">
-                <a href="admin/settings.php" class="system-btn">🔐 Настройки безопасности</a>
-                <button type="button" class="system-btn" onclick="window.location.href='admin/logout.php'">🚪 Выйти из системы</button>
-            </div>
-        </section>
 
         <section class="snake-section" id="snakeSection" aria-label="Мини-игра змейка">
             <div class="snake-head-row">
@@ -2070,7 +2054,9 @@
             document.addEventListener('click', (event) => {
                 const panel = document.getElementById('notificationPanel');
                 const icon = document.querySelector('.notification-icon');
+                const logoutBtn = event.target.closest('.header-logout-btn');
                 if (!panel || !icon) return;
+                if (logoutBtn) return;
                 if (panel.contains(event.target) || icon.contains(event.target)) {
                     return;
                 }
