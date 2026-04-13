@@ -1437,6 +1437,13 @@
         document.addEventListener('DOMContentLoaded', () => {
             applyTrackStaticI18n();
             loadPrefs();
+            try {
+                const qFromUrl = new URLSearchParams(window.location.search).get('q');
+                if (qFromUrl) {
+                    const qEl = document.getElementById('qGlobal');
+                    if (qEl) qEl.value = qFromUrl;
+                }
+            } catch (_) {}
             setMode(state.mode);
             loadAll().catch((e) => {
                 document.getElementById('clientsList').innerHTML = '<div class="muted">Ошибка загрузки: ' + esc(e.message || '') + '</div>';

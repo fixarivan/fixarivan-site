@@ -324,6 +324,11 @@
             transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
+        .document-item--dash {
+            align-items: flex-start;
+            gap: 16px;
+        }
+
         .document-item-content {
             display: flex;
             flex-direction: column;
@@ -366,6 +371,216 @@
         .document-details p {
             color: rgba(255, 255, 255, 0.6);
             font-size: 0.9rem;
+        }
+
+        .document-item-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .document-item-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 8px 10px;
+            margin-bottom: 8px;
+        }
+
+        .document-item-head .document-primary {
+            flex: 1 1 180px;
+            min-width: 0;
+        }
+
+        .doc-type-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            flex-shrink: 0;
+        }
+
+        .doc-type-chip--order { background: rgba(99, 102, 241, 0.25); color: #e0e7ff; border-color: rgba(129, 140, 248, 0.35); }
+        .doc-type-chip--receipt { background: rgba(236, 72, 153, 0.2); color: #fce7f3; border-color: rgba(244, 114, 182, 0.35); }
+        .doc-type-chip--invoice { background: rgba(245, 158, 11, 0.22); color: #fef3c7; border-color: rgba(251, 191, 36, 0.35); }
+        .doc-type-chip--report { background: rgba(14, 165, 233, 0.22); color: #e0f2fe; border-color: rgba(56, 189, 248, 0.35); }
+
+        .document-primary {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.95);
+            line-height: 1.35;
+            word-break: break-word;
+        }
+
+        .document-meta-row {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            font-size: 0.82rem;
+            color: rgba(226, 232, 240, 0.55);
+            line-height: 1.4;
+        }
+
+        .document-meta-row .document-meta-id {
+            color: rgba(148, 163, 184, 0.95);
+            font-weight: 600;
+        }
+
+        .document-meta-row .document-meta-ref {
+            font-weight: 600;
+            color: rgba(167, 139, 250, 0.9);
+        }
+
+        .document-meta-row .document-meta-status {
+            color: rgba(148, 163, 184, 0.95);
+        }
+
+        .document-meta-row .document-meta-sep {
+            opacity: 0.42;
+            font-weight: 700;
+            user-select: none;
+        }
+
+        .document-meta-extra {
+            margin: 6px 0 0 0;
+            font-size: 0.78rem;
+            color: rgba(148, 163, 184, 0.95);
+        }
+
+        .document-item-actions--dash {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+            flex-shrink: 0;
+            min-width: 200px;
+        }
+
+        .document-dash-secondary {
+            display: flex;
+            align-items: stretch;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .document-dash-secondary .btn-track-dash {
+            flex: 1 1 auto;
+            min-width: 0;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+
+        .document-dash-secondary--solo {
+            justify-content: flex-end;
+        }
+
+        .btn-primary-dash {
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+        }
+
+        .btn-primary-dash:hover {
+            filter: brightness(1.06);
+        }
+
+        .btn-track-dash {
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .btn-track-dash:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .doc-more-details {
+            position: relative;
+        }
+
+        .doc-more-details > summary {
+            list-style: none;
+        }
+
+        .doc-more-details > summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .btn-doc-more {
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 1.35rem;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-doc-more:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .doc-more-menu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 6px);
+            min-width: 220px;
+            padding: 6px;
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+            z-index: 40;
+        }
+
+        .doc-more-item {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 10px 12px;
+            font-size: 0.88rem;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: rgba(241, 245, 249, 0.95);
+            cursor: pointer;
+        }
+
+        .doc-more-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .doc-more-item--danger {
+            color: #fecaca;
         }
 
         .document-actions {
@@ -821,6 +1036,14 @@
             .metric-label { font-size: 0.82rem; }
             .metric-subtext { font-size: 0.72rem; margin-top: 4px; }
             .document-item { flex-direction: column; align-items: stretch; gap: 12px; padding: 14px 12px; }
+            .document-item--dash .document-item-actions--dash {
+                width: 100%;
+                min-width: 0;
+            }
+            .document-item--dash .btn-primary-dash {
+                width: 100%;
+                box-sizing: border-box;
+            }
             .document-info { flex-direction: row; align-items: flex-start; gap: 12px; }
             .document-details h4 { font-size: 0.95rem; }
             .document-details p { font-size: 0.8rem; line-height: 1.35; }
@@ -1603,12 +1826,6 @@
                 <div class="nav-card-desc">Оплата и PDF; привязка к заказу — из Track (рекомендуется)</div>
             </a>
 
-            <a href="master_form.html" class="nav-card dashboard-card">
-                <span class="nav-card-icon">🔧</span>
-                <div class="nav-card-title">Акт приёма (мастер)</div>
-                <div class="nav-card-desc">Приём техники, ссылки и токены для клиента из одной формы</div>
-            </a>
-
             <a href="clients.html" class="nav-card dashboard-card">
                 <span class="nav-card-icon">👥</span>
                 <div class="nav-card-title">Клиенты</div>
@@ -1651,7 +1868,6 @@
             <div class="system-actions-row">
                 <a href="admin/settings.php" class="system-btn">🔐 Настройки безопасности</a>
                 <button type="button" class="system-btn" onclick="window.location.href='admin/logout.php'">🚪 Выйти из системы</button>
-                <button type="button" class="system-btn" onclick="clearAllDocuments()">🗑️ Очистить все документы</button>
             </div>
         </section>
 
@@ -2222,30 +2438,89 @@
             const limit = 5;
             const expanded = dashboardState.recentDocumentsExpanded === true;
             const visibleDocs = expanded ? docList : docList.slice(0, limit);
-            container.innerHTML = visibleDocs.map(doc => {
-                const safeId = String(doc.document_id || '').replace(/'/g, "\\'");
-                const safeType = String(doc.type || 'order').replace(/'/g, "\\'");
+            const typeLabelFallback = { order: 'Акт', receipt: 'Квитанция', invoice: 'Счёт', report: 'Отчёт' };
+
+            container.innerHTML = visibleDocs.map((doc) => {
+                const dtype = String(doc.type || 'order').toLowerCase();
+                const jsId = dashEscapeJsString(String(doc.document_id ?? ''));
+                const jsType = dashEscapeJsString(dtype);
+                const chipMod = ['order', 'receipt', 'invoice', 'report'].includes(dtype) ? dtype : 'order';
+                const typeLabel = dashEscapeHtml(doc.type_label_ru || typeLabelFallback[dtype] || 'Документ');
+
+                let primaryText = String(doc.primary_line || '').trim();
+                if (!primaryText) {
+                    const c = String(doc.client_name || '').trim();
+                    const m = String(doc.device_model || '').trim();
+                    if (c && m) primaryText = c + ' · ' + m;
+                    else if (c) primaryText = c;
+                    else if (m) primaryText = m;
+                    else primaryText = String(doc.display_id || doc.document_id || '') || 'Без названия';
+                }
+                const primary = dashEscapeHtml(primaryText);
+
+                const dispId = dashEscapeHtml(String(doc.display_id || doc.document_id || ''));
+                const metaTitle = dashEscapeAttr(doc.title || '');
+
                 const st = doc.status_label || doc.status || '';
-                const paymentInfo = doc.type === 'receipt'
-                    ? `${doc.payment_method ? ' • 💳 ' + doc.payment_method : ''}${doc.payment_status ? ' • 📌 ' + doc.payment_status : ''}`
+                const metaBits = [];
+                metaBits.push(`<span class="document-meta-id">№ ${dispId}</span>`);
+                if (doc.order_id) {
+                    const ref = doc.order_ref_short ? dashEscapeHtml(String(doc.order_ref_short)) : '';
+                    const oid = dashEscapeHtml(String(doc.order_id));
+                    metaBits.push(`<span class="document-meta-order">Заказ · <span class="document-meta-ref">${ref || oid}</span></span>`);
+                }
+                if (st) metaBits.push(`<span class="document-meta-status">${dashEscapeHtml(st)}</span>`);
+                metaBits.push(`<span>${dashEscapeHtml(formatDate(doc.date_created))}</span>`);
+                const metaRow = metaBits.length
+                    ? `<div class="document-meta-row">${metaBits.join('<span class="document-meta-sep" aria-hidden="true">·</span>')}</div>`
                     : '';
+
+                let receiptExtra = '';
+                if (dtype === 'receipt' && (doc.payment_method || doc.payment_status)) {
+                    const bits = [];
+                    if (doc.payment_method) bits.push('💳 ' + doc.payment_method);
+                    if (doc.payment_status) bits.push('📌 ' + doc.payment_status);
+                    receiptExtra = `<p class="document-meta-extra">${bits.map((b) => dashEscapeHtml(b)).join(' · ')}</p>`;
+                }
+
+                const viewerBtn = doc.viewer_url
+                    ? `<button type="button" class="doc-more-item" data-viewer-url="${dashEscapeAttr(doc.viewer_url)}" onclick="closeDocMoreMenu(this);copyViewerLinkFromData(this)">🔗 Ссылка для клиента</button>`
+                    : '';
+
+                const pdfBtn = dtype === 'report'
+                    ? ''
+                    : `<button type="button" class="doc-more-item" onclick="closeDocMoreMenu(this);downloadDocument('${jsId}','${jsType}',this)">📄 Скачать PDF</button>`;
+
+                const trackHref = doc.order_id ? `track.html?q=${encodeURIComponent(String(doc.order_id))}` : '';
+                const trackLink = trackHref
+                    ? `<a class="btn-track-dash" href="${dashEscapeAttr(trackHref)}">Заказ в Track</a>`
+                    : '';
+                const secondaryClass = 'document-dash-secondary' + (trackLink ? '' : ' document-dash-secondary--solo');
+
                 return `
-                    <div class="document-item">
-                        <div class="document-info">
-                            <div class="document-icon ${doc.type || 'order'}">
-                                ${getDocumentIcon(doc.type || 'order')}
+                    <div class="document-item document-item--dash">
+                        <div class="document-item-body" title="${metaTitle}">
+                            <div class="document-item-head">
+                                <span class="doc-type-chip doc-type-chip--${chipMod}">${typeLabel}</span>
+                                <p class="document-primary">${primary}</p>
                             </div>
-                            <div class="document-details">
-                                <h4>${doc.display_id || doc.document_id} — ${doc.client_name || 'Без имени'}</h4>
-                                <p>${doc.device_model || '—'} • ${st ? '<span style="opacity:0.9;">' + st + '</span> • ' : ''}${doc.order_id ? '<span style="opacity:0.85;">Заказ: ' + doc.order_id + '</span> • ' : ''}${formatDate(doc.date_created)}${paymentInfo}</p>
-                            </div>
+                            ${metaRow}
+                            ${receiptExtra}
                         </div>
-                        <div class="document-actions">
-                            ${doc.viewer_url ? `<button type="button" class="btn btn-view" data-viewer-url="${doc.viewer_url.replace(/"/g, '&quot;')}" onclick="copyViewerLinkFromData(this)">🔗 Копировать ссылку</button>` : ''}
-                            <button class="btn btn-view" onclick="viewDocument('${safeId}', '${safeType}')">👁️ Просмотр</button>
-                            ${String(doc.type || '').toLowerCase() === 'report' ? '' : `<button class="btn btn-download" onclick="downloadDocument('${safeId}', '${safeType}', this)">📄 PDF</button>`}
-                            <button class="btn btn-edit" onclick="editDocument('${safeId}', '${safeType}')">✏️ Редактировать</button>
-                            <button class="btn btn-delete" onclick="deleteDocument('${safeId}', '${safeType}')">🗑️ Удалить</button>
+                        <div class="document-item-actions--dash">
+                            <button type="button" class="btn-primary-dash" onclick="viewDocument('${jsId}','${jsType}')">Открыть</button>
+                            <div class="${secondaryClass}">
+                                ${trackLink}
+                                <details class="doc-more-details">
+                                    <summary class="btn-doc-more" aria-label="Ещё действия">⋯</summary>
+                                    <div class="doc-more-menu" role="menu">
+                                        ${viewerBtn}
+                                        ${pdfBtn}
+                                        <button type="button" class="doc-more-item" onclick="closeDocMoreMenu(this);editDocument('${jsId}','${jsType}')">✏️ Редактировать</button>
+                                        <button type="button" class="doc-more-item doc-more-item--danger" onclick="closeDocMoreMenu(this);deleteDocument('${jsId}','${jsType}')">🗑️ Удалить</button>
+                                    </div>
+                                </details>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -2321,6 +2596,28 @@
             const d = document.createElement('div');
             d.textContent = String(str);
             return d.innerHTML;
+        }
+
+        function dashEscapeAttr(str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;');
+        }
+
+        function dashEscapeJsString(s) {
+            return String(s ?? '')
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/\r/g, '\\r')
+                .replace(/\n/g, '\\n');
+        }
+
+        function closeDocMoreMenu(el) {
+            if (!el || !el.closest) return;
+            const det = el.closest('details.doc-more-details');
+            if (det) det.removeAttribute('open');
         }
 
         function formatDashEventTime(iso, allDay) {
@@ -2475,41 +2772,6 @@
                 loadStatistics(true);
                 } catch (error) {
                 showToast('Ошибка при удалении: ' + error.message, 'error');
-            }
-        }
-
-        async function clearAllDocuments() {
-            if (!confirm('⚠️ ВНИМАНИЕ!\n\nВы собираетесь удалить ВСЕ ДОКУМЕНТЫ из системы:\n\n• 📝 Все акты приёма\n• 🧾 Все квитанции\n• 📋 Все отчёты\n• 🔗 Все реферальные ссылки\n\nЭто действие НЕОБРАТИМО!\n\nПродолжить?')) {
-                return;
-            }
-
-            const password = prompt('🔒 Введите пароль для подтверждения очистки всех документов:');
-            if (password === null || password === '') {
-                showToast('Операция отменена.', 'info');
-                return;
-            }
-
-            if (!confirm('🚨 ПОСЛЕДНЕЕ ПРЕДУПРЕЖДЕНИЕ!\n\nВы действительно хотите удалить ВСЕ ДОКУМЕНТЫ?\n\n• 📝 Все акты приёма\n• 🧾 Все квитанции\n• 📋 Все отчёты\n• 🔗 Все реферальные ссылки\n\n✅ СКЛАД И ИНВЕНТАРЬ НЕ ЗАТРАГИВАЮТСЯ!\n\nНажмите OK для продолжения или Отмена для отмены.')) {
-                showToast('Операция отменена пользователем', 'info');
-                return;
-            }
-
-            try {
-                const result = await fetchJson('./api/clear_database.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ confirm: 'YES_DELETE_ALL', delete_password: password })
-                });
-
-                if (!result.success) {
-                    throw new Error(result.message || 'Не удалось очистить документы');
-                }
-
-                showToast(`Все документы очищены (удалено: ${result.total_deleted})`, 'success');
-                loadStatistics(true);
-                loadRecentDocuments();
-            } catch (error) {
-                showToast('Ошибка при очистке: ' + error.message, 'error');
             }
         }
 

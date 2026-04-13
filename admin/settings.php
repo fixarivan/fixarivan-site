@@ -251,6 +251,71 @@ $companyProfile = fixarivan_company_profile_load();
                 <button type="submit">Сохранить реквизиты</button>
             </form>
         </div>
+
+        <div class="card" style="margin-top: 20px; border: 2px solid #c53030; background: #fff8f8;">
+            <p style="font-weight: 700; margin-bottom: 8px; color: #991b1b;">Опасная зона: удаление всех документов</p>
+            <p class="hint" style="color: #7f1d1d;">Это действие удалит все акты, квитанции и отчёты из базы и связанные JSON-файлы. <strong>Восстановление невозможно.</strong> Склад (инвентарь) не затрагивается.</p>
+            <p class="hint">Введите слово <strong>DELETE</strong> (заглавными) и пароль удаления — тот же, что для удаления клиентов и отдельных документов (см. блок выше).</p>
+            <label for="clear_confirm_text">Подтверждение текстом</label>
+            <input type="text" id="clear_confirm_text" name="clear_confirm_text" autocomplete="off" placeholder="DELETE">
+            <label for="clear_delete_password">Пароль удаления</label>
+            <input type="password" id="clear_delete_password" name="clear_delete_password" autocomplete="off">
+            <button type="button" id="btnClearAllDocuments" style="width: 100%; padding: 14px; border: none; border-radius: 12px; background: #c53030; color: #fff; font-weight: 700; cursor: pointer; margin-top: 8px;">Удалить все документы</button>
+            <p id="clearDocsResult" class="hint" style="margin-top: 12px; display: none;"></p>
+        </div>
     </div>
+    <script>
+    (function () {
+        var btn = document.getElementById('btnClearAllDocuments');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            var c = document.getElementById('clear_confirm_text');
+            var p = document.getElementById('clear_delete_password');
+            var out = document.getElementById('clearDocsResult');
+            if (!c || !p) return;
+            var t = (c.value || '').trim();
+            var pw = p.value || '';
+            if (t !== 'DELETE') {
+                alert('Введите слово DELETE заглавными для подтверждения.');
+                return;
+            }
+            if (!pw) {
+                alert('Введите пароль удаления.');
+                return;
+            }
+            if (!confirm('Последнее предупреждение: все документы будут удалены без возможности восстановления. Продолжить?')) {
+                return;
+            }
+            btn.disabled = true;
+            fetch('../api/clear_database.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confirm: 'YES_DELETE_ALL', delete_password: pw })
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (json) {
+                    btn.disabled = false;
+                    if (out) {
+                        out.style.display = 'block';
+                        out.style.color = json.success ? '#065f46' : '#991b1b';
+                        out.textContent = json.success
+                            ? ('Готово. Удалено записей: ' + (json.total_deleted != null ? json.total_deleted : '—') + '. Обновите рабочий стол (index.php).')
+                            : (json.message || 'Ошибка');
+                    }
+                    if (json.success) {
+                        c.value = '';
+                        p.value = '';
+                    } else {
+                        alert(json.message || 'Ошибка');
+                    }
+                })
+                .catch(function (e) {
+                    btn.disabled = false;
+                    alert('Ошибка сети: ' + (e && e.message ? e.message : String(e)));
+                });
+        });
+    })();
+    </script>
 </body>
 </html>

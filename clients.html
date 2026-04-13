@@ -177,7 +177,6 @@
                 <h3 class="section-title">Действия</h3>
                 <div class="quick-docs">
                     <button type="button" id="btnNewOrderBlank">➕ Новый заказ</button>
-                    <button type="button" id="btnNewOrder">📝 Новый акт</button>
                     <button type="button" id="btnNewReceipt">🧾 Квитанция</button>
                     <button type="button" id="btnNewInvoice">📄 Счёт</button>
                 </div>
@@ -466,10 +465,6 @@
         document.getElementById('btnNewOrderBlank').addEventListener('click', () => {
             const query = buildClientQuery();
             window.location.href = 'order_new.html' + (query ? ('?' + query) : '');
-        });
-        document.getElementById('btnNewOrder').addEventListener('click', () => {
-            const query = buildClientQuery();
-            window.location.href = 'master_form.html' + (query ? ('?' + query) : '');
         });
         document.getElementById('btnNewReceipt').addEventListener('click', () => {
             const query = buildClientQuery();
