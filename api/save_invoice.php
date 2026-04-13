@@ -190,18 +190,22 @@ try {
     ]);
 
     saveInvoiceJson($record);
-    $viewerUrl = fixarivan_absolute_url('invoice_view.php?token=' . rawurlencode((string)$record['client_token']));
+    $tok = (string) $record['client_token'];
+    $viewerUrl = fixarivan_absolute_url('invoice_view.php?token=' . rawurlencode($tok));
+    $portalUrl = fixarivan_absolute_url('client_portal.php?token=' . rawurlencode($tok));
     api_json_send(true, [
         'document_id' => $record['document_id'],
         'invoice_id' => $record['invoice_id'],
         'order_id' => $record['order_id'],
         'client_token' => $record['client_token'],
         'viewer_url' => $viewerUrl,
+        'portal_url' => $portalUrl,
         'invoice_logo' => $record['invoice_logo'] !== '' ? $record['invoice_logo'] : null,
     ], 'Счёт сохранён', [], [
         'document_id' => $record['document_id'],
         'invoice_id' => $record['invoice_id'],
         'viewer_url' => $viewerUrl,
+        'portal_url' => $portalUrl,
     ]);
 } catch (Throwable $e) {
     api_json_send(false, null, 'Ошибка сохранения счёта', [$e->getMessage()]);

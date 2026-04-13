@@ -85,12 +85,56 @@ try {
 }
 
 $order = client_portal_load_order_by_token($pdo, $token);
+$portalEntryInvoice = [];
 
 if ($order === []) {
+    $stInv = $pdo->prepare('SELECT * FROM invoices WHERE client_token = :t LIMIT 1');
+    $stInv->execute([':t' => $token]);
+    $portalEntryInvoice = $stInv->fetch(PDO::FETCH_ASSOC) ?: [];
+}
+
+if ($order === [] && $portalEntryInvoice === []) {
     fixarivan_viewer_rate_failure('client_portal');
     fixarivan_viewer_log_line('client_portal', 'not_found', fixarivan_viewer_token_fingerprint($token), '');
     fixarivan_viewer_render_neutral_unavailable($viewerLangEarly);
     exit;
+}
+
+if ($order === [] && $portalEntryInvoice !== []) {
+    $cidInv = (int) ($portalEntryInvoice['client_id'] ?? 0);
+    if ($cidInv > 0) {
+        $stOrd = $pdo->prepare('SELECT * FROM orders WHERE client_id = :cid ORDER BY date_updated DESC');
+        $stOrd->execute([':cid' => $cidInv]);
+        $ordRows = $stOrd->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if ($ordRows !== []) {
+            $order = $ordRows[0];
+        }
+    }
+    if ($order === []) {
+        $so = trim((string) ($portalEntryInvoice['service_object'] ?? ''));
+        $order = [
+            'client_token' => $token,
+            'client_id' => $cidInv,
+            'client_name' => (string) ($portalEntryInvoice['client_name'] ?? ''),
+            'client_phone' => (string) ($portalEntryInvoice['client_phone'] ?? ''),
+            'client_email' => (string) ($portalEntryInvoice['client_email'] ?? ''),
+            'order_id' => '',
+            'document_id' => '',
+            'language' => (string) ($portalEntryInvoice['language'] ?? 'fi'),
+            'public_status' => 'in_progress',
+            'order_status' => 'in_progress',
+            'order_type' => 'repair',
+            'order_lines_json' => '[]',
+            'public_comment' => '',
+            'public_expected_date' => '',
+            'public_estimated_cost' => '',
+            'device_model' => $so,
+            'problem_description' => '',
+            'parts_status' => '',
+            'date_updated' => (string) ($portalEntryInvoice['date_updated'] ?? ''),
+            'date_created' => (string) ($portalEntryInvoice['date_created'] ?? ''),
+        ];
+    }
 }
 
 fixarivan_viewer_rate_success('client_portal');
@@ -146,7 +190,7 @@ if ($orderIds !== []) {
         $sr->execute($ids);
         $receipts = $sr->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-        $si = $pdo->prepare("SELECT invoice_id, document_id, client_token, total_amount, status, order_id FROM invoices WHERE order_id IN ($ph) ORDER BY date_created DESC LIMIT 80");
+        $si = $pdo->prepare("SELECT invoice_id, document_id, client_id, client_token, total_amount, status, order_id FROM invoices WHERE order_id IN ($ph) ORDER BY date_created DESC LIMIT 80");
         $si->execute($ids);
         $invoices = $si->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
@@ -161,6 +205,42 @@ if ($orderIds !== []) {
     $receipts = client_portal_dedupe_by_key($receipts, 'document_id');
     $invoices = client_portal_dedupe_by_key($invoices, 'document_id');
     $reports = client_portal_dedupe_by_key($reports, 'report_id');
+}
+
+if ($clientId > 0) {
+    try {
+        $si2 = $pdo->prepare('SELECT invoice_id, document_id, client_id, client_token, total_amount, status, order_id FROM invoices WHERE client_id = :cid ORDER BY date_created DESC LIMIT 80');
+        $si2->execute([':cid' => $clientId]);
+        $invByClient = $si2->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $invoices = client_portal_dedupe_by_key(array_merge($invoices, $invByClient), 'document_id');
+    } catch (Throwable $e) {
+        /* ignore */
+    }
+}
+
+if ($portalEntryInvoice !== []) {
+    $did = trim((string) ($portalEntryInvoice['document_id'] ?? ''));
+    if ($did !== '') {
+        $have = false;
+        foreach ($invoices as $inv) {
+            if (trim((string) ($inv['document_id'] ?? '')) === $did) {
+                $have = true;
+                break;
+            }
+        }
+        if (!$have) {
+            $invoices[] = [
+                'invoice_id' => $portalEntryInvoice['invoice_id'] ?? '',
+                'document_id' => $portalEntryInvoice['document_id'] ?? '',
+                'client_id' => $portalEntryInvoice['client_id'] ?? null,
+                'client_token' => $portalEntryInvoice['client_token'] ?? '',
+                'total_amount' => $portalEntryInvoice['total_amount'] ?? 0,
+                'status' => $portalEntryInvoice['status'] ?? '',
+                'order_id' => $portalEntryInvoice['order_id'] ?? '',
+            ];
+            $invoices = client_portal_dedupe_by_key($invoices, 'document_id');
+        }
+    }
 }
 
 $reportIdsForExclude = [];
@@ -295,6 +375,27 @@ $featuredDocs = fixarivan_filter_documents_for_order($receipts, $invoices, $repo
 $receiptsForOrder = $featuredDocs['receipts'];
 $invoicesForOrder = $featuredDocs['invoices'];
 $reportsForOrder = $featuredDocs['reports'];
+
+if ($clientId > 0 && $invoices !== []) {
+    $seenInvDoc = [];
+    foreach ($invoicesForOrder as $x) {
+        $did = trim((string) ($x['document_id'] ?? ''));
+        if ($did !== '') {
+            $seenInvDoc[$did] = true;
+        }
+    }
+    foreach ($invoices as $inv) {
+        if ((int) ($inv['client_id'] ?? 0) !== $clientId) {
+            continue;
+        }
+        $did = trim((string) ($inv['document_id'] ?? ''));
+        if ($did === '' || isset($seenInvDoc[$did])) {
+            continue;
+        }
+        $seenInvDoc[$did] = true;
+        $invoicesForOrder[] = $inv;
+    }
+}
 
 $pubChipSlug = fixarivan_portal_status_class_slug((string)($pubStatusMeta['slug'] ?? 'unknown'));
 $partsChipSlug = fixarivan_portal_status_class_slug((string)($partsStatusMeta['slug'] ?? 'unknown'));
@@ -885,7 +986,11 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
             <div class="order-hero-head">
                 <div>
                     <h2 class="order-hero-title"><?= htmlspecialchars($featDisplayName) ?></h2>
+                    <?php if ($featOrderId !== '') { ?>
                     <div class="order-hero-sub"><?= htmlspecialchars($featOrderId) ?></div>
+                    <?php } elseif ($portalEntryInvoice !== [] && trim((string)($portalEntryInvoice['service_object'] ?? '')) !== '') { ?>
+                    <div class="order-hero-sub muted"><?= htmlspecialchars(trim((string)($portalEntryInvoice['service_object'] ?? ''))) ?></div>
+                    <?php } ?>
                 </div>
                 <?php if ($featLines !== [] || $workAmountNum !== null) { ?>
                     <div class="money-pill"><span aria-hidden="true">💰</span><span class="money-pill-amount"><?= htmlspecialchars(number_format($grandTotalNum, 2, ',', ' ')) ?> €</span></div>
@@ -985,7 +1090,7 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
                 </div>
             <?php } ?>
 
-            <?php if ($orderTypeMeta['code'] !== 'sale') { ?>
+            <?php if ($orderTypeMeta['code'] !== 'sale' && trim((string)($featured['document_id'] ?? '')) !== '') { ?>
                 <div class="row" style="margin-top:12px;">
                     <a class="btn" href="<?= htmlspecialchars('order_view.php?' . http_build_query(['token' => trim((string)($featured['client_token'] ?? $token)), 'lang' => $viewerLang])) ?>"><?= htmlspecialchars($tr['view_act']) ?></a>
                 </div>
@@ -995,7 +1100,7 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
         <?php /* Текущий заказ → документы */ ?>
         <?php if ($receiptsForOrder !== [] || $invoicesForOrder !== [] || $reportsForOrder !== []) { ?>
             <div class="card">
-                <h2><?= htmlspecialchars($tr['documents']) ?> · <?= htmlspecialchars($featOrderId) ?></h2>
+                <h2><?= htmlspecialchars($tr['documents']) ?><?php if ($featOrderId !== '') { ?> · <?= htmlspecialchars($featOrderId) ?><?php } ?></h2>
                 <p class="muted" style="margin:0 0 12px;font-size:0.88rem;"><?= htmlspecialchars($tr['documents_order_hint']) ?></p>
                 <?php if ($receiptsForOrder !== []) { ?>
                     <h3 style="margin:12px 0 8px;font-size:1rem;color:#c7d2fe;"><?= htmlspecialchars($tr['receipts']) ?></h3>

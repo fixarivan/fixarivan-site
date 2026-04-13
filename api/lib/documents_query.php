@@ -194,6 +194,9 @@ function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): a
             $viewer = $token !== ''
                 ? fixarivan_absolute_url('invoice_view.php?token=' . rawurlencode($token))
                 : null;
+            $portal = $token !== ''
+                ? fixarivan_absolute_url('client_portal.php?token=' . rawurlencode($token))
+                : null;
             $out[] = [
                 'type' => 'invoice',
                 'document_id' => $row['document_id'],
@@ -212,6 +215,7 @@ function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): a
                 'payment_date' => (string)($row['payment_date'] ?? ''),
                 'payment_method' => (string)($row['payment_method'] ?? ''),
                 'viewer_url' => $viewer,
+                'portal_url' => $portal,
                 'has_viewer_link' => $viewer !== null,
             ];
         }

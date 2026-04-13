@@ -567,7 +567,15 @@ q('btnSave').addEventListener('click', async () => {
     q('document_id').value = (json.data && json.data.document_id) || json.document_id || q('document_id').value;
     q('invoice_id').value = (json.data && json.data.invoice_id) || json.invoice_id || q('invoice_id').value;
     const viewerUrl = (json.data && json.data.viewer_url) || json.viewer_url || '';
-    q('statusLine').textContent = viewerUrl ? (tKey('saved_viewer') + ' ' + viewerUrl) : tKey('saved');
+    const portalUrl = (json.data && json.data.portal_url) || json.portal_url || '';
+    let statusMsg = tKey('saved');
+    if (viewerUrl) {
+        statusMsg = tKey('saved_viewer') + ' ' + viewerUrl;
+    }
+    if (portalUrl) {
+        statusMsg += (viewerUrl ? ' · ' : '') + 'Портал: ' + portalUrl;
+    }
+    q('statusLine').textContent = statusMsg;
     pendingInvoiceLogoDataUrl = null;
     q('invoiceLogoFile').value = '';
     q('removeInvoiceLogo').checked = false;
