@@ -573,9 +573,16 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
             text-align: right;
             white-space: nowrap;
         }
+        /* Наименование: перенос по словам; без hyphens:auto — меньше артефактов в брендах/артикулах */
         .line-name-main {
             color: #f8fafc;
             font-weight: 600;
+            word-break: normal;
+            overflow-wrap: break-word;
+            line-height: 1.45;
+        }
+        .portal-lines-table .line-name-cell {
+            vertical-align: top;
         }
         .totals-panel {
             display: grid;
@@ -624,8 +631,10 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
             .portal-lines-table td:nth-child(1),
             .portal-lines-table th:nth-child(1) {
                 white-space: normal;
-                word-break: break-word;
-                max-width: min(42vw, 200px);
+                word-break: normal;
+                overflow-wrap: break-word;
+                max-width: min(58vw, 260px);
+                vertical-align: top;
             }
             .comment-body {
                 max-height: 11rem;
@@ -937,7 +946,7 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
                                         $lineTot = $ln['sale'] * $ln['qty'];
                                         ?>
                                         <tr>
-                                            <td><span class="line-name-main"><?= htmlspecialchars($ln['name']) ?></span></td>
+                                            <td class="line-name-cell"><span class="line-name-main"><?= htmlspecialchars($ln['name']) ?></span></td>
                                             <td><?= htmlspecialchars((string)$ln['qty']) ?></td>
                                             <td><?= htmlspecialchars(number_format($ln['sale'], 2, ',', ' ')) ?></td>
                                             <td><?= htmlspecialchars(number_format($lineTot, 2, ',', ' ')) ?></td>
