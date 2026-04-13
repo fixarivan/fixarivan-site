@@ -44,6 +44,41 @@ function clients_build_orders_with_docs(array $orders, array $receipts, array $i
     return fixarivan_group_orders_with_documents($orders, $receipts, $invoices, $reports);
 }
 
+/**
+ * Счета: объединение выборок по order_id / client_id / телефону без дублей по document_id.
+ *
+ * @param list<array<string,mixed>> $rows
+ * @return list<array<string,mixed>>
+ */
+function clients_dedupe_invoices_by_document_id(array $rows, int $limit = 50): array
+{
+    $byId = [];
+    foreach ($rows as $r) {
+        if (!is_array($r)) {
+            continue;
+        }
+        $id = trim((string) ($r['document_id'] ?? ''));
+        if ($id === '') {
+            continue;
+        }
+        if (!isset($byId[$id])) {
+            $byId[$id] = $r;
+        }
+    }
+    $list = array_values($byId);
+    usort($list, static function ($a, $b): int {
+        $ta = strtotime((string) ($a['updated_at'] ?? '')) ?: 0;
+        $tb = strtotime((string) ($b['updated_at'] ?? '')) ?: 0;
+
+        return $tb <=> $ta;
+    });
+    if ($limit > 0 && count($list) > $limit) {
+        $list = array_slice($list, 0, $limit);
+    }
+
+    return $list;
+}
+
 try {
     $pdo = getSqliteConnection();
 } catch (Throwable $e) {
@@ -98,7 +133,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
 
         $receipts = [];
-        $invoices = [];
         if ($orderIds !== []) {
             $in = implode(',', array_fill(0, count($orderIds), '?'));
             $stmt = $pdo->prepare(
@@ -111,17 +145,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             );
             $stmt->execute(array_keys($orderIds));
             $receipts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $stmt = $pdo->prepare(
-                'SELECT document_id, order_id, invoice_id, total_amount, status,
-                        COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS updated_at
-                 FROM invoices
-                 WHERE order_id IN (' . $in . ')
-                 ORDER BY updated_at DESC
-                 LIMIT 50'
-            );
-            $stmt->execute(array_keys($orderIds));
-            $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } elseif ($phoneNorm !== '' || $emailNorm !== '') {
             $where = [];
             $params = [];
@@ -144,6 +167,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $stmt->execute($params);
             $receipts = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
+
+        $invSql = 'SELECT document_id, order_id, invoice_id, client_id, total_amount, status,
+                        COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS updated_at
+                 FROM invoices';
+        $invMerged = [];
+        if ($orderIds !== []) {
+            $in = implode(',', array_fill(0, count($orderIds), '?'));
+            $stmt = $pdo->prepare($invSql . ' WHERE order_id IN (' . $in . ') ORDER BY updated_at DESC LIMIT 50');
+            $stmt->execute(array_keys($orderIds));
+            $invMerged = array_merge($invMerged, $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
+        }
+        $stmt = $pdo->prepare($invSql . ' WHERE client_id = :cid ORDER BY updated_at DESC LIMIT 50');
+        $stmt->execute([':cid' => $clientRowId]);
+        $invMerged = array_merge($invMerged, $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
+        if ($phoneNorm !== '' || $emailNorm !== '') {
+            $where = [];
+            $params = [];
+            if ($phoneNorm !== '') {
+                $where[] = clients_norm_phone_sql('client_phone') . ' = :ip';
+                $params[':ip'] = $phoneNorm;
+            }
+            if ($emailNorm !== '') {
+                $where[] = 'lower(IFNULL(client_email, \'\')) = :ie';
+                $params[':ie'] = $emailNorm;
+            }
+            $stmt = $pdo->prepare($invSql . ' WHERE ' . implode(' OR ', $where) . ' ORDER BY updated_at DESC LIMIT 50');
+            $stmt->execute($params);
+            $invMerged = array_merge($invMerged, $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
+        }
+        $invoices = clients_dedupe_invoices_by_document_id($invMerged, 50);
 
         $reports = [];
         if ($orderIds !== []) {
@@ -171,6 +224,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
         $ordersWithDocs = clients_build_orders_with_docs($orders, $receipts, $invoices, $reports);
 
+        $placedInvoiceIds = [];
+        foreach ($ordersWithDocs as $g) {
+            foreach (($g['invoices'] ?? []) as $x) {
+                $did = trim((string) ($x['document_id'] ?? ''));
+                if ($did !== '') {
+                    $placedInvoiceIds[$did] = true;
+                }
+            }
+        }
+        $orphanInvoices = [];
+        foreach ($invoices as $inv) {
+            $did = trim((string) ($inv['document_id'] ?? ''));
+            if ($did === '' || isset($placedInvoiceIds[$did])) {
+                continue;
+            }
+            $orphanInvoices[] = $inv;
+        }
+
         api_json_send(true, [
             'client' => $client,
             'history' => [
@@ -180,6 +251,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 'reports' => $reports,
             ],
             'orders_with_docs' => $ordersWithDocs,
+            'invoices_without_order' => $orphanInvoices,
             'active_orders' => $activeOrders,
             'waiting_parts' => $waitingParts,
         ], null, [], []);

@@ -194,6 +194,36 @@ function fixarivan_group_orders_with_documents(array $orders, array $receipts, a
             $byKey[$mapDocToKey[$iid]]['invoices'][] = $inv;
         }
     }
+    $invoicePlaced = [];
+    foreach ($byKey as $g) {
+        foreach ($g['invoices'] as $x) {
+            $did = trim((string) ($x['document_id'] ?? ''));
+            if ($did !== '') {
+                $invoicePlaced[$did] = true;
+            }
+        }
+    }
+    foreach ($invoices as $inv) {
+        $docId = trim((string) ($inv['document_id'] ?? ''));
+        if ($docId !== '' && isset($invoicePlaced[$docId])) {
+            continue;
+        }
+        $icid = (int) ($inv['client_id'] ?? 0);
+        if ($icid <= 0) {
+            continue;
+        }
+        foreach ($byKey as $key => &$g2) {
+            $ocid = (int) ($g2['order']['client_id'] ?? 0);
+            if ($ocid === $icid) {
+                $g2['invoices'][] = $inv;
+                if ($docId !== '') {
+                    $invoicePlaced[$docId] = true;
+                }
+                break;
+            }
+        }
+        unset($g2);
+    }
     foreach ($reports as $rep) {
         $roid = trim((string) ($rep['order_id'] ?? ''));
         if ($roid !== '' && isset($mapDocToKey[$roid])) {

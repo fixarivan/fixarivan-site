@@ -271,6 +271,22 @@
             return `<div class="nest"><h5>${esc(title)}</h5><ul>${rows.map(mapLine).join('')}</ul></div>`;
         }
 
+        /** Счета, попавшие в карточку клиента по client_id/телефону, но не сгруппированы ни с одним заказом */
+        function renderOrphanInvoicesCard(rows) {
+            if (!rows || !rows.length) return '';
+            return `<div class="order-card orphan-docs">
+                <div class="order-card-head">
+                    <div>
+                        <div class="order-id">Счета без привязки к заказу</div>
+                        <div class="order-meta muted">В счёте не указан заказ или номер не совпадает с заказами клиента — проверьте order_id в счёте или привязку в Track</div>
+                    </div>
+                </div>
+                ${renderNestDocs('Счета', rows, (x) =>
+                    `<li>📄 ${esc(x.invoice_id || x.document_id || '—')} <span class="muted">• ${esc(x.status || '—')}</span></li>`
+                )}
+            </div>`;
+        }
+
         function renderOrderCard(g) {
             const o = g.order || {};
             const oid = String(o.order_id || '').trim();
@@ -327,19 +343,26 @@
             document.getElementById('chipActive').textContent = 'Активных заказов: ' + activeOrders.length;
             document.getElementById('chipWait').textContent = 'Ожидание запчастей: ' + waitingParts.length;
 
+            const orphanInv = Array.isArray(d.invoices_without_order) ? d.invoices_without_order : [];
+            const orphanHtml = renderOrphanInvoicesCard(orphanInv);
+
             const groups = Array.isArray(d.orders_with_docs) ? d.orders_with_docs : null;
             ph.style.display = 'none';
             if (groups && groups.length) {
-                box.innerHTML = groups.map(renderOrderCard).join('');
+                box.innerHTML = orphanHtml + groups.map(renderOrderCard).join('');
                 return;
             }
             const h = d.history || {};
             const flat = h.orders || [];
             if (!flat.length) {
+                if (orphanHtml) {
+                    box.innerHTML = orphanHtml + `<div class="empty-orders">Нет заказов<br><button type="button" class="btn-empty-create btn-new-order-here" data-q="${esc(buildClientQuery())}">Создать заказ</button></div>`;
+                    return;
+                }
                 box.innerHTML = `<div class="empty-orders">Нет заказов<br><button type="button" class="btn-empty-create btn-new-order-here" data-q="${esc(buildClientQuery())}">Создать заказ</button></div>`;
                 return;
             }
-            box.innerHTML = flat.map((o) => renderOrderCard({
+            box.innerHTML = orphanHtml + flat.map((o) => renderOrderCard({
                 order: o,
                 estimate_total: null,
                 receipts: [],
