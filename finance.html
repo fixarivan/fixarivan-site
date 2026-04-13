@@ -9,6 +9,7 @@
     <meta name="theme-color" content="#0b1120">
     <script>window.FIXARIVAN_REQUIRE_ADMIN_SESSION = true;</script>
     <script src="auth_check.js"></script>
+    <script src="js/ui_helpers.js"></script>
     <style>
         :root {
             --bg: #0b1220;
@@ -143,6 +144,11 @@
         .click-val:hover { opacity: 0.9; }
         .val-profit { color: var(--good); font-weight: 600; }
         .val-debt { color: var(--bad); font-weight: 600; }
+        .orphan-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 10px; }
+        .orphan-table th, .orphan-table td { border: 1px solid #334155; padding: 8px 10px; text-align: left; word-break: break-word; }
+        .orphan-table th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+        .orphan-table a { color: var(--accent); text-decoration: none; }
+        .orphan-table a:hover { text-decoration: underline; }
     </style>
     <link rel="stylesheet" href="css/fixarivan-theme.css">
 </head>
@@ -188,6 +194,12 @@
         </div>
     </section>
 
+    <section class="block" id="orphanInvoicesSection" style="margin-top: 14px;">
+        <h2>Счета без привязки к заказу</h2>
+        <p class="muted">Пустой <code>order_id</code> или заказ с таким номером отсутствует в <code>orders</code> — стоит проверить в Track и в счёте.</p>
+        <div id="orphanInvoicesBox" class="muted">Загрузка…</div>
+    </section>
+
     <div class="grid" id="mainGrid"></div>
 
     <section class="block" id="taxSection" style="margin-top:14px;">
@@ -222,6 +234,14 @@
     }
 
     function qs(sel) { return document.querySelector(sel); }
+    function humanizeFi(e) {
+        return (window.FixariVan && FixariVan.ui && typeof FixariVan.ui.humanizeApiError === 'function')
+            ? FixariVan.ui.humanizeApiError(e)
+            : String((e && e.message) || e || 'Ошибка');
+    }
+    function escHtml(s) {
+        return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
     function showErr(msg) {
         const el = qs('#loadErr');
         el.style.display = msg ? 'block' : 'none';
@@ -428,7 +448,7 @@
             }
             pre.textContent = JSON.stringify(j.rows, null, 2);
         } catch (e) {
-            pre.textContent = e.message || String(e);
+            pre.textContent = humanizeFi(e);
         }
     }
 
@@ -467,7 +487,45 @@
             }
             render(j.data, j.period_meta);
         } catch (e) {
-            showErr(e.message || String(e));
+            showErr(humanizeFi(e));
+        }
+    }
+
+    async function loadOrphans() {
+        const box = qs('#orphanInvoicesBox');
+        if (!box) return;
+        box.innerHTML = 'Загрузка…';
+        try {
+            const res = await fetch('api/invoices_orphans.php', { credentials: 'same-origin', cache: 'no-store' });
+            const j = await res.json();
+            const rows = (j.data && Array.isArray(j.data.rows)) ? j.data.rows
+                : (Array.isArray(j.rows) ? j.rows : []);
+            if (!j.success) {
+                box.innerHTML = '<span class="err">' + (j.message || 'Не удалось загрузить') + '</span>';
+                return;
+            }
+            if (!rows.length) {
+                box.innerHTML = '<span class="muted">Таких счетов нет — всё согласовано с заказами.</span>';
+                return;
+            }
+            let h = '<table class="orphan-table"><thead><tr><th>Счёт</th><th>order_id в счёте</th><th>Статус</th><th>Сумма</th><th>Клиент</th><th></th></tr></thead><tbody>';
+            rows.forEach(function (r) {
+                const id = String(r.document_id || '').trim();
+                const inv = escHtml(String(r.invoice_id || '—'));
+                const oid = escHtml(String(r.order_id || '').trim() || '—');
+                const st = escHtml(String(r.status || '—'));
+                const totRaw = (r.total_amount != null && r.total_amount !== '') ? String(r.total_amount) : '—';
+                const tot = escHtml(totRaw);
+                const cn = escHtml(String(r.client_name || '').trim() || '—');
+                const href = id ? ('invoice.html?document_id=' + encodeURIComponent(id)) : '#';
+                h += '<tr><td>' + inv + '</td><td>' + oid + '</td><td>' + st + '</td><td>' + tot + ' €</td><td>' + cn + '</td><td>';
+                h += id ? ('<a href="' + href + '">Открыть</a>') : '—';
+                h += '</td></tr>';
+            });
+            h += '</tbody></table><p class="muted" style="margin-top:8px;">Показано: ' + rows.length + (rows.length >= 200 ? ' (лимит 200)' : '') + '.</p>';
+            box.innerHTML = h;
+        } catch (e) {
+            box.innerHTML = '<span class="err">' + humanizeFi(e) + '</span>';
         }
     }
 
@@ -505,6 +563,7 @@
     currentPreset = 'month';
     setChips();
     load();
+    loadOrphans();
 })();
 </script>
 </body>

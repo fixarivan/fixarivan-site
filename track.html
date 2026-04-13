@@ -7,6 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <script>window.FIXARIVAN_REQUIRE_ADMIN_SESSION = true;</script>
     <script src="auth_check.js"></script>
+    <script src="js/ui_helpers.js"></script>
     <script src="js/document_manager.js"></script>
     <style>
         * { box-sizing: border-box; }
@@ -192,6 +193,7 @@
         function trackT() { return TRACK_LANG; }
 
         const esc = (v) => { const d = document.createElement('div'); d.textContent = String(v ?? ''); return d.innerHTML; };
+        const fvErr = (e) => (window.FixariVan?.ui?.humanizeApiError ? window.FixariVan.ui.humanizeApiError(e) : ((e && e.message) || String(e)));
         function trackPartsStatusRu(code) {
             const c = String(code || '').toLowerCase().trim();
             const T = trackT();
@@ -828,7 +830,7 @@
                         alertTrackSupplyWarningIfAny(j);
                         await loadAll();
                     } catch (e) {
-                        alert(e.message || 'Ошибка');
+                        alert(fvErr(e) || 'Ошибка');
                         await loadAll();
                     } finally {
                         sel.disabled = false;
@@ -900,7 +902,7 @@
                         alertTrackSupplyWarningIfAny(j);
                         await loadAll();
                     } catch (e) {
-                        alert(e.message || 'Ошибка');
+                        alert(fvErr(e) || 'Ошибка');
                         await loadAll();
                     } finally {
                         sel.disabled = false;
@@ -917,7 +919,7 @@
                         alertTrackSupplyWarningIfAny(j);
                         await loadAll();
                     } catch (e) {
-                        alert(e.message || 'Ошибка');
+                        alert(fvErr(e) || 'Ошибка');
                         await loadAll();
                     } finally {
                         inp.disabled = false;
@@ -934,7 +936,7 @@
                         alertTrackSupplyWarningIfAny(j);
                         await loadAll();
                     } catch (e) {
-                        alert(e.message || 'Ошибка');
+                        alert(fvErr(e) || 'Ошибка');
                         await loadAll();
                     } finally {
                         btn.disabled = false;
@@ -957,7 +959,7 @@
                         if (!json || json.success !== true) throw new Error(json?.message || 'Ошибка сохранения');
                         await loadAll();
                     } catch (e) {
-                        alert(e.message || 'Ошибка');
+                        alert(fvErr(e) || 'Ошибка');
                         await loadAll();
                     } finally {
                         sel.disabled = false;
@@ -1427,7 +1429,7 @@
                         alert(msg.join('\n\n'));
                         await loadAll();
                     } catch (e) {
-                        alert(e.message || 'Ошибка сохранения');
+                        alert(fvErr(e) || 'Ошибка сохранения');
                     } finally {
                         btn.disabled = false;
                         btn.textContent = oldText;
@@ -1448,7 +1450,7 @@
         }
         async function viewDoc(id, type){
             try { const data = await FixariVanDocuments.fetchDocument(id, type); FixariVanDocuments.showViewModal(data, type); }
-            catch (e) { alert(e.message || 'Ошибка просмотра'); }
+            catch (e) { alert(fvErr(e) || 'Ошибка просмотра'); }
         }
         async function editDoc(id, type){
             if (type === 'invoice') {
@@ -1456,10 +1458,10 @@
                 return;
             }
             try { const data = await FixariVanDocuments.fetchDocument(id, type); FixariVanDocuments.showEditModal(data, type, () => loadAll()); }
-            catch (e) { alert(e.message || 'Ошибка редактирования'); }
+            catch (e) { alert(fvErr(e) || 'Ошибка редактирования'); }
         }
         async function pdfDoc(id, type, btn){
-            try { await FixariVanDocuments.exportDocument(id, type, btn); } catch (e) { alert(e.message || 'Ошибка PDF'); }
+            try { await FixariVanDocuments.exportDocument(id, type, btn); } catch (e) { alert(fvErr(e) || 'Ошибка PDF'); }
         }
         window.viewDoc = viewDoc; window.editDoc = editDoc; window.pdfDoc = pdfDoc;
 
@@ -1492,7 +1494,7 @@
             } catch (_) {}
             setMode(state.mode);
             loadAll().catch((e) => {
-                document.getElementById('clientsList').innerHTML = '<div class="muted">Ошибка загрузки: ' + esc(e.message || '') + '</div>';
+                document.getElementById('clientsList').innerHTML = '<div class="muted">Ошибка загрузки: ' + esc(fvErr(e)) + '</div>';
             });
         });
     </script>

@@ -1977,6 +1977,10 @@
                 }
             };
 
+        const humanizeErr = (e) => (window.FixariVan && window.FixariVan.ui && typeof window.FixariVan.ui.humanizeApiError === 'function')
+            ? window.FixariVan.ui.humanizeApiError(e)
+            : ((e && e.message) || String(e));
+
         const dashboardState = {
             statsLoading: false,
             lastStats: null,
@@ -2203,7 +2207,7 @@
 
                 refreshNotifications();
             } catch (error) {
-                showToast('Ошибка загрузки статистики: ' + error.message, 'error');
+                showToast('Ошибка загрузки статистики: ' + humanizeErr(error), 'error');
                 loadInventoryFromCache();
             } finally {
                 setStatisticsLoading(false);
@@ -2230,7 +2234,7 @@
                     return true;
                 }
             } catch (error) {
-                showToast('Ошибка загрузки данных склада: ' + error.message, 'warning');
+                showToast('Ошибка загрузки данных склада: ' + humanizeErr(error), 'warning');
             }
             return false;
         }
@@ -2567,7 +2571,7 @@
                 refreshNotifications();
             } catch (error) {
                 console.error('Error loading recent documents:', error);
-                showToast('Ошибка загрузки документов: ' + error.message, 'error');
+                showToast('Ошибка загрузки документов: ' + humanizeErr(error), 'error');
                 container.innerHTML = `
                     <div style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.6);">
                         <h3>Нет соединения</h3>
@@ -2663,7 +2667,7 @@
                 refreshNotifications();
             } catch (error) {
                 console.error('Error loading calendar summary:', error);
-                const msg = dashEscapeHtml(error.message || 'Ошибка');
+                const msg = dashEscapeHtml(humanizeErr(error));
                 const errHtml = `<div class="dash-cal-empty">Не удалось загрузить: ${msg}</div>`;
                 overdueEl.innerHTML = errHtml;
                 todayEl.innerHTML = errHtml;
@@ -2715,7 +2719,7 @@
                 const data = await FixariVanDocuments.fetchDocument(documentId, documentType);
                 FixariVanDocuments.showViewModal(data, documentType);
             } catch (error) {
-                showToast('Ошибка при загрузке документа: ' + error.message, 'error');
+                showToast('Ошибка при загрузке документа: ' + humanizeErr(error), 'error');
             }
         }
 
@@ -2723,7 +2727,7 @@
             try {
                 await FixariVanDocuments.exportDocument(documentId, documentType, button instanceof HTMLElement ? button : null);
             } catch (error) {
-                showToast('Ошибка при генерации PDF: ' + error.message, 'error');
+                showToast('Ошибка при генерации PDF: ' + humanizeErr(error), 'error');
             }
         }
 
@@ -2739,7 +2743,7 @@
                     loadStatistics();
                 });
             } catch (error) {
-                showToast('Ошибка при загрузке документа: ' + error.message, 'error');
+                showToast('Ошибка при загрузке документа: ' + humanizeErr(error), 'error');
             }
         }
 
@@ -2757,7 +2761,7 @@
                 loadRecentDocuments();
                 loadStatistics(true);
                 } catch (error) {
-                showToast('Ошибка при удалении: ' + error.message, 'error');
+                showToast('Ошибка при удалении: ' + humanizeErr(error), 'error');
             }
         }
 
@@ -2788,7 +2792,7 @@
                 statusLight.style.background = '#ffd43b';
                 statusText.textContent = '⚠️ Ошибка проверки БД';
                 if (!dashboardState.dbStatusToastShown) {
-                    showToast('Не удалось проверить подключение к базе данных', 'warning');
+                    showToast('Не удалось проверить подключение к базе данных: ' + humanizeErr(error), 'warning');
                     dashboardState.dbStatusToastShown = true;
                 }
             }

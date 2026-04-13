@@ -249,6 +249,7 @@
             return parsed;
         });
         const showToast = window.FixariVan?.ui?.showToast ?? function(m){ alert(m); };
+        const fvErr = (e) => (window.FixariVan?.ui?.humanizeApiError ? window.FixariVan.ui.humanizeApiError(e) : (e?.message || String(e)));
 
         const state = { clients: [], activeId: '' };
         function esc(s) {
@@ -520,8 +521,8 @@
             if (cid) await openClient(cid);
         }
 
-        document.getElementById('btnSearch').addEventListener('click', () => loadClients().catch((e) => showToast(e.message, 'error')));
-        document.getElementById('btnReload').addEventListener('click', () => loadClients().catch((e) => showToast(e.message, 'error')));
+        document.getElementById('btnSearch').addEventListener('click', () => loadClients().catch((e) => showToast(fvErr(e), 'error')));
+        document.getElementById('btnReload').addEventListener('click', () => loadClients().catch((e) => showToast(fvErr(e), 'error')));
         document.getElementById('btnNew').addEventListener('click', resetForm);
         document.getElementById('btnReset').addEventListener('click', resetForm);
         document.getElementById('btnNewOrderBlank').addEventListener('click', () => {
@@ -559,7 +560,7 @@
             resetForm();
             await loadClients();
         });
-        document.getElementById('clientForm').addEventListener('submit', (e) => saveClient(e).catch((err) => showToast(err.message || 'Ошибка', 'error')));
+        document.getElementById('clientForm').addEventListener('submit', (e) => saveClient(e).catch((err) => showToast(fvErr(err) || 'Ошибка', 'error')));
 
         async function clientsResolvePortalUrl(docId, orderId) {
             if (!docId && !orderId) return '';
@@ -637,7 +638,7 @@
             }
         });
 
-        document.addEventListener('DOMContentLoaded', () => { loadClients().catch((e) => showToast(e.message, 'error')); });
+        document.addEventListener('DOMContentLoaded', () => { loadClients().catch((e) => showToast(fvErr(e), 'error')); });
     </script>
 </body>
 </html>

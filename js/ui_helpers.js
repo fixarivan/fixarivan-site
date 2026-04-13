@@ -111,5 +111,29 @@
         if (!toastContainer) return;
         [...toastContainer.children].forEach(child => child.remove());
     };
+
+    /**
+     * Понятное сообщение для toast/alert по TypeError сети, 401/403 и типичным ответам API.
+     */
+    ui.humanizeApiError = function humanizeApiError(err) {
+        const raw = String((err && err.message) != null ? err.message : err || 'Ошибка');
+        const low = raw.toLowerCase();
+        if (raw.includes('401') || low.includes('требуется вход') || low.includes('unauthorized')) {
+            return 'Требуется вход. Обновите страницу и войдите как администратор.';
+        }
+        if (raw.includes('403') || low.includes('forbidden') || low.includes('доступ запрещён') || low.includes('доступ запрещен')) {
+            return 'Доступ запрещён. Обновите страницу и войдите как администратор.';
+        }
+        if (low.includes('failed to fetch') || low.includes('networkerror') || low.includes('load failed') || low.includes('network request failed')) {
+            return 'Нет соединения с сервером. Проверьте интернет и попробуйте снова.';
+        }
+        if (low.includes('не найдено') || low.includes('not found')) {
+            return 'Запись не найдена.';
+        }
+        if (low.includes('timeout') || low.includes('timed out')) {
+            return 'Превышено время ожидания ответа сервера.';
+        }
+        return raw;
+    };
 })(window);
 

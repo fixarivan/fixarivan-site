@@ -252,6 +252,13 @@ $companyProfile = fixarivan_company_profile_load();
             </form>
         </div>
 
+        <div class="card" style="margin-top: 20px;">
+            <p style="font-weight: 600; margin-bottom: 8px;">Резервная копия каталога storage</p>
+            <p class="hint">Скачивается ZIP с SQLite (<code>fixarivan.sqlite</code>), токенами и прочими файлами из каталога storage — по смыслу как бэкап перед деплоем. Храните копию вне сервера.</p>
+            <p style="margin-top: 12px;"><a href="../api/backup_storage.php" style="display:inline-block;padding:12px 18px;border-radius:12px;background:linear-gradient(45deg,#667eea,#764ba2);color:#fff;text-decoration:none;font-weight:600;">Скачать ZIP (storage)</a></p>
+            <p class="hint" style="margin-top:10px;">Требуется расширение PHP <code>zip</code> на сервере. При ошибке откроется JSON с описанием.</p>
+        </div>
+
         <div class="card" style="margin-top: 20px; border: 2px solid #c53030; background: #fff8f8;">
             <p style="font-weight: 700; margin-bottom: 8px; color: #991b1b;">Опасная зона: удаление всех документов</p>
             <p class="hint" style="color: #7f1d1d;">Это действие удалит все акты, квитанции и отчёты из базы и связанные JSON-файлы. <strong>Восстановление невозможно.</strong> Склад (инвентарь) не затрагивается.</p>

@@ -469,14 +469,10 @@
         }
 
         function humanizeApiError(err) {
-            const raw = String((err && err.message) || 'Ошибка');
-            if (raw.includes('403') || raw.toLowerCase().includes('forbidden')) {
-                return 'Доступ запрещён. Обновите страницу и войдите как администратор.';
+            if (window.FixariVan && FixariVan.ui && typeof FixariVan.ui.humanizeApiError === 'function') {
+                return FixariVan.ui.humanizeApiError(err);
             }
-            if (raw.toLowerCase().includes('не найдено')) {
-                return 'Запись не найдена.';
-            }
-            return raw;
+            return String((err && err.message) || err || 'Ошибка');
         }
 
         async function loadMonth(monthStr) {
