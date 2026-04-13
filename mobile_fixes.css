@@ -212,13 +212,15 @@
     }
 
     .inventory-page .header .nav-links {
+        flex: 0 1 auto;
         flex-wrap: wrap;
         min-width: 0;
         justify-content: flex-end;
         gap: 10px;
     }
 
-    .inventory-page .logo {
+    .inventory-page .logo,
+    .inventory-page .fv-site-logo {
         min-width: 0;
     }
 
@@ -359,6 +361,14 @@
     .dashboard-page .header {
         max-width: 100%;
         box-sizing: border-box;
+    }
+
+    .dashboard-page .logo-wordmark-row {
+        gap: 0.45rem;
+    }
+
+    .dashboard-page .logo-space-van .fv-brand-mark-img {
+        width: clamp(2.15rem, 9vw, 2.85rem);
     }
 
     .dashboard-page .nav-grid {

@@ -1,7 +1,7 @@
 // FixariVan Service Worker — static/asset cache only; API is never cached.
 // Bump CACHE_VERSION (v2 → v3 → …) when changing frontend/CSS/JS so clients refresh bundles.
 
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v7';
 const CACHE_NAME = 'fixarivan-' + CACHE_VERSION;
 const STATIC_CACHE = CACHE_NAME + '-static';
 const DYNAMIC_CACHE = CACHE_NAME + '-dynamic';

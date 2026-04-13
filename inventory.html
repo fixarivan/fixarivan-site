@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Космический Склад - FixariVan</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="css/fixarivan-theme.css">
     
     <!-- Доступ к складу только с админ-сессией (как рабочий стол index.php) -->
     <script>
@@ -139,22 +140,11 @@
             animation: glow 3s ease-in-out infinite;
         }
 
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 24px;
-            font-weight: 800;
-            color: var(--highlight);
-            text-decoration: none;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        .logo-wordmark {
-            font-size: clamp(1.15rem, 4vw, 1.5rem);
-            font-weight: 800;
-            letter-spacing: -0.02em;
-            color: var(--highlight);
+        /* Логотип: см. css/fixarivan-theme.css (.fv-site-logo, .fv-brand-*) */
+        .header .logo.fv-site-logo {
+            animation: none;
+            flex: 1 1 auto;
+            min-width: 0;
         }
 
         .nav-links {
@@ -934,13 +924,16 @@
     </style>
     <link rel="stylesheet" href="mobile_fixes.css">
 </head>
-<body class="inventory-page">
+<body class="inventory-page fv-inventory">
     <div class="header">
-        <a href="index.php" class="logo">
-            <span class="logo-wordmark">FixariVan</span>
-            <div>
-                <div style="font-size: 12px; color: var(--text-secondary);">Космический склад</div>
-            </div>
+        <a href="index.php" class="logo fv-site-logo">
+            <span class="fv-brand-mark-wrap" aria-hidden="true">
+                <img class="fv-brand-mark-img" src="assets/icons/logo-mark.svg" alt="" width="44" height="44" decoding="async"/>
+            </span>
+            <span class="fv-brand-text">
+                <span class="logo-wordmark fv-brand-wordmark">FixariVan</span>
+                <span class="fv-brand-subtitle">Космический склад</span>
+            </span>
         </a>
         <div class="nav-links">
             <a href="index.php" class="nav-link">🏠 Главная</a>
