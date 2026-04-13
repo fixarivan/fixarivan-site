@@ -21,6 +21,7 @@ require_once __DIR__ . '/inventory_sqlite_helpers.php';
 try {
     $pdo = getSqliteConnection();
     $inventoryStats = sqliteInventoryAggregateStats($pdo);
+    $inventoryStats['categories'] = sqliteInventoryCategoryBreakdown($pdo);
     echo json_encode([
         'success' => true,
         'message' => null,
@@ -42,6 +43,7 @@ try {
         'sold_revenue' => 0.0,
         'sold_purchase' => 0.0,
         'realized_margin' => 0.0,
+        'categories' => [],
         'sqlite_degraded' => true,
     ];
     echo json_encode([

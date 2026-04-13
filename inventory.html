@@ -1395,9 +1395,31 @@
             closeInventorySettingsModal();
         }
 
+        /**
+         * Аналитика категорий: приоритет — полные данные с сервера (get_inventory_stats.categories),
+         * чтобы не терять позиции при поиске (лимит 40) и фильтре категории в списке.
+         */
         function renderCategoryAnalytics() {
             const box = document.getElementById('analyticsSummary');
             if (!box || !inventorySettings.showCategoryAnalytics) return;
+
+            const serverRows = window.__inventoryCategoryStatsFromServer;
+            if (Array.isArray(serverRows) && serverRows.length > 0) {
+                box.innerHTML = serverRows.map((row) => {
+                    const cat = row.category || 'other';
+                    const cnt = row.card_count ?? 0;
+                    const qty = row.qty ?? 0;
+                    const val = row.purchase_value ?? 0;
+                    return `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;background:rgba(45,27,78,0.35);">
+                    <div><strong>${categoryIcons[cat] || '📦'} ${translations.ru[cat] || cat}</strong></div>
+                    <div class="muted">Карточек: ${cnt} • Остаток: ${qty} • Стоимость: ${formatMoney(val, 'ru')}</div>
+                </div>
+            `;
+                }).join('');
+                return;
+            }
+
             if (!Array.isArray(inventory) || !inventory.length) {
                 box.innerHTML = '<div class="muted">Нет данных для аналитики</div>';
                 return;

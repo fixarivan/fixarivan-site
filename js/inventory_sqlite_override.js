@@ -164,8 +164,13 @@
             if (realizedMarginEl) {
                 realizedMarginEl.textContent = typeof formatMoney === 'function' ? formatMoney(realizedMargin, 'ru') : (realizedMargin.toFixed(2) + ' €');
             }
+            window.__inventoryCategoryStatsFromServer = Array.isArray(d.categories) ? d.categories : null;
+            if (typeof renderCategoryAnalytics === 'function') {
+                renderCategoryAnalytics();
+            }
         } catch (err) {
             console.warn('updateStatsFromServer', err);
+            window.__inventoryCategoryStatsFromServer = null;
             updateStats();
         }
     };
