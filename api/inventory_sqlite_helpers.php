@@ -57,6 +57,7 @@ function sqliteInventoryCategoryBreakdown(PDO $pdo): array {
 /**
  * Aggregate warehouse metrics from SQLite (inventory_items + inventory_balances).
  * Суммы считаются от всех карточек (LEFT JOIN), чтобы позиции без строки в balances не выпадали из оценки.
+ * Продано / реализованная маржа: movement_type IN ('sale','out') — заказы и Track пишут списание как `out`, не только `sale`.
  */
 function sqliteInventoryAggregateStats(PDO $pdo): array {
     $row = $pdo->query(
@@ -89,19 +90,19 @@ function sqliteInventoryAggregateStats(PDO $pdo): array {
             (
                 SELECT COALESCE(SUM(ABS(m.quantity_delta)), 0)
                 FROM inventory_movements m
-                WHERE m.movement_type = 'sale'
+                WHERE m.movement_type IN ('sale', 'out')
             ) AS sold_qty,
             (
                 SELECT COALESCE(SUM(ABS(m.quantity_delta) * COALESCE(m.unit_sale_price, i.sale_price, 0)), 0)
                 FROM inventory_movements m
                 LEFT JOIN inventory_items i ON i.id = m.item_id
-                WHERE m.movement_type = 'sale'
+                WHERE m.movement_type IN ('sale', 'out')
             ) AS sold_revenue,
             (
                 SELECT COALESCE(SUM(ABS(m.quantity_delta) * COALESCE(m.unit_cost, i.default_cost, 0)), 0)
                 FROM inventory_movements m
                 LEFT JOIN inventory_items i ON i.id = m.item_id
-                WHERE m.movement_type = 'sale'
+                WHERE m.movement_type IN ('sale', 'out')
             ) AS sold_purchase
         "
     )->fetch(PDO::FETCH_ASSOC);
