@@ -296,7 +296,8 @@ try {
             fixarivan_order_lines_to_supply_items($linesForJson),
             (string)($row['supply_urgency'] ?? $row['priority'] ?? 'medium'),
             (string)($row['public_expected_date'] ?? ''),
-            (string)($row['client_name'] ?? '')
+            (string)($row['client_name'] ?? ''),
+            (string)($row['device_model'] ?? '')
         );
         fixarivan_recompute_order_parts_aggregate($pdo, $orderIdForDb);
         $oidHook = $orderIdForDb !== '' ? $orderIdForDb : $documentId;

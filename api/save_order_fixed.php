@@ -611,7 +611,8 @@ function saveOrderFixed(array $data): array {
                     fixarivan_order_lines_to_supply_items($linesParsedWh),
                     (string)($merged['supply_urgency'] ?? $merged['priority'] ?? 'medium'),
                     (string)($merged['public_expected_date'] ?? ''),
-                    (string)($merged['client_name'] ?? '')
+                    (string)($merged['client_name'] ?? ''),
+                    (string)($merged['device_model'] ?? '')
                 );
             } catch (Throwable $supplyEx) {
                 $supplyWarning = $supplyEx->getMessage();

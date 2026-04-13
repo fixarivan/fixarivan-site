@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/order_center.php';
 require_once __DIR__ . '/order_json_storage.php';
+require_once __DIR__ . '/calendar_events.php';
 require_once __DIR__ . '/../inventory_sqlite_helpers.php';
 
 /**
@@ -549,7 +550,7 @@ function fixarivan_sync_supply_to_inventory(PDO $pdo, string $orderId, array $it
 /**
  * @param list<array{name:string,qty:float,type:string,note:string}> $items
  */
-function fixarivan_create_supply_reminder(PDO $pdo, string $orderId, array $items, string $urgency, string $publicExpectedYmd, string $clientName): void {
+function fixarivan_create_supply_reminder(PDO $pdo, string $orderId, array $items, string $urgency, string $publicExpectedYmd, string $clientName, string $deviceModel = ''): void {
     if ($orderId === '' || $items === []) {
         return;
     }
@@ -579,9 +580,10 @@ function fixarivan_create_supply_reminder(PDO $pdo, string $orderId, array $item
         'INSERT INTO calendar_events (event_id, title, starts_at, ends_at, all_day, status, notes, link_type, link_id, created_at, updated_at)
          VALUES (:event_id, :title, :starts_at, :ends_at, :all_day, :status, :notes, :link_type, :link_id, :created_at, :updated_at)'
     );
+    $title = fixarivan_build_supply_calendar_title($orderId, $items, $clientName, $deviceModel);
     $stmt->execute([
         ':event_id' => $eventId,
-        ':title' => 'Закупка по заказу ' . $orderId,
+        ':title' => $title,
         ':starts_at' => $dt->format('c'),
         ':ends_at' => null,
         ':all_day' => 1,
@@ -879,7 +881,7 @@ function fixarivan_apply_supply_effects(
     }
     $urgency = fixarivan_normalize_supply_urgency($urgency, 'normal');
     fixarivan_sync_supply_to_inventory($pdo, $orderId, $items, $deviceModel);
-    fixarivan_create_supply_reminder($pdo, $orderId, $items, $urgency, $publicExpectedDate, $clientName);
+    fixarivan_create_supply_reminder($pdo, $orderId, $items, $urgency, $publicExpectedDate, $clientName, $deviceModel);
 }
 
 /**
