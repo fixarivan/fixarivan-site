@@ -179,6 +179,7 @@ function fixarivan_normalize_invoice_record(array $input, array $existing = []):
         'client_phone' => fixarivan_normalize_phone((string)($input['clientPhone'] ?? $input['client_phone'] ?? $existing['client_phone'] ?? '')),
         'client_email' => fixarivan_safe_lower((string)($input['clientEmail'] ?? $input['client_email'] ?? $existing['client_email'] ?? '')),
         'service_object' => trim((string)($input['serviceObject'] ?? $input['service_object'] ?? $existing['service_object'] ?? '')),
+        'service_address' => trim((string)($input['serviceAddress'] ?? $input['service_address'] ?? $existing['service_address'] ?? '')),
         'items' => $items,
         'subtotal' => $subtotal,
         'tax_rate' => $taxRate,

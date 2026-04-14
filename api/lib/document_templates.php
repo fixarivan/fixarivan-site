@@ -287,6 +287,7 @@ function dt_translations(string $language): array
                 'invoice_id' => 'Номер счёта',
                 'due_date' => 'Срок оплаты',
                 'service_object' => 'Объект/услуга',
+                'service_address' => 'Адрес объекта',
                 'payment_terms' => 'Условия оплаты',
                 'notes' => 'Примечания',
                 'signature' => 'Подпись клиента',
@@ -423,6 +424,7 @@ function dt_translations(string $language): array
                 'invoice_id' => 'Invoice Number',
                 'due_date' => 'Due Date',
                 'service_object' => 'Service Object',
+                'service_address' => 'Service address',
                 'payment_terms' => 'Payment Terms',
                 'notes' => 'Notes',
                 'signature' => 'Customer Signature',
@@ -566,6 +568,7 @@ function dt_translations(string $language): array
                 'invoice_id' => 'Laskun numero',
                 'due_date' => 'Eräpäivä',
                 'service_object' => 'Palvelukohde',
+                'service_address' => 'Osoite',
                 'payment_terms' => 'Maksuehdot',
                 'notes' => 'Huomiot',
                 'signature' => 'Asiakkaan allekirjoitus',
@@ -1807,6 +1810,10 @@ function dt_section_invoice(array $data, array $dict, string $lang): string
     $so = trim((string)($data['service_object'] ?? ''));
     if ($so !== '') {
         $html .= dt_render_field($dict['labels']['service_object'], dt_sanitize($so));
+    }
+    $sAddr = trim((string)($data['service_address'] ?? ''));
+    if ($sAddr !== '') {
+        $html .= dt_render_field($dict['labels']['service_address'] ?? '—', dt_sanitize($sAddr));
     }
     $html .= '</div>';
 

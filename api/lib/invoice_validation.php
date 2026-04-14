@@ -86,6 +86,7 @@ function fixarivan_invoice_normalize_input(array $input): array
     if (isset($input['items']) && is_array($input['items'])) {
         $out['items'] = fixarivan_invoice_normalize_items_array($input['items']);
     }
+    $out['service_address'] = trim((string)($input['serviceAddress'] ?? $input['service_address'] ?? ''));
 
     return $out;
 }
@@ -153,6 +154,17 @@ function fixarivan_invoice_validate(array $input, array $existing = []): array
                 $errors[] = ['code' => 'totals_invalid', 'message' => 'Invalid totals', 'field' => 'totals'];
                 break;
             }
+        }
+    }
+
+    $serviceAddr = trim((string)($input['serviceAddress'] ?? $input['service_address'] ?? ''));
+    if ($serviceAddr !== '') {
+        $len = function_exists('mb_strlen') ? mb_strlen($serviceAddr) : strlen($serviceAddr);
+        if ($len < 5) {
+            $errors[] = ['code' => 'invalid_service_address', 'message' => 'Service address must be at least 5 characters', 'field' => 'service_address'];
+        }
+        if ($len > 255) {
+            $errors[] = ['code' => 'invalid_service_address', 'message' => 'Service address must be at most 255 characters', 'field' => 'service_address'];
         }
     }
 

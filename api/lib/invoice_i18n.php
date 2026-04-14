@@ -35,6 +35,8 @@ function fixarivan_invoice_i18n_merge(string $lang): array
                 'fmt_vat_net' => 'Сумма без НДС (%s)',
                 'fmt_vat_tax' => 'НДС %s',
                 'invoice_legal_note' => 'Счёт сформирован в соответствии с применимыми налоговыми правилами. Суммы с НДС указаны по строкам (0% или 25,5%).',
+                'service_object' => 'Объект/услуга',
+                'service_address' => 'Адрес объекта',
             ],
             'values' => [
                 'invoice_status' => [
@@ -77,6 +79,7 @@ function fixarivan_invoice_i18n_merge(string $lang): array
                 'due_date' => 'Due date',
                 'payment_terms' => 'Payment terms',
                 'service_object' => 'Service / object',
+                'service_address' => 'Service address',
                 'notes' => 'Notes',
                 'status' => 'Status',
                 'updated_at' => 'Last updated',
@@ -131,6 +134,7 @@ function fixarivan_invoice_i18n_merge(string $lang): array
                 'due_date' => 'Eräpäivä',
                 'payment_terms' => 'Maksuehto',
                 'service_object' => 'Palvelukohde',
+                'service_address' => 'Osoite',
                 'notes' => 'Lisätiedot',
                 'status' => 'Tila',
                 'updated_at' => 'Päivitetty',
@@ -244,6 +248,8 @@ function fixarivan_invoice_merge_for_form_one(string $lang): array
             'email' => 'Email',
             'service_object' => 'Объект/услуга',
             'service_object_ph' => 'Напр. установка камер на объекте',
+            'service_address' => 'Адрес объекта',
+            'service_address_ph' => 'например, адрес выполнения работ',
             'due_date' => 'Срок оплаты',
             'payment_date_lbl' => 'Дата оплаты',
             'payment_method_lbl' => 'Способ оплаты',
@@ -301,6 +307,7 @@ function fixarivan_invoice_merge_for_form_one(string $lang): array
             'val_totals_invalid' => 'Ошибка расчёта итогов',
             'val_due_date_invalid' => 'Неверная дата оплаты',
             'val_due_before_invoice' => 'Срок оплаты не раньше даты счёта',
+            'val_invalid_service_address' => 'Адрес объекта: от 5 до 255 символов (или оставьте пустым)',
         ],
         'en' => [
             'heading' => 'Invoice',
@@ -317,6 +324,8 @@ function fixarivan_invoice_merge_for_form_one(string $lang): array
             'email' => 'Email',
             'service_object' => 'Service / object',
             'service_object_ph' => 'e.g. camera installation on site',
+            'service_address' => 'Service address',
+            'service_address_ph' => 'e.g. Hankasuontie 4, Helsinki',
             'due_date' => 'Due date',
             'payment_date_lbl' => 'Payment date',
             'payment_method_lbl' => 'Payment method',
@@ -374,6 +383,7 @@ function fixarivan_invoice_merge_for_form_one(string $lang): array
             'val_totals_invalid' => 'Invalid totals',
             'val_due_date_invalid' => 'Invalid due date',
             'val_due_before_invoice' => 'Due date must be on or after the invoice date',
+            'val_invalid_service_address' => 'Service address: 5–255 characters, or leave empty',
         ],
         'fi' => [
             'heading' => 'Lasku',
@@ -390,6 +400,8 @@ function fixarivan_invoice_merge_for_form_one(string $lang): array
             'email' => 'Sähköposti',
             'service_object' => 'Palvelukohde',
             'service_object_ph' => 'esim. kameroiden asennus kohteessa',
+            'service_address' => 'Osoite',
+            'service_address_ph' => 'esim. Hankasuontie 4, Helsinki',
             'due_date' => 'Eräpäivä',
             'payment_date_lbl' => 'Maksupäivä',
             'payment_method_lbl' => 'Maksutapa',
@@ -447,6 +459,7 @@ function fixarivan_invoice_merge_for_form_one(string $lang): array
             'val_totals_invalid' => 'Virheelliset summat',
             'val_due_date_invalid' => 'Virheellinen eräpäivä',
             'val_due_before_invoice' => 'Eräpäivä ei voi olla ennen laskupäivää',
+            'val_invalid_service_address' => 'Osoite: 5–255 merkkiä tai tyhjä',
         ],
     ];
 

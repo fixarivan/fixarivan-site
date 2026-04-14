@@ -73,6 +73,12 @@
         <div><label id="lbl_due_date">Due date</label><input id="due_date" type="date" /></div>
     </div>
     <div class="row2">
+        <div style="grid-column: 1 / -1;">
+            <label id="lbl_service_address" for="service_address">Service address</label>
+            <textarea id="service_address" rows="2" placeholder="" autocapitalize="sentences"></textarea>
+        </div>
+    </div>
+    <div class="row2">
         <div><label id="lbl_payment_date">Payment date</label><input id="payment_date" type="date" /></div>
         <div><label id="lbl_payment_method">Payment method</label>
             <select id="payment_method">
@@ -191,6 +197,8 @@ function applyInvoiceFormLang(lang){
     q('lbl_email').textContent = d.email;
     q('lbl_service_object').textContent = d.service_object;
     q('service_object').placeholder = d.service_object_ph;
+    q('lbl_service_address').textContent = d.service_address;
+    q('service_address').placeholder = d.service_address_ph;
     q('lbl_due_date').textContent = d.due_date;
     if (q('lbl_payment_date')) q('lbl_payment_date').textContent = d.payment_date_lbl || '';
     if (q('lbl_payment_method')) q('lbl_payment_method').textContent = d.payment_method_lbl || '';
@@ -432,6 +440,7 @@ function buildPayload(){
         clientPhone: q('client_phone').value.trim(),
         clientEmail: q('client_email').value.trim(),
         serviceObject: q('service_object').value.trim(),
+        serviceAddress: q('service_address').value.trim(),
         dueDate: q('due_date').value,
         subtotal,
         taxRate: 0,
@@ -489,6 +498,7 @@ async function loadExisting(){
     q('client_phone').value = d.client_phone || '';
     q('client_email').value = d.client_email || '';
     q('service_object').value = d.service_object || '';
+    if (q('service_address')) q('service_address').value = d.service_address || '';
     q('due_date').value = d.due_date || '';
     if (q('payment_date')) q('payment_date').value = (d.payment_date && String(d.payment_date).slice(0, 10)) || '';
     if (q('payment_method')) {
