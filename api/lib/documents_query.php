@@ -216,6 +216,7 @@ function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): a
                 'payment_method' => (string)($row['payment_method'] ?? ''),
                 'viewer_url' => $viewer,
                 'portal_url' => $portal,
+                'client_token' => $token !== '' ? $token : null,
                 'has_viewer_link' => $viewer !== null,
             ];
         }

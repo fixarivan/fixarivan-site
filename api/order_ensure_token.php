@@ -48,6 +48,7 @@ if ($documentId === '' && $orderId === '') {
 try {
     $pdo = getSqliteConnection();
     $row = null;
+    $fromInvoice = false;
     if ($documentId !== '') {
         $stmt = $pdo->prepare('SELECT id, document_id, order_id, client_token, date_updated FROM orders WHERE document_id = :d LIMIT 1');
         $stmt->execute([':d' => $documentId]);
@@ -58,8 +59,17 @@ try {
         $stmt->execute([':o' => $orderId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
     }
+    if ((!is_array($row) || $row === []) && $documentId !== '') {
+        $stmt = $pdo->prepare('SELECT id, document_id, order_id, client_token, date_updated FROM invoices WHERE document_id = :d LIMIT 1');
+        $stmt->execute([':d' => $documentId]);
+        $inv = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (is_array($inv) && $inv !== []) {
+            $row = $inv;
+            $fromInvoice = true;
+        }
+    }
     if (!is_array($row) || $row === []) {
-        api_json_send(false, null, 'Заказ не найден', []);
+        api_json_send(false, null, 'Заказ или счёт не найден', []);
         exit;
     }
 
@@ -67,10 +77,18 @@ try {
     $now = date('c');
     if ($token === '') {
         $token = fixarivan_generate_client_token();
-        $upd = $pdo->prepare('UPDATE orders SET client_token = :t, date_updated = :u WHERE id = :id AND (client_token IS NULL OR TRIM(client_token) = \'\')');
+        if ($fromInvoice) {
+            $upd = $pdo->prepare('UPDATE invoices SET client_token = :t, date_updated = :u WHERE id = :id AND (client_token IS NULL OR TRIM(client_token) = \'\')');
+        } else {
+            $upd = $pdo->prepare('UPDATE orders SET client_token = :t, date_updated = :u WHERE id = :id AND (client_token IS NULL OR TRIM(client_token) = \'\')');
+        }
         $upd->execute([':t' => $token, ':u' => $now, ':id' => (int)($row['id'] ?? 0)]);
         if ($upd->rowCount() === 0) {
-            $stmt2 = $pdo->prepare('SELECT client_token FROM orders WHERE id = :id LIMIT 1');
+            if ($fromInvoice) {
+                $stmt2 = $pdo->prepare('SELECT client_token FROM invoices WHERE id = :id LIMIT 1');
+            } else {
+                $stmt2 = $pdo->prepare('SELECT client_token FROM orders WHERE id = :id LIMIT 1');
+            }
             $stmt2->execute([':id' => (int)($row['id'] ?? 0)]);
             $token = trim((string)$stmt2->fetchColumn());
         }

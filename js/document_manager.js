@@ -355,6 +355,7 @@
                 const data = await FixariVanDocuments.fetchDocument(documentId, documentType);
                 const result = await fetchJson('./api/generate_dompdf_fixed.php', {
                     method: 'POST',
+                    credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ documentId, documentType, language: data.language || 'ru' })
                 });

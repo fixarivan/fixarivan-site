@@ -404,10 +404,11 @@
 
         function buildTrackDocQuery(g, o) {
             const orderDoc = o.documents ? o.documents.find((d) => d.type === 'order') : null;
+            const invDoc = o.documents ? o.documents.find((d) => String(d.type || '').toLowerCase() === 'invoice') : null;
             const orderDocId = orderDoc ? String(orderDoc.document_id || '') : '';
-            const clientTok = String(o.client_token || (orderDoc && orderDoc.client_token) || '');
+            const clientTok = String(o.client_token || (orderDoc && orderDoc.client_token) || (invDoc && invDoc.client_token) || '');
             const p = new URLSearchParams();
-            p.set('document_id', orderDocId);
+            p.set('document_id', orderDocId || (invDoc ? String(invDoc.document_id || '') : ''));
             p.set('order_id', o.order_id || '');
             if (clientTok) {
                 p.set('client_token', clientTok);
@@ -601,6 +602,10 @@
                     o.portal_url = r.portal_url || o.portal_url || '';
                     o.language = normalizePortalLang(r.language);
                 }
+                if (r.type === 'invoice') {
+                    o.client_token = r.client_token || o.client_token || '';
+                    o.portal_url = r.portal_url || o.portal_url || '';
+                }
                 o.documents.push(r);
                 if (r.public_expected_date != null && String(r.public_expected_date).trim() !== '') {
                     o.public_expected_date = String(r.public_expected_date);
@@ -698,9 +703,11 @@
             }
             tree.innerHTML = g.orders.map((o) => {
                 const orderDoc = o.documents.find((d) => d.type === 'order');
+                const invDoc = o.documents.find((d) => String(d.type || '').toLowerCase() === 'invoice');
                 const orderDocId = orderDoc ? String(orderDoc.document_id || '') : '';
-                const portalUrl = String(o.portal_url || (orderDoc && orderDoc.portal_url) || '');
-                const clientTok = String(o.client_token || (orderDoc && orderDoc.client_token) || '');
+                const portalUrl = String(o.portal_url || (orderDoc && orderDoc.portal_url) || (invDoc && invDoc.portal_url) || '');
+                const clientTok = String(o.client_token || (orderDoc && orderDoc.client_token) || (invDoc && invDoc.client_token) || '');
+                const portalDocId = orderDocId || (invDoc ? String(invDoc.document_id || '') : '');
                 const pub = pubStatusNorm(o) || 'in_progress';
                 const pst = String(o.parts_status || '').trim();
                 const pc = String(o.public_comment || '');
@@ -791,8 +798,8 @@
                         <a href="${esc(repPc)}">➕ ${esc(T.repPc)}</a>
                     </div>
                     <div class="doc-actions" style="margin:8px 0;">
-                        <button type="button" class="primary portal-open" data-doc="${esc(orderDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalOpen)}</button>
-                        <button type="button" class="portal-copy" data-doc="${esc(orderDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalCopy)}</button>
+                        <button type="button" class="primary portal-open" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalOpen)}</button>
+                        <button type="button" class="portal-copy" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalCopy)}</button>
                     </div>
                     <div class="muted">${esc(o.problem_description || T.problemNone)}</div>
                     <ul class="docs">
