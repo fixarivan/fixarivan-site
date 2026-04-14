@@ -20,6 +20,7 @@ function fixarivan_invoice_i18n_merge(string $lang): array
                 'invoice_items' => 'Позиции счёта',
                 'invoice_totals' => 'Итого и примечание',
                 'invoice_payment' => 'Оплата',
+                'invoice_financial' => 'Итого и НДС',
             ],
             'labels' => [
                 'customer' => 'Клиент',
@@ -40,6 +41,9 @@ function fixarivan_invoice_i18n_merge(string $lang): array
                 'invoice_summary_line_vat0' => 'Прокладка интернет-кабеля и подключение',
                 'invoice_summary_line_vat255' => 'Внешние работы',
                 'invoice_summary_line_vat_other' => 'Услуги',
+                'invoice_vat_table_rate' => 'Ставка',
+                'invoice_vat_table_net' => 'Без НДС',
+                'invoice_vat_table_tax' => 'НДС',
             ],
             'values' => [
                 'invoice_status' => [
@@ -72,6 +76,7 @@ function fixarivan_invoice_i18n_merge(string $lang): array
                 'invoice_items' => 'Invoice items',
                 'invoice_totals' => 'Notes & totals',
                 'invoice_payment' => 'Payment',
+                'invoice_financial' => 'Totals & VAT',
             ],
             'labels' => [
                 'customer' => 'Customer',
@@ -86,6 +91,9 @@ function fixarivan_invoice_i18n_merge(string $lang): array
                 'invoice_summary_line_vat0' => 'Internet cable routing and installation',
                 'invoice_summary_line_vat255' => 'External work',
                 'invoice_summary_line_vat_other' => 'Services',
+                'invoice_vat_table_rate' => 'Rate',
+                'invoice_vat_table_net' => 'Net',
+                'invoice_vat_table_tax' => 'VAT',
                 'notes' => 'Notes',
                 'status' => 'Status',
                 'updated_at' => 'Last updated',
@@ -130,6 +138,7 @@ function fixarivan_invoice_i18n_merge(string $lang): array
                 'invoice_items' => 'Laskurivit',
                 'invoice_totals' => 'Lisätiedot',
                 'invoice_payment' => 'Maksu',
+                'invoice_financial' => 'Yhteenveto ja ALV',
             ],
             'labels' => [
                 'customer' => 'Asiakas',
@@ -144,6 +153,9 @@ function fixarivan_invoice_i18n_merge(string $lang): array
                 'invoice_summary_line_vat0' => 'Internet-kaapelin reititys ja yhteys',
                 'invoice_summary_line_vat255' => 'Ulkopuolinen työ',
                 'invoice_summary_line_vat_other' => 'Palvelut',
+                'invoice_vat_table_rate' => 'ALV %',
+                'invoice_vat_table_net' => 'Veroton',
+                'invoice_vat_table_tax' => 'ALV',
                 'notes' => 'Lisätiedot',
                 'status' => 'Tila',
                 'updated_at' => 'Päivitetty',
