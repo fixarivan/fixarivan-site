@@ -1010,11 +1010,6 @@ function dt_render_document_html(string $type, array $data, string $language): s
         $html .= '</div></div>';
     } elseif ($type === 'invoice') {
         $html .= dt_invoice_pdf_header_html($profile, $data, $dict, $companyTitle, $title);
-        $html .= '<div class="dt-company dt-inv-card">';
-        if (!empty($dict['sections']['invoice_company'])) {
-            $html .= '<div class="dt-section-title dt-company-section-title">' . dt_sanitize($dict['sections']['invoice_company']) . '</div>';
-        }
-        $html .= dt_build_company_block_html($profile, $data, $dict, true) . '</div>';
     } else {
         $html .= '<div class="dt-header"><div class="dt-header-title">' . dt_sanitize($companyTitle) . '</div>';
         $html .= '<div class="dt-header-sub">' . dt_sanitize($title) . '</div></div>';
@@ -1051,7 +1046,7 @@ function dt_render_document_html(string $type, array $data, string $language): s
     } elseif ($type === 'receipt') {
         $html .= dt_section_receipt($data, $dict, $lang);
     } elseif ($type === 'invoice') {
-        $html .= dt_section_invoice($data, $dict, $lang);
+        $html .= dt_section_invoice($data, $dict, $lang, $profile);
     } else {
         $html .= dt_section_report($data, $dict, $lang);
     }
@@ -1835,7 +1830,10 @@ function dt_invoice_render_totals_breakdown_html(array $groups, array $dict, str
     return $html . '</div>';
 }
 
-function dt_section_invoice(array $data, array $dict, string $lang): string
+/**
+ * @param array<string,mixed> $profile Профиль компании (для блока YRITYKSEN TIEDOT рядом с LASKUN TIEDOT).
+ */
+function dt_section_invoice(array $data, array $dict, string $lang, array $profile = []): string
 {
     $no = $dict['no_data'];
     $items = $data['items'] ?? [];
@@ -1849,7 +1847,16 @@ function dt_section_invoice(array $data, array $dict, string $lang): string
 
     $custLabel = (string)($dict['labels']['customer'] ?? $dict['labels']['client_name'] ?? 'Customer');
 
-    $html = '<div class="dt-section dt-inv-card"><div class="dt-section-title">' . dt_sanitize($dict['sections']['invoice_details']) . '</div>';
+    $html = '<table class="dt-inv-layout-2col" width="100%" cellpadding="0" cellspacing="0"><tr>';
+    $html .= '<td class="dt-inv-layout-td dt-inv-layout-td--left" width="50%" valign="top">';
+    $html .= '<div class="dt-section dt-inv-card dt-inv-card--company">';
+    if (!empty($dict['sections']['invoice_company'])) {
+        $html .= '<div class="dt-section-title dt-company-section-title">' . dt_sanitize($dict['sections']['invoice_company']) . '</div>';
+    }
+    $html .= dt_build_company_block_html($profile, $data, $dict, true);
+    $html .= '</div></td>';
+    $html .= '<td class="dt-inv-layout-td dt-inv-layout-td--right" width="50%" valign="top">';
+    $html .= '<div class="dt-section dt-inv-card dt-inv-card--details"><div class="dt-section-title">' . dt_sanitize($dict['sections']['invoice_details']) . '</div>';
     $html .= dt_render_field($dict['labels']['invoice_id'], dt_sanitize((string)($data['invoice_id'] ?? $data['document_id'] ?? $no), $no));
     $html .= dt_render_field($dict['labels']['invoice_date'], dt_sanitize(dt_format_date($data['date_created'] ?? null, $lang, true), $no));
     if (!empty($data['date_updated'])) {
@@ -1865,28 +1872,41 @@ function dt_section_invoice(array $data, array $dict, string $lang): string
     if ($sAddr !== '') {
         $html .= dt_render_field($dict['labels']['service_address'] ?? '—', dt_sanitize($sAddr));
     }
-    $html .= '</div>';
+    $html .= '</div></td></tr></table>';
 
     $payTitle = (string)($dict['sections']['invoice_payment'] ?? 'Payment');
-    $html .= '<div class="dt-section dt-inv-card"><div class="dt-section-title">' . dt_sanitize($payTitle) . '</div>';
-    $html .= dt_render_field($dict['labels']['status'], dt_sanitize(dt_invoice_status_label((string)($data['status'] ?? ''), $dict), $no));
     $pm = trim((string)($data['payment_method'] ?? ''));
-    $html .= dt_render_field(
-        $dict['labels']['payment_method'],
-        dt_sanitize($pm === '' ? $no : dt_payment_method_label($pm, $lang), $no)
-    );
     $pd = trim((string)($data['payment_date'] ?? ''));
-    $html .= dt_render_field(
-        $dict['labels']['payment_date'],
-        dt_sanitize($pd === '' ? $no : dt_format_date($pd, $lang), $no)
-    );
-    $html .= '</div>';
+    $custTitle = (string)($dict['sections']['invoice_customer'] ?? 'Customer');
 
-    $html .= '<div class="dt-section dt-inv-card"><div class="dt-section-title">' . dt_sanitize($dict['sections']['invoice_customer']) . '</div>';
-    $html .= dt_render_field($custLabel, dt_sanitize($data['client_name'] ?? $no, $no));
-    $html .= dt_render_field($dict['labels']['client_phone'], dt_sanitize($data['client_phone'] ?? $no, $no));
-    $html .= dt_render_field($dict['labels']['client_email'], dt_sanitize($data['client_email'] ?? $no, $no));
-    $html .= '</div>';
+    $html .= '<table class="dt-inv-layout-2col dt-inv-layout-2col--mid" width="100%" cellpadding="0" cellspacing="0"><tr>';
+    $html .= '<td class="dt-inv-layout-td dt-inv-layout-td--left" width="50%" valign="top">';
+    $html .= '<div class="dt-section dt-inv-card dt-inv-card--payment"><div class="dt-section-title">' . dt_sanitize($payTitle) . '</div>';
+    $html .= '<table class="dt-inv-pay-grid" width="100%" cellpadding="0" cellspacing="0">';
+    $html .= '<tr>';
+    $html .= '<td class="dt-inv-pay-label">' . dt_sanitize((string)$dict['labels']['status']) . '</td>';
+    $html .= '<td class="dt-inv-pay-label">' . dt_sanitize((string)$dict['labels']['payment_method']) . '</td>';
+    $html .= '</tr><tr>';
+    $html .= '<td class="dt-inv-pay-val">' . dt_sanitize(dt_invoice_status_label((string)($data['status'] ?? ''), $dict), $no) . '</td>';
+    $html .= '<td class="dt-inv-pay-val">' . dt_sanitize($pm === '' ? $no : dt_payment_method_label($pm, $lang), $no) . '</td>';
+    $html .= '</tr>';
+    if ($pd !== '') {
+        $html .= '<tr><td class="dt-inv-pay-label dt-inv-pay-label--full" colspan="2">' . dt_sanitize((string)$dict['labels']['payment_date']) . '</td></tr>';
+        $html .= '<tr><td class="dt-inv-pay-val dt-inv-pay-val--full" colspan="2">' . dt_sanitize(dt_format_date($pd, $lang), $no) . '</td></tr>';
+    }
+    $html .= '</table></div></td>';
+    $html .= '<td class="dt-inv-layout-td dt-inv-layout-td--right" width="50%" valign="top">';
+    $html .= '<div class="dt-section dt-inv-card dt-inv-card--customer"><div class="dt-section-title">' . dt_sanitize($custTitle) . '</div>';
+    $html .= '<table class="dt-inv-cust-grid" width="100%" cellpadding="0" cellspacing="0">';
+    $html .= '<tr>';
+    $html .= '<th class="dt-inv-cust-h">' . dt_sanitize($custLabel) . '</th>';
+    $html .= '<th class="dt-inv-cust-h">' . dt_sanitize((string)$dict['labels']['client_phone']) . '</th>';
+    $html .= '<th class="dt-inv-cust-h">' . dt_sanitize((string)$dict['labels']['client_email']) . '</th>';
+    $html .= '</tr><tr>';
+    $html .= '<td class="dt-inv-cust-v">' . dt_sanitize($data['client_name'] ?? $no, $no) . '</td>';
+    $html .= '<td class="dt-inv-cust-v">' . dt_sanitize($data['client_phone'] ?? $no, $no) . '</td>';
+    $html .= '<td class="dt-inv-cust-v">' . dt_sanitize($data['client_email'] ?? $no, $no) . '</td>';
+    $html .= '</tr></table></div></td></tr></table>';
 
     $html .= '<div class="dt-section dt-inv-card dt-inv-card--items"><div class="dt-section-title">' . dt_sanitize($dict['sections']['invoice_items']) . '</div>';
     $displayMode = strtolower(trim((string)($data['display_mode'] ?? $data['displayMode'] ?? 'detailed')));
@@ -1997,7 +2017,7 @@ function dt_section_invoice(array $data, array $dict, string $lang): string
 function dt_css(): string
 {
     return <<<CSS
-@page { size: A4; margin: 8mm 9mm; }
+@page { size: A4; margin: 7mm 8mm; }
 html { margin: 0; padding: 0; }
 body {
     font-family: 'DejaVu Sans', Arial, sans-serif;
@@ -2160,7 +2180,7 @@ body {
     color: #ffffff;
     padding: 0;
     border-radius: 6px;
-    margin: 0 0 8px 0;
+    margin: 0 0 5px 0;
     overflow: hidden;
 }
 .dt-inv-pdf-header-inner {
@@ -2201,27 +2221,77 @@ body {
 .dt-inv-pdf-doc-title { font-size: 14pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1.15; color: #ffffff; }
 .dt-inv-pdf-invoice-no { margin-top: 4px; font-size: 9pt; color: rgba(255,255,255,0.95); }
 .dt-inv-pdf-invoice-no strong { color: #ffffff; }
-.dt-document--invoice .dt-company.dt-inv-card {
+.dt-inv-layout-2col { margin: 0 0 5px 0; border-collapse: separate; border-spacing: 0; }
+.dt-inv-layout-2col--mid { margin-top: 5px; margin-bottom: 2px; }
+.dt-inv-layout-td--left { padding: 0 4px 0 0; }
+.dt-inv-layout-td--right { padding: 0 0 0 4px; }
+.dt-document--invoice .dt-inv-card--company .dt-company-section-title,
+.dt-document--invoice .dt-company-section-title { margin: 0 0 3px 0; font-size: 8.5pt; }
+.dt-document--invoice .dt-inv-card--company {
     background: #f9fafb;
     border: 1px solid #e5e7eb;
     border-radius: 6px;
-    padding: 6px 8px;
-    margin-bottom: 0;
-    border-bottom: none;
+    padding: 5px 7px;
+    margin: 0;
+    height: 100%;
 }
-.dt-document--invoice .dt-company-section-title { margin: 0 0 4px 0; font-size: 8.5pt; }
+.dt-document--invoice .dt-inv-card--company .dt-company-title { font-size: 9.5pt; }
 .dt-document--invoice .dt-section.dt-inv-card {
     border-bottom: none;
-    padding: 5px 8px;
-    margin-top: 8px;
+    padding: 5px 7px;
+    margin-top: 0;
     margin-bottom: 0;
 }
 .dt-inv-card {
     background: #f9f9f9;
     border: 1px solid #e8e8e8;
     border-radius: 6px;
-    padding: 5px 8px;
-    margin-top: 8px;
+    padding: 5px 7px;
+    margin-top: 5px;
+}
+.dt-document--invoice .dt-inv-card--details { margin: 0; }
+.dt-inv-pay-grid { border-collapse: collapse; margin-top: 2px; }
+.dt-inv-pay-label {
+    font-size: 7.5pt;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0 4px 2px 0;
+    vertical-align: bottom;
+    line-height: 1.2;
+    width: 50%;
+}
+.dt-inv-pay-label--full { padding-top: 3px; }
+.dt-inv-pay-val {
+    font-size: 9pt;
+    color: #0f172a;
+    padding: 0 4px 0 0;
+    vertical-align: top;
+    line-height: 1.3;
+    word-wrap: break-word;
+}
+.dt-inv-pay-val--full { padding-top: 1px; }
+.dt-inv-cust-grid { border-collapse: collapse; margin-top: 2px; table-layout: fixed; }
+.dt-inv-cust-h {
+    font-size: 7.5pt;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    text-align: left;
+    padding: 0 3px 2px 0;
+    line-height: 1.2;
+    border-bottom: 1px solid #e2e8f0;
+}
+.dt-inv-cust-v {
+    font-size: 9pt;
+    color: #0f172a;
+    padding: 3px 3px 0 0;
+    vertical-align: top;
+    line-height: 1.3;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 .dt-document--invoice .dt-section-title {
     font-size: 9pt;
@@ -2265,27 +2335,29 @@ body {
 }
 .dt-inv-totals-fallback-wrap .dt-inv-totals { width: 100%; }
 .dt-inv-notes-body {
-    font-size: 8pt;
-    line-height: 1.4;
+    font-size: 8.5pt;
+    line-height: 1.35;
     max-width: 100%;
     color: #334155;
     margin: 0;
-    padding: 0;
+    padding: 2px 0 0 0;
 }
 .dt-inv-note-empty { color: #94a3b8; }
 .dt-inv-legal {
-    margin-top: 4px;
-    padding-top: 4px;
+    margin-top: 3px;
+    padding-top: 3px;
     border-top: 1px solid #e5e7eb;
     font-size: 7.5pt;
-    line-height: 1.4;
+    line-height: 1.35;
     color: #64748b;
     max-width: 100%;
 }
 .dt-document--invoice .dt-inv-card--notes {
-    margin-top: 8px;
-    padding-top: 5px;
-    padding-bottom: 4px;
+    margin-top: 5px;
+    padding: 4px 6px 3px 6px;
+}
+.dt-document--invoice .dt-inv-card--notes .dt-section-title {
+    margin-bottom: 2px;
 }
 .dt-document--invoice .dt-footer {
     padding: 3px 4px;
