@@ -277,6 +277,13 @@ function ensureSqliteSchema(PDO $pdo): void {
     if (!in_array('service_address', $invoiceColNamesAddr, true)) {
         $pdo->exec('ALTER TABLE invoices ADD COLUMN service_address TEXT');
     }
+    $invoiceColsDm = $pdo->query("PRAGMA table_info('invoices')")->fetchAll(PDO::FETCH_ASSOC);
+    $invoiceColNamesDm = array_map(static function ($c) {
+        return $c['name'] ?? '';
+    }, $invoiceColsDm);
+    if (!in_array('display_mode', $invoiceColNamesDm, true)) {
+        $pdo->exec("ALTER TABLE invoices ADD COLUMN display_mode TEXT DEFAULT 'detailed'");
+    }
 
     $orderCols = $pdo->query("PRAGMA table_info('orders')")->fetchAll(PDO::FETCH_ASSOC);
     $orderColNames = array_map(static function ($c) {

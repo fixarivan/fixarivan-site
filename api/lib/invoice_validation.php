@@ -168,6 +168,11 @@ function fixarivan_invoice_validate(array $input, array $existing = []): array
         }
     }
 
+    $dmRaw = strtolower(trim((string)($input['displayMode'] ?? $input['display_mode'] ?? '')));
+    if ($dmRaw !== '' && !in_array($dmRaw, ['detailed', 'summary'], true)) {
+        $errors[] = ['code' => 'invalid_display_mode', 'message' => 'display_mode must be detailed or summary', 'field' => 'display_mode'];
+    }
+
     $dueRaw = (string)($input['dueDate'] ?? $input['due_date'] ?? '');
     $dueRaw = trim($dueRaw);
     if ($dueRaw !== '') {

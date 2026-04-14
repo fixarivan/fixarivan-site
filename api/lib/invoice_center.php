@@ -30,6 +30,56 @@ function fixarivan_normalize_invoice_language(array $input, array $existing = []
     return in_array($l, ['ru', 'en', 'fi'], true) ? $l : 'ru';
 }
 
+/**
+ * Режим отображения позиций в PDF/viewer: detailed — все строки, summary — агрегат по ставкам НДС.
+ */
+function fixarivan_normalize_invoice_display_mode(array $input, array $existing = []): string
+{
+    $raw = $input['displayMode'] ?? $input['display_mode'] ?? $existing['display_mode'] ?? 'detailed';
+    $m = strtolower(trim((string)$raw));
+
+    return $m === 'summary' ? 'summary' : 'detailed';
+}
+
+/**
+ * Синтетические строки таблицы позиций для режима summary (по группам VAT).
+ *
+ * @param array<int, mixed> $items
+ * @return list<array{name: string, qty: float, price: float, vat: float, line_total: float}>
+ */
+function fixarivan_invoice_summary_display_rows(array $items, array $dict): array
+{
+    $labels = $dict['labels'] ?? [];
+    $l0 = (string)($labels['invoice_summary_line_vat0'] ?? '—');
+    $l25 = (string)($labels['invoice_summary_line_vat255'] ?? $labels['invoice_summary_line_vat25'] ?? '—');
+    $lOther = (string)($labels['invoice_summary_line_vat_other'] ?? '—');
+
+    $groups = fixarivan_invoice_vat_groups_by_rate($items);
+    $rows = [];
+    foreach ($groups as $g) {
+        $rate = (float)($g['rate'] ?? 0);
+        $base = (float)($g['base'] ?? 0);
+        $tax = (float)($g['tax'] ?? 0);
+        $lineTotal = $base + $tax;
+        if (abs($rate) < 0.01) {
+            $name = $l0;
+        } elseif (abs($rate - 25.5) < 0.05) {
+            $name = $l25;
+        } else {
+            $name = $lOther;
+        }
+        $rows[] = [
+            'name' => $name,
+            'qty' => 1.0,
+            'price' => $base,
+            'vat' => $rate,
+            'line_total' => $lineTotal,
+        ];
+    }
+
+    return $rows;
+}
+
 function fixarivan_next_invoice_id(PDO $pdo, ?DateTimeInterface $now = null): string
 {
     $dt = $now ?? new DateTimeImmutable('now', new DateTimeZone('Europe/Helsinki'));
@@ -175,6 +225,7 @@ function fixarivan_normalize_invoice_record(array $input, array $existing = []):
         'due_date' => (string)($input['dueDate'] ?? $input['due_date'] ?? $existing['due_date'] ?? $now->modify('+14 day')->format('Y-m-d')),
         'status' => trim((string)($input['status'] ?? $existing['status'] ?? 'draft')),
         'language' => fixarivan_normalize_invoice_language($input, $existing),
+        'display_mode' => fixarivan_normalize_invoice_display_mode($input, $existing),
         'client_name' => trim((string)($input['clientName'] ?? $input['client_name'] ?? $existing['client_name'] ?? '')),
         'client_phone' => fixarivan_normalize_phone((string)($input['clientPhone'] ?? $input['client_phone'] ?? $existing['client_phone'] ?? '')),
         'client_email' => fixarivan_safe_lower((string)($input['clientEmail'] ?? $input['client_email'] ?? $existing['client_email'] ?? '')),

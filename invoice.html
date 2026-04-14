@@ -104,6 +104,12 @@
     </div>
     <input type="hidden" id="orderDocumentId" value="" />
     <p id="orderBindHint" class="muted no-print" style="display:none;margin:0 0 10px;font-size:12px;"></p>
+    <div class="row2 no-print" style="margin-bottom:10px;">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-weight:normal;">
+            <input type="checkbox" id="display_mode_summary" style="margin-top:3px;" />
+            <span id="lbl_display_mode_summary">Show as summary</span>
+        </label>
+    </div>
     <div>
         <label id="lbl_line_items">Lines</label>
         <table class="items" id="itemsTable">
@@ -216,6 +222,7 @@ function applyInvoiceFormLang(lang){
     if (q('vat_hint')) q('vat_hint').textContent = d.vat_hint || '';
     q('lbl_payment_terms').textContent = d.payment_terms;
     q('lbl_order_id').textContent = d.order_id;
+    if (q('lbl_display_mode_summary')) q('lbl_display_mode_summary').textContent = d.display_mode_summary || '';
     q('lbl_line_items').textContent = d.line_items;
     q('th_name').textContent = d.th_name;
     q('th_qty').textContent = d.th_qty;
@@ -453,7 +460,8 @@ function buildPayload(){
         orderDocumentId: (q('orderDocumentId') && q('orderDocumentId').value) ? q('orderDocumentId').value.trim() : '',
         note: q('note').value.trim(),
         items,
-        language: formLang()
+        language: formLang(),
+        displayMode: q('display_mode_summary') && q('display_mode_summary').checked ? 'summary' : 'detailed'
     };
 }
 function parseQuery(){
@@ -516,6 +524,8 @@ async function loadExisting(){
     const dl = String(d.language || 'ru').toLowerCase();
     q('doc_language').value = ['ru', 'en', 'fi'].includes(dl) ? dl : 'ru';
     applyInvoiceFormLang(q('doc_language').value);
+    const dm = String(d.display_mode || d.displayMode || 'detailed').toLowerCase();
+    if (q('display_mode_summary')) q('display_mode_summary').checked = dm === 'summary';
     q('itemsBody').innerHTML = '';
     const items = Array.isArray(d.items) && d.items.length ? d.items : [{ name: '' }];
     items.forEach(addRow);

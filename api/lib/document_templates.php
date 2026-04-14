@@ -852,6 +852,7 @@ function dt_merge_data(array $dbData = null, array $override = null): array
             ,'invoiceId' => 'invoice_id'
             ,'dueDate' => 'due_date'
             ,'serviceObject' => 'service_object'
+            ,'displayMode' => 'display_mode'
             ,'paymentTerms' => 'payment_terms'
             ,'publicEstimatedCost' => 'public_estimated_cost'
             ,'publicComment' => 'public_comment'
@@ -1839,7 +1840,37 @@ function dt_section_invoice(array $data, array $dict, string $lang): string
     $html .= '</div>';
 
     $html .= '<div class="dt-section"><div class="dt-section-title">' . dt_sanitize($dict['sections']['invoice_items']) . '</div>';
+    $displayMode = strtolower(trim((string)($data['display_mode'] ?? $data['displayMode'] ?? 'detailed')));
+    if ($displayMode === '') {
+        $displayMode = 'detailed';
+    }
+    $tableRows = [];
     if (is_array($items) && $items !== []) {
+        if ($displayMode === 'summary') {
+            $tableRows = fixarivan_invoice_summary_display_rows($items, $dict);
+        } else {
+            foreach ($items as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $nm = (string)($row['name'] ?? $row['description'] ?? '');
+                $qty = (float)($row['qty'] ?? $row['quantity'] ?? 0);
+                $price = (float)($row['price'] ?? 0);
+                $vatp = (float)($row['vat'] ?? $row['tax_rate'] ?? 0);
+                $base = $qty * $price;
+                $tax = $base * ($vatp / 100);
+                $sum = $base + $tax;
+                $tableRows[] = [
+                    'name' => $nm !== '' ? $nm : '—',
+                    'qty' => $qty,
+                    'price' => $price,
+                    'vat' => $vatp,
+                    'line_total' => $sum,
+                ];
+            }
+        }
+    }
+    if ($tableRows !== []) {
         $html .= '<table class="dt-inv-table"><thead><tr>';
         $html .= '<th>' . dt_sanitize($dict['labels']['col_name']) . '</th>';
         $html .= '<th class="dt-num">' . dt_sanitize($dict['labels']['col_qty']) . '</th>';
@@ -1847,17 +1878,12 @@ function dt_section_invoice(array $data, array $dict, string $lang): string
         $html .= '<th class="dt-num">' . dt_sanitize($dict['labels']['col_vat']) . '</th>';
         $html .= '<th class="dt-num">' . dt_sanitize($dict['labels']['col_sum']) . '</th>';
         $html .= '</tr></thead><tbody>';
-        foreach ($items as $row) {
-            if (!is_array($row)) {
-                continue;
-            }
-            $nm = (string)($row['name'] ?? $row['description'] ?? '');
-            $qty = (float)($row['qty'] ?? $row['quantity'] ?? 0);
+        foreach ($tableRows as $row) {
+            $nm = (string)($row['name'] ?? '');
+            $qty = (float)($row['qty'] ?? 0);
             $price = (float)($row['price'] ?? 0);
-            $vatp = (float)($row['vat'] ?? $row['tax_rate'] ?? 0);
-            $base = $qty * $price;
-            $tax = $base * ($vatp / 100);
-            $sum = $base + $tax;
+            $vatp = (float)($row['vat'] ?? 0);
+            $sum = isset($row['line_total']) ? (float)$row['line_total'] : ($qty * $price) * (1 + $vatp / 100);
             $html .= '<tr>';
             $html .= '<td>' . dt_sanitize($nm !== '' ? $nm : '—') . '</td>';
             $html .= '<td class="dt-num">' . dt_sanitize((string)$qty) . '</td>';

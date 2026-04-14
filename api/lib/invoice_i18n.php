@@ -37,6 +37,9 @@ function fixarivan_invoice_i18n_merge(string $lang): array
                 'invoice_legal_note' => 'Счёт сформирован в соответствии с применимыми налоговыми правилами. Суммы с НДС указаны по строкам (0% или 25,5%).',
                 'service_object' => 'Объект/услуга',
                 'service_address' => 'Адрес объекта',
+                'invoice_summary_line_vat0' => 'Прокладка интернет-кабеля и подключение',
+                'invoice_summary_line_vat255' => 'Внешние работы',
+                'invoice_summary_line_vat_other' => 'Услуги',
             ],
             'values' => [
                 'invoice_status' => [
@@ -80,6 +83,9 @@ function fixarivan_invoice_i18n_merge(string $lang): array
                 'payment_terms' => 'Payment terms',
                 'service_object' => 'Service / object',
                 'service_address' => 'Service address',
+                'invoice_summary_line_vat0' => 'Internet cable routing and installation',
+                'invoice_summary_line_vat255' => 'External work',
+                'invoice_summary_line_vat_other' => 'Services',
                 'notes' => 'Notes',
                 'status' => 'Status',
                 'updated_at' => 'Last updated',
@@ -135,6 +141,9 @@ function fixarivan_invoice_i18n_merge(string $lang): array
                 'payment_terms' => 'Maksuehto',
                 'service_object' => 'Palvelukohde',
                 'service_address' => 'Osoite',
+                'invoice_summary_line_vat0' => 'Internet-kaapelin reititys ja yhteys',
+                'invoice_summary_line_vat255' => 'Ulkopuolinen työ',
+                'invoice_summary_line_vat_other' => 'Palvelut',
                 'notes' => 'Lisätiedot',
                 'status' => 'Tila',
                 'updated_at' => 'Päivitetty',
@@ -250,6 +259,7 @@ function fixarivan_invoice_merge_for_form_one(string $lang): array
             'service_object_ph' => 'Напр. установка камер на объекте',
             'service_address' => 'Адрес объекта',
             'service_address_ph' => 'например, адрес выполнения работ',
+            'display_mode_summary' => 'Показать как общий счёт',
             'due_date' => 'Срок оплаты',
             'payment_date_lbl' => 'Дата оплаты',
             'payment_method_lbl' => 'Способ оплаты',
@@ -308,6 +318,7 @@ function fixarivan_invoice_merge_for_form_one(string $lang): array
             'val_due_date_invalid' => 'Неверная дата оплаты',
             'val_due_before_invoice' => 'Срок оплаты не раньше даты счёта',
             'val_invalid_service_address' => 'Адрес объекта: от 5 до 255 символов (или оставьте пустым)',
+            'val_invalid_display_mode' => 'Режим отображения: detailed или summary',
         ],
         'en' => [
             'heading' => 'Invoice',
@@ -326,6 +337,7 @@ function fixarivan_invoice_merge_for_form_one(string $lang): array
             'service_object_ph' => 'e.g. camera installation on site',
             'service_address' => 'Service address',
             'service_address_ph' => 'e.g. Hankasuontie 4, Helsinki',
+            'display_mode_summary' => 'Show as summary',
             'due_date' => 'Due date',
             'payment_date_lbl' => 'Payment date',
             'payment_method_lbl' => 'Payment method',
@@ -384,6 +396,7 @@ function fixarivan_invoice_merge_for_form_one(string $lang): array
             'val_due_date_invalid' => 'Invalid due date',
             'val_due_before_invoice' => 'Due date must be on or after the invoice date',
             'val_invalid_service_address' => 'Service address: 5–255 characters, or leave empty',
+            'val_invalid_display_mode' => 'Display mode: detailed or summary',
         ],
         'fi' => [
             'heading' => 'Lasku',
@@ -402,6 +415,7 @@ function fixarivan_invoice_merge_for_form_one(string $lang): array
             'service_object_ph' => 'esim. kameroiden asennus kohteessa',
             'service_address' => 'Osoite',
             'service_address_ph' => 'esim. Hankasuontie 4, Helsinki',
+            'display_mode_summary' => 'Näytä lasku tiivistettynä',
             'due_date' => 'Eräpäivä',
             'payment_date_lbl' => 'Maksupäivä',
             'payment_method_lbl' => 'Maksutapa',
@@ -460,6 +474,7 @@ function fixarivan_invoice_merge_for_form_one(string $lang): array
             'val_due_date_invalid' => 'Virheellinen eräpäivä',
             'val_due_before_invoice' => 'Eräpäivä ei voi olla ennen laskupäivää',
             'val_invalid_service_address' => 'Osoite: 5–255 merkkiä tai tyhjä',
+            'val_invalid_display_mode' => 'Näyttö: detailed tai summary',
         ],
     ];
 

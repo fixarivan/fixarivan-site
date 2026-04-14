@@ -130,11 +130,11 @@ try {
     $stmt = $pdo->prepare(
         'INSERT INTO invoices (
             document_id, invoice_id, order_id, client_id, date_created, date_updated, due_date, status, language,
-            client_name, client_phone, client_email, service_object, service_address, items_json, subtotal, tax_rate, tax_amount,
+            client_name, client_phone, client_email, service_object, service_address, display_mode, items_json, subtotal, tax_rate, tax_amount,
             total_amount, payment_terms, note, raw_json, client_token, invoice_logo, payment_date, payment_method
         ) VALUES (
             :document_id, :invoice_id, :order_id, :client_id, :date_created, :date_updated, :due_date, :status, :language,
-            :client_name, :client_phone, :client_email, :service_object, :service_address, :items_json, :subtotal, :tax_rate, :tax_amount,
+            :client_name, :client_phone, :client_email, :service_object, :service_address, :display_mode, :items_json, :subtotal, :tax_rate, :tax_amount,
             :total_amount, :payment_terms, :note, :raw_json, :client_token, :invoice_logo, :payment_date, :payment_method
         ) ON CONFLICT(document_id) DO UPDATE SET
             invoice_id=excluded.invoice_id,
@@ -149,6 +149,7 @@ try {
             client_email=excluded.client_email,
             service_object=excluded.service_object,
             service_address=excluded.service_address,
+            display_mode=excluded.display_mode,
             items_json=excluded.items_json,
             subtotal=excluded.subtotal,
             tax_rate=excluded.tax_rate,
@@ -177,6 +178,7 @@ try {
         ':client_email' => $record['client_email'],
         ':service_object' => $record['service_object'],
         ':service_address' => $record['service_address'] !== '' ? $record['service_address'] : null,
+        ':display_mode' => $record['display_mode'] ?? 'detailed',
         ':items_json' => json_encode($record['items'], JSON_UNESCAPED_UNICODE),
         ':subtotal' => (float)$record['subtotal'],
         ':tax_rate' => (float)$record['tax_rate'],
