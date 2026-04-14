@@ -131,8 +131,10 @@ function dt_invoice_pdf_header_html(array $profile, array $data, array $dict, st
         $invoiceNo = trim((string)($data['document_id'] ?? ''));
     }
     $lblNo = (string)($dict['labels']['invoice_id'] ?? 'Invoice #');
-    $html = '<table class="dt-inv-pdf-header" cellpadding="0" cellspacing="0" width="100%"><tr>';
-    $html .= '<td class="dt-inv-pdf-header-left" valign="top">';
+    /* Обёртка div + bgcolor для Dompdf: фон таблицы в PDF часто не виден */
+    $html = '<div class="dt-inv-pdf-header">';
+    $html .= '<table class="dt-inv-pdf-header-inner" cellpadding="0" cellspacing="0" width="100%" bgcolor="#1e40af"><tr>';
+    $html .= '<td class="dt-inv-pdf-header-left" valign="middle">';
     $html .= '<table class="dt-inv-pdf-header-brandtbl" cellpadding="0" cellspacing="0"><tr>';
     $html .= '<td class="dt-inv-pdf-header-logo-cell" valign="middle">';
     if ($logoHtml !== '') {
@@ -145,10 +147,10 @@ function dt_invoice_pdf_header_html(array $profile, array $data, array $dict, st
     $html .= '<div class="dt-inv-pdf-tagline">Mobile Tech Service</div>';
     $html .= '</td></tr></table>';
     $html .= '</td>';
-    $html .= '<td class="dt-inv-pdf-header-right" valign="top" align="right">';
+    $html .= '<td class="dt-inv-pdf-header-right" valign="middle" align="right">';
     $html .= '<div class="dt-inv-pdf-doc-title">' . dt_sanitize($docTitle) . '</div>';
     $html .= '<div class="dt-inv-pdf-invoice-no">' . dt_sanitize($lblNo) . ': <strong>' . dt_sanitize($invoiceNo !== '' ? $invoiceNo : '—') . '</strong></div>';
-    $html .= '</td></tr></table>';
+    $html .= '</td></tr></table></div>';
 
     return $html;
 }
@@ -1792,41 +1794,45 @@ function dt_invoice_totals_table_row(string $label, string $value, bool $isGrand
 }
 
 /**
- * Итоги счёта: группы по ставке, без одной «средней» ставки НДС.
+ * Финальные итоги счёта: строки «нетто по ставке», «НДС по ставке», «всего» (без дублирующей VAT-таблицы).
  *
  * @param list<array{rate: float, base: float, tax: float}> $groups
  */
 function dt_invoice_render_totals_breakdown_html(array $groups, array $dict, string $lang, float $grandTotal): string
 {
     $no = $dict['no_data'];
+    $fmtNet = (string)($dict['labels']['fmt_vat_net'] ?? '%s');
+    $fmtTax = (string)($dict['labels']['fmt_vat_tax'] ?? '%s');
     $lblGrand = (string)($dict['labels']['grand_total'] ?? $dict['labels']['total_amount'] ?? 'Total');
-    $rateH = (string)($dict['labels']['invoice_vat_table_rate'] ?? 'Rate');
-    $netH = (string)($dict['labels']['invoice_vat_table_net'] ?? 'Net');
-    $taxH = (string)($dict['labels']['invoice_vat_table_tax'] ?? 'VAT');
 
-    $html = '<div class="dt-inv-vat-wrap">';
-    $html .= '<table class="dt-inv-vat-table">';
-    $html .= '<thead><tr>';
-    $html .= '<th>' . dt_sanitize($rateH) . '</th>';
-    $html .= '<th class="dt-num">' . dt_sanitize($netH) . '</th>';
-    $html .= '<th class="dt-num">' . dt_sanitize($taxH) . '</th>';
-    $html .= '</tr></thead><tbody>';
-    foreach ($groups as $g) {
-        $rateStr = dt_invoice_format_rate_for_display((float)($g['rate'] ?? 0), $lang);
-        $html .= '<tr>';
-        $html .= '<td>' . dt_sanitize($rateStr) . '</td>';
-        $html .= '<td class="dt-num">' . dt_sanitize(dt_format_currency((float)($g['base'] ?? 0), $lang), $no) . '</td>';
-        $html .= '<td class="dt-num">' . dt_sanitize(dt_format_currency((float)($g['tax'] ?? 0), $lang), $no) . '</td>';
-        $html .= '</tr>';
+    $html = '<div class="dt-inv-totals-fallback-wrap">';
+    $html .= dt_invoice_totals_table_open();
+    $onlyZero = count($groups) === 1 && abs((float)($groups[0]['rate'] ?? 0)) < 0.0001;
+
+    if ($onlyZero) {
+        $g = $groups[0];
+        $rateStr = dt_invoice_format_rate_for_display(0.0, $lang);
+        $html .= dt_invoice_totals_table_row(sprintf($fmtNet, $rateStr), dt_sanitize(dt_format_currency($g['base'], $lang), $no));
+        $html .= dt_invoice_totals_table_row($lblGrand, dt_sanitize(dt_format_currency($grandTotal, $lang), $no), true);
+        $html .= dt_invoice_totals_table_close();
+
+        return $html . '</div>';
     }
-    $html .= '</tbody></table>';
-    $html .= '<table class="dt-inv-grand-table" width="100%" cellpadding="0" cellspacing="0">';
-    $html .= '<tr>';
-    $html .= '<td class="dt-inv-grand-label">' . dt_sanitize($lblGrand) . '</td>';
-    $html .= '<td class="dt-num dt-inv-grand-value">' . dt_sanitize(dt_format_currency($grandTotal, $lang), $no) . '</td>';
-    $html .= '</tr></table></div>';
 
-    return $html;
+    foreach ($groups as $g) {
+        $rateStr = dt_invoice_format_rate_for_display((float)$g['rate'], $lang);
+        $html .= dt_invoice_totals_table_row(sprintf($fmtNet, $rateStr), dt_sanitize(dt_format_currency($g['base'], $lang), $no));
+    }
+    foreach ($groups as $g) {
+        if ((float)$g['tax'] > 0.000001) {
+            $rateStr = dt_invoice_format_rate_for_display((float)$g['rate'], $lang);
+            $html .= dt_invoice_totals_table_row(sprintf($fmtTax, $rateStr), dt_sanitize(dt_format_currency($g['tax'], $lang), $no));
+        }
+    }
+    $html .= dt_invoice_totals_table_row($lblGrand, dt_sanitize(dt_format_currency($grandTotal, $lang), $no), true);
+    $html .= dt_invoice_totals_table_close();
+
+    return $html . '</div>';
 }
 
 function dt_section_invoice(array $data, array $dict, string $lang): string
@@ -1842,7 +1848,6 @@ function dt_section_invoice(array $data, array $dict, string $lang): string
     }
 
     $custLabel = (string)($dict['labels']['customer'] ?? $dict['labels']['client_name'] ?? 'Customer');
-    $finTitle = (string)($dict['sections']['invoice_financial'] ?? $dict['sections']['invoice_totals']);
 
     $html = '<div class="dt-section dt-inv-card"><div class="dt-section-title">' . dt_sanitize($dict['sections']['invoice_details']) . '</div>';
     $html .= dt_render_field($dict['labels']['invoice_id'], dt_sanitize((string)($data['invoice_id'] ?? $data['document_id'] ?? $no), $no));
@@ -1942,7 +1947,7 @@ function dt_section_invoice(array $data, array $dict, string $lang): string
     }
     $html .= '</div>';
 
-    $html .= '<div class="dt-section dt-inv-card dt-inv-card--totals"><div class="dt-section-title">' . dt_sanitize($finTitle) . '</div>';
+    $html .= '<div class="dt-section dt-inv-card dt-inv-card--totals">';
     $groups = fixarivan_invoice_vat_groups_by_rate($items);
     if ($groups !== []) {
         $grandTotal = 0.0;
@@ -1992,7 +1997,7 @@ function dt_section_invoice(array $data, array $dict, string $lang): string
 function dt_css(): string
 {
     return <<<CSS
-@page { size: A4; margin: 9mm 10mm; }
+@page { size: A4; margin: 8mm 9mm; }
 html { margin: 0; padding: 0; }
 body {
     font-family: 'DejaVu Sans', Arial, sans-serif;
@@ -2131,158 +2136,161 @@ body {
 /* Акт и счёт (Dompdf): тот же каркас шапки/секций, что у остальных dt-document */
 .dt-document--order,
 .dt-document--invoice {
-    font-size: 10pt;
-    line-height: 1.45;
+    font-size: 9.5pt;
+    line-height: 1.35;
 }
-.dt-document--order .dt-section,
-.dt-document--invoice .dt-section {
+.dt-document--order .dt-section {
     page-break-inside: avoid;
 }
-/* Invoice PDF: modern layout, compact for one A4 page */
+/* Invoice: не форсировать разрывы внутри каждой карточки — иначе лишняя 2-я страница */
+.dt-document--invoice .dt-section.dt-inv-card {
+    page-break-inside: auto;
+}
+.dt-document--invoice .dt-inv-line-table {
+    page-break-inside: auto;
+}
+/* Invoice PDF: контрастная шапка + компактная вёрстка */
 .dt-document--invoice {
     max-width: 100%;
     color: #0f172a;
 }
 .dt-inv-pdf-header {
     width: 100%;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-    color: #f8fafc;
-    padding: 12px 14px;
-    border-radius: 8px;
-    margin-bottom: 6px;
+    background-color: #1e40af;
+    color: #ffffff;
+    padding: 0;
+    border-radius: 6px;
+    margin: 0 0 8px 0;
+    overflow: hidden;
+}
+.dt-inv-pdf-header-inner {
+    width: 100%;
+    background-color: #1e40af !important;
+    color: #ffffff !important;
+}
+.dt-inv-pdf-header-inner td {
+    background-color: #1e40af;
+    color: #ffffff;
+    padding: 10px 12px;
 }
 .dt-inv-pdf-header-left { width: 58%; }
 .dt-inv-pdf-header-right { width: 42%; text-align: right; }
 .dt-inv-pdf-logo {
-    max-height: 44px;
-    max-width: 48px;
+    max-height: 40px;
+    max-width: 44px;
     width: auto;
     height: auto;
     display: block;
 }
 .dt-inv-pdf-logo-fallback {
-    width: 40px;
-    height: 40px;
-    line-height: 40px;
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
     text-align: center;
-    border-radius: 8px;
-    background: rgba(255,255,255,0.22);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.25);
+    color: #ffffff;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 13px;
 }
 .dt-inv-pdf-header-brandtbl { width: auto; }
-.dt-inv-pdf-header-logo-cell { width: 52px; padding-right: 10px; }
-.dt-inv-pdf-company { font-size: 14pt; font-weight: 700; letter-spacing: 0.02em; line-height: 1.15; }
-.dt-inv-pdf-tagline { font-size: 8.5pt; opacity: 0.92; margin-top: 2px; }
-.dt-inv-pdf-doc-title { font-size: 15pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; line-height: 1.15; }
-.dt-inv-pdf-invoice-no { margin-top: 5px; font-size: 9.5pt; opacity: 0.95; }
+.dt-inv-pdf-header-brandtbl td { padding: 0 !important; background: transparent !important; }
+.dt-inv-pdf-header-logo-cell { width: 48px; padding-right: 8px !important; }
+.dt-inv-pdf-company { font-size: 13pt; font-weight: 700; letter-spacing: 0.02em; line-height: 1.2; color: #ffffff; }
+.dt-inv-pdf-tagline { font-size: 8pt; color: rgba(255,255,255,0.9); margin-top: 1px; }
+.dt-inv-pdf-doc-title { font-size: 14pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1.15; color: #ffffff; }
+.dt-inv-pdf-invoice-no { margin-top: 4px; font-size: 9pt; color: rgba(255,255,255,0.95); }
+.dt-inv-pdf-invoice-no strong { color: #ffffff; }
 .dt-document--invoice .dt-company.dt-inv-card {
     background: #f9fafb;
     border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 8px 10px;
-    margin-bottom: 5px;
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-bottom: 0;
     border-bottom: none;
 }
-.dt-document--invoice .dt-company-section-title { margin-bottom: 5px; font-size: 9pt; }
+.dt-document--invoice .dt-company-section-title { margin: 0 0 4px 0; font-size: 8.5pt; }
 .dt-document--invoice .dt-section.dt-inv-card {
     border-bottom: none;
-    padding: 7px 9px;
+    padding: 5px 8px;
+    margin-top: 8px;
+    margin-bottom: 0;
 }
 .dt-inv-card {
     background: #f9f9f9;
     border: 1px solid #e8e8e8;
-    border-radius: 8px;
-    padding: 7px 9px;
-    margin-top: 5px;
+    border-radius: 6px;
+    padding: 5px 8px;
+    margin-top: 8px;
 }
 .dt-document--invoice .dt-section-title {
-    font-size: 9.5pt;
-    margin: 0 0 5px 0;
+    font-size: 9pt;
+    margin: 0 0 4px 0;
+    line-height: 1.25;
     color: #1e40af;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
 }
-.dt-document--invoice .dt-field { margin-bottom: 2px; }
-.dt-document--invoice .dt-label { font-size: 8.5pt; min-width: 90px; }
-.dt-document--invoice .dt-value { font-size: 9.5pt; line-height: 1.4; }
+.dt-document--invoice .dt-field { margin-bottom: 1px; gap: 6px; }
+.dt-document--invoice .dt-label { font-size: 8pt; min-width: 85px; line-height: 1.3; }
+.dt-document--invoice .dt-value { font-size: 9pt; line-height: 1.35; }
 .dt-document--invoice .dt-inv-line-table thead th {
     background: #eeeeee;
     border: 1px solid #d4d4d8;
-    padding: 3px 5px;
-    font-size: 8.5pt;
+    padding: 2px 4px;
+    font-size: 8pt;
+    line-height: 1.3;
 }
 .dt-document--invoice .dt-inv-line-table td {
     border: 1px solid #e2e8f0;
-    padding: 2px 5px;
-    font-size: 9.5pt;
-    line-height: 1.35;
+    padding: 1px 4px;
+    font-size: 9pt;
+    line-height: 1.32;
 }
 .dt-document--invoice .dt-inv-line-table tbody tr:nth-child(even) td { background: #f3f4f6; }
-.dt-inv-vat-wrap { margin-top: 2px; }
-.dt-inv-vat-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 9.5pt;
+.dt-document--invoice .dt-inv-line-table tr { page-break-inside: auto; }
+.dt-document--invoice .dt-inv-totals {
+    font-size: 9pt;
+    margin: 2px 0 4px 0;
 }
-.dt-inv-vat-table th,
-.dt-inv-vat-table td {
-    border: 1px solid #d4d4d8;
-    padding: 3px 5px;
-}
-.dt-inv-vat-table thead th {
-    background: #eeeeee;
-    font-weight: 600;
-    font-size: 8.5pt;
-}
-.dt-inv-grand-table {
-    width: 100%;
-    margin-top: 6px;
-    border-collapse: collapse;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-}
-.dt-inv-grand-table td {
-    padding: 7px 10px;
-    vertical-align: middle;
-    border: none;
-}
-.dt-inv-grand-label {
-    font-weight: 700;
-    font-size: 11pt;
-    color: #0f172a;
-}
-.dt-inv-grand-value {
-    font-weight: 700;
-    font-size: 12pt;
-    color: #0f172a;
+.dt-document--invoice .dt-inv-totals td { padding: 1px 0 1px 6px; }
+.dt-document--invoice .dt-inv-totals-label { font-size: 8.5pt; line-height: 1.3; }
+.dt-document--invoice .dt-inv-totals-tr.dt-grand td {
+    padding-top: 4px;
+    font-size: 10pt;
 }
 .dt-inv-totals-fallback-wrap {
-    max-width: 420px;
+    max-width: 400px;
     margin-left: auto;
-    margin-top: 4px;
+    margin-top: 2px;
 }
 .dt-inv-totals-fallback-wrap .dt-inv-totals { width: 100%; }
 .dt-inv-notes-body {
-    font-size: 9pt;
-    line-height: 1.55;
-    max-width: 52em;
+    font-size: 8pt;
+    line-height: 1.4;
+    max-width: 100%;
     color: #334155;
+    margin: 0;
+    padding: 0;
 }
 .dt-inv-note-empty { color: #94a3b8; }
 .dt-inv-legal {
-    margin-top: 8px;
-    padding-top: 6px;
+    margin-top: 4px;
+    padding-top: 4px;
     border-top: 1px solid #e5e7eb;
-    font-size: 8pt;
-    line-height: 1.5;
+    font-size: 7.5pt;
+    line-height: 1.4;
     color: #64748b;
-    max-width: 52em;
+    max-width: 100%;
+}
+.dt-document--invoice .dt-inv-card--notes {
+    margin-top: 8px;
+    padding-top: 5px;
+    padding-bottom: 4px;
 }
 .dt-document--invoice .dt-footer {
-    padding: 5px 6px;
-    font-size: 8.5pt;
-    margin-top: 6px;
+    padding: 3px 4px;
+    font-size: 8pt;
+    margin-top: 4px;
 }
 .dt-document--order {
     font-size: 10pt;
