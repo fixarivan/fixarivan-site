@@ -2077,6 +2077,41 @@ function dt_invoice_pdf_extra_css(): string
     padding: 1px 3px;
     font-size: 6.5pt !important;
 }
+/* Dompdf: height:100% у карточки компании в td давал «высоту страницы» и пустые листы — только auto */
+.dt-document--invoice .dt-inv-card--company { height: auto !important; min-height: 0 !important; }
+/* Dompdf плохо считает flex — поля dt-field дают разрывы страниц; таблица стабильнее */
+.dt-document--invoice .dt-field {
+    display: table !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+}
+.dt-document--invoice .dt-label {
+    display: table-cell !important;
+    width: 38% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    vertical-align: top !important;
+}
+.dt-document--invoice .dt-value {
+    display: table-cell !important;
+    width: 62% !important;
+    vertical-align: top !important;
+}
+.dt-document--invoice .dt-inv-pdf-header {
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+}
+.dt-document--invoice table.dt-inv-layout-2col,
+.dt-document--invoice table.dt-inv-layout-2col--mid {
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+}
+.dt-document--invoice .dt-inv-card--company .dt-invoice-logo,
+.dt-document--invoice .dt-inv-card--company .dt-company-logo {
+    max-height: 36px !important;
+    max-width: 160px !important;
+}
+.dt-document--invoice .dt-inv-totals-fallback-wrap { page-break-inside: auto !important; }
 CSS;
 }
 
@@ -2300,7 +2335,6 @@ body {
     border-radius: 6px;
     padding: 5px 7px;
     margin: 0;
-    height: 100%;
 }
 .dt-document--invoice .dt-inv-card--company .dt-company-title { font-size: 9.5pt; }
 .dt-document--invoice .dt-section.dt-inv-card {
