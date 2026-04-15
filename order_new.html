@@ -87,6 +87,41 @@
         }
         .btn-secondary { background: #e5e7eb; color: #374151; margin-left: 8px; }
         .link-box { margin-top: 16px; padding: 12px; background: #f3f4f6; border-radius: 10px; word-break: break-all; font-size: 0.85rem; }
+        .client-portal-url { margin-top: 8px; line-height: 1.45; }
+        .portal-actions-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+            align-items: center;
+        }
+        .portal-actions-row .btn-sm {
+            padding: 8px 14px;
+            font-size: 0.88rem;
+            border-radius: 8px;
+        }
+        .portal-actions-row .btn-secondary { margin-left: 0; }
+        .portal-msg-label {
+            display: block;
+            margin-top: 14px;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: #374151;
+        }
+        .portal-msg-preview {
+            width: 100%;
+            min-height: 160px;
+            padding: 10px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            line-height: 1.45;
+            resize: vertical;
+            font-family: inherit;
+            background: #fff;
+            color: #1f2937;
+        }
         .doc-quick { font-weight: 600; color: #4338ca; text-decoration: none; }
         .doc-quick:hover { text-decoration: underline; }
         .muted { color: #6b7280; font-size: 0.85rem; margin-top: 8px; }
@@ -502,7 +537,14 @@
             </div>
             <div class="link-box" id="clientLinkBox" hidden>
                 <strong>Ссылка клиенту (портал):</strong>
-                <div id="clientLink"></div>
+                <div id="clientLink" class="client-portal-url"></div>
+                <input type="hidden" id="lastPortalUrl" value="">
+                <div class="portal-actions-row">
+                    <button type="button" class="btn btn-sm" id="copyPortalLinkBtn">Скопировать ссылку</button>
+                    <button type="button" class="btn btn-sm btn-secondary" id="copyPortalMessageBtn">Скопировать текст для клиента</button>
+                </div>
+                <label class="portal-msg-label" for="clientPortalMessagePreview">Текст для отправки клиенту (можно править перед копированием)</label>
+                <textarea id="clientPortalMessagePreview" class="portal-msg-preview" rows="9" spellcheck="true" placeholder="Текст появится после сохранения заказа"></textarea>
             </div>
             <div class="link-box" id="quickDocsBox" hidden style="margin-top:12px;">
                 <strong>Документы по этому заказу (как в Track):</strong>
@@ -532,6 +574,73 @@
         function escapeAttr(s) {
             return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
         }
+
+        function buildClientPortalMessage(portalUrl) {
+            var u = String(portalUrl || '').trim();
+            var lines = [
+                'Это ваш персональный портал от FixariVan 🔧',
+                '',
+                'Там отображается весь процесс: статус, квитанции, детали работ и стоимость — всё в одном месте.',
+                '',
+                'Ссылка уникальная и доступна только вам, поэтому за безопасность можно не переживать.',
+                '',
+                u
+            ];
+            return lines.join('\n');
+        }
+
+        async function copyTextToClipboard(text) {
+            var t = String(text == null ? '' : text);
+            if (!t) return false;
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(t);
+                    return true;
+                }
+            } catch (e) {}
+            try {
+                var ta = document.createElement('textarea');
+                ta.value = t;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                var ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                return ok;
+            } catch (e2) {
+                return false;
+            }
+        }
+
+        function flashButtonLabel(btn, doneLabel, ms) {
+            if (!btn) return;
+            var orig = btn.textContent;
+            btn.textContent = doneLabel;
+            btn.disabled = true;
+            setTimeout(function () {
+                btn.textContent = orig;
+                btn.disabled = false;
+            }, ms || 2000);
+        }
+
+        document.getElementById('copyPortalLinkBtn').addEventListener('click', async function () {
+            var u = document.getElementById('lastPortalUrl').value;
+            if (!u) return;
+            var ok = await copyTextToClipboard(u);
+            if (ok) flashButtonLabel(this, 'Скопировано ✓', 2000);
+            else alert('Не удалось скопировать');
+        });
+
+        document.getElementById('copyPortalMessageBtn').addEventListener('click', async function () {
+            var ta = document.getElementById('clientPortalMessagePreview');
+            var text = ta ? ta.value : '';
+            if (!String(text).trim()) return;
+            var ok = await copyTextToClipboard(text);
+            if (ok) flashButtonLabel(this, 'Скопировано ✓', 2000);
+            else alert('Не удалось скопировать');
+        });
 
         function addLineRow(data) {
             const tr = document.createElement('tr');
@@ -800,6 +909,8 @@
                 const path = window.location.pathname.replace('order_new.html', 'client_portal.php');
                 const link = origin + path + '?token=' + encodeURIComponent(token) + '&lang=ru';
                 document.getElementById('clientLink').textContent = link;
+                document.getElementById('lastPortalUrl').value = link;
+                document.getElementById('clientPortalMessagePreview').value = buildClientPortalMessage(link);
                 document.getElementById('clientLinkBox').hidden = false;
                 var qu = buildQuickDocUrls(
                     payload.documentId,
