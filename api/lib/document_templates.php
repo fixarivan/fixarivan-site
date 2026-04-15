@@ -932,6 +932,9 @@ function dt_render_document_html(string $type, array $data, string $language): s
     $docClass = 'dt-document dt-document--' . preg_replace('/[^a-z0-9_-]/i', '', $type);
     $html = '<!DOCTYPE html><html><head><meta charset="UTF-8">';
     $html .= '<style>' . dt_css() . '</style>';
+    if ($type === 'invoice') {
+        $html .= '<style>' . dt_invoice_pdf_extra_css() . '</style>';
+    }
     $html .= '</head><body><div class="' . dt_sanitize($docClass) . '">';
     if ($type === 'receipt') {
         $receiptLogo = dt_company_logo_img_html($profile, $data);
@@ -2013,6 +2016,35 @@ function dt_section_invoice(array $data, array $dict, string $lang, array $profi
     return $html;
 }
 
+/**
+ * Доп. CSS только для PDF счёта: уже поля A4, плотнее примечания (меньше страниц при длинном note).
+ */
+function dt_invoice_pdf_extra_css(): string
+{
+    return <<<CSS
+@page { size: A4; margin: 5mm 6mm; }
+.dt-document--invoice .dt-inv-pdf-header-inner td { padding: 8px 10px !important; }
+.dt-document--invoice .dt-inv-notes-body {
+    font-size: 7.5pt !important;
+    line-height: 1.2 !important;
+    text-align: justify;
+}
+.dt-document--invoice .dt-inv-legal {
+    font-size: 7pt !important;
+    line-height: 1.2 !important;
+}
+.dt-document--invoice .dt-inv-card--notes {
+    margin-top: 3px !important;
+    padding: 2px 4px 3px 4px !important;
+}
+.dt-document--invoice .dt-footer {
+    page-break-inside: avoid;
+    margin-top: 2px;
+    padding: 2px 4px;
+}
+CSS;
+}
+
 /** Единый стиль PDF (Dompdf) для актов, счетов, квитанций и отчётов — см. dt_render_document_html. */
 function dt_css(): string
 {
@@ -2074,7 +2106,7 @@ body {
     vertical-align: top;
 }
 .dt-inv-table th { background: #e8eef5; font-weight: 600; font-size: 9pt; padding: 4px 5px; }
-.dt-inv-table tr { page-break-inside: avoid; }
+.dt-inv-table tr { page-break-inside: auto; }
 .dt-num {
     text-align: right;
     white-space: nowrap;
@@ -2335,8 +2367,8 @@ body {
 }
 .dt-inv-totals-fallback-wrap .dt-inv-totals { width: 100%; }
 .dt-inv-notes-body {
-    font-size: 8.5pt;
-    line-height: 1.35;
+    font-size: 7.5pt;
+    line-height: 1.22;
     max-width: 100%;
     color: #334155;
     margin: 0;
@@ -2344,17 +2376,17 @@ body {
 }
 .dt-inv-note-empty { color: #94a3b8; }
 .dt-inv-legal {
-    margin-top: 3px;
-    padding-top: 3px;
+    margin-top: 2px;
+    padding-top: 2px;
     border-top: 1px solid #e5e7eb;
-    font-size: 7.5pt;
-    line-height: 1.35;
+    font-size: 7pt;
+    line-height: 1.22;
     color: #64748b;
     max-width: 100%;
 }
 .dt-document--invoice .dt-inv-card--notes {
-    margin-top: 5px;
-    padding: 4px 6px 3px 6px;
+    margin-top: 4px;
+    padding: 3px 5px 2px 5px;
 }
 .dt-document--invoice .dt-inv-card--notes .dt-section-title {
     margin-bottom: 2px;
