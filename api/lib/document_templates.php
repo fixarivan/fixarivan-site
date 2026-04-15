@@ -2017,30 +2017,65 @@ function dt_section_invoice(array $data, array $dict, string $lang, array $profi
 }
 
 /**
- * Доп. CSS только для PDF счёта: уже поля A4, плотнее примечания (меньше страниц при длинном note).
+ * Доп. CSS только для PDF счёта (Dompdf): плотная вёрстка как у «Печать → PDF» в браузере,
+ * чтобы длинные примечания не разъезжались на 3–4 страницы при тех же данных.
  */
 function dt_invoice_pdf_extra_css(): string
 {
     return <<<CSS
-@page { size: A4; margin: 5mm 6mm; }
-.dt-document--invoice .dt-inv-pdf-header-inner td { padding: 8px 10px !important; }
+@page { size: A4 portrait; margin: 3mm 4mm; }
+.dt-document--invoice {
+    font-size: 7pt !important;
+    line-height: 1.14 !important;
+}
+.dt-document--invoice .dt-inv-pdf-header { margin: 0 0 3px 0 !important; }
+.dt-document--invoice .dt-inv-pdf-header-inner td { padding: 5px 7px !important; }
+.dt-document--invoice .dt-inv-pdf-logo,
+.dt-document--invoice .dt-inv-pdf-logo-fallback { max-height: 32px !important; max-width: 36px !important; }
+.dt-document--invoice .dt-inv-pdf-header-logo-cell { width: 40px !important; padding-right: 6px !important; }
+.dt-document--invoice .dt-inv-pdf-company { font-size: 10.5pt !important; line-height: 1.1 !important; }
+.dt-document--invoice .dt-inv-pdf-tagline { font-size: 7pt !important; }
+.dt-document--invoice .dt-inv-pdf-doc-title { font-size: 11pt !important; }
+.dt-document--invoice .dt-inv-pdf-invoice-no { font-size: 8pt !important; margin-top: 2px !important; }
+.dt-document--invoice .dt-inv-card--company { padding: 4px 5px !important; }
+.dt-document--invoice .dt-inv-card--company .dt-company-section-title { font-size: 7.5pt !important; margin-bottom: 2px !important; }
+.dt-document--invoice .dt-inv-card--company .dt-company-title { font-size: 8.5pt !important; }
+.dt-document--invoice .dt-section.dt-inv-card { padding: 3px 5px !important; }
+.dt-document--invoice .dt-section-title { font-size: 8pt !important; margin: 0 0 2px 0 !important; }
+.dt-document--invoice .dt-field { margin-bottom: 0 !important; gap: 4px !important; }
+.dt-document--invoice .dt-label { font-size: 7pt !important; min-width: 72px !important; }
+.dt-document--invoice .dt-value { font-size: 7.5pt !important; line-height: 1.15 !important; }
+.dt-document--invoice .dt-inv-layout-2col { margin: 0 0 3px 0 !important; }
+.dt-document--invoice .dt-inv-layout-2col--mid { margin-top: 3px !important; margin-bottom: 0 !important; }
+.dt-document--invoice .dt-inv-pay-label { font-size: 6.5pt !important; padding: 0 2px 1px 0 !important; }
+.dt-document--invoice .dt-inv-pay-val { font-size: 7.5pt !important; line-height: 1.15 !important; }
+.dt-document--invoice .dt-inv-cust-h { font-size: 6.5pt !important; padding: 0 2px 1px 0 !important; }
+.dt-document--invoice .dt-inv-cust-v { font-size: 7.5pt !important; padding: 2px 2px 0 0 !important; line-height: 1.15 !important; }
+.dt-document--invoice .dt-inv-line-table thead th { font-size: 6.75pt !important; padding: 1px 3px !important; }
+.dt-document--invoice .dt-inv-line-table td { font-size: 7.25pt !important; padding: 1px 3px !important; line-height: 1.15 !important; }
+.dt-document--invoice .dt-inv-totals { font-size: 7.25pt !important; margin: 1px 0 2px 0 !important; }
+.dt-document--invoice .dt-inv-totals-label { font-size: 7pt !important; line-height: 1.15 !important; }
+.dt-document--invoice .dt-inv-totals-tr.dt-grand td { font-size: 8.5pt !important; padding-top: 2px !important; }
+.dt-document--invoice .dt-inv-totals-fallback-wrap { margin-top: 1px !important; }
 .dt-document--invoice .dt-inv-notes-body {
-    font-size: 7.5pt !important;
-    line-height: 1.2 !important;
+    font-size: 6pt !important;
+    line-height: 1.1 !important;
     text-align: justify;
 }
 .dt-document--invoice .dt-inv-legal {
-    font-size: 7pt !important;
-    line-height: 1.2 !important;
+    font-size: 5.75pt !important;
+    line-height: 1.1 !important;
 }
 .dt-document--invoice .dt-inv-card--notes {
-    margin-top: 3px !important;
-    padding: 2px 4px 3px 4px !important;
+    margin-top: 2px !important;
+    padding: 2px 3px !important;
 }
+.dt-document--invoice .dt-inv-card--notes .dt-section-title { font-size: 7.5pt !important; }
 .dt-document--invoice .dt-footer {
     page-break-inside: avoid;
-    margin-top: 2px;
-    padding: 2px 4px;
+    margin-top: 1px;
+    padding: 1px 3px;
+    font-size: 6.5pt !important;
 }
 CSS;
 }
