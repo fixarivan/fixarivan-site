@@ -21,6 +21,7 @@ require_once __DIR__ . '/lib/order_center.php';
 require_once __DIR__ . '/lib/order_supply.php';
 require_once __DIR__ . '/lib/order_warehouse_sync.php';
 require_once __DIR__ . '/lib/order_json_storage.php';
+require_once __DIR__ . '/lib/order_track_lines.php';
 
 /** @return float|null */
 function fixarivan_optional_float(mixed $v) {
@@ -68,21 +69,7 @@ function fixarivan_parse_order_lines_array(mixed $raw): array {
 
 /** @return array{0: float, 1: float} */
 function fixarivan_totals_from_order_lines(array $lines): array {
-    $purchase = 0.0;
-    $sale = 0.0;
-    foreach ($lines as $ln) {
-        if (!is_array($ln)) {
-            continue;
-        }
-        $q = (float)($ln['qty'] ?? $ln['quantity'] ?? 1);
-        if ($q <= 0) {
-            $q = 1.0;
-        }
-        $purchase += (float)($ln['purchase'] ?? $ln['purchase_price'] ?? $ln['cost'] ?? 0) * $q;
-        $sale += (float)($ln['sale'] ?? $ln['sale_price'] ?? $ln['price'] ?? 0) * $q;
-    }
-
-    return [$purchase, $sale];
+    return fixarivan_track_totals_from_lines($lines);
 }
 
 function fixarivan_resolve_public_order_status_for_normalize(array $data, ?array $existing): string {

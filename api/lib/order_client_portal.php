@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/order_track_lines.php';
+
 /**
  * TZ P2 блок 8: единая структура «клиент → заказы → документы → позиции» и общие хелперы с api/clients.php.
  */
@@ -18,11 +20,11 @@ function fixarivan_orders_estimate_from_lines_json(?string $json): ?float
         if (!is_array($r)) {
             continue;
         }
-        $q = (float) ($r['qty'] ?? $r['quantity'] ?? 1);
+        $q = fixarivan_track_parse_decimal($r['qty'] ?? $r['quantity'] ?? 1);
         if ($q <= 0) {
             $q = 1.0;
         }
-        $p = (float) ($r['sale'] ?? $r['sale_price'] ?? $r['price'] ?? 0);
+        $p = fixarivan_track_parse_decimal($r['sale'] ?? $r['sale_price'] ?? $r['price'] ?? 0);
         $sum += $q * $p;
         $has = true;
     }

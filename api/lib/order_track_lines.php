@@ -5,6 +5,27 @@
 declare(strict_types=1);
 
 /**
+ * Десятичное значение из поля Track/заказа (запятая или точка, без пробелов).
+ */
+function fixarivan_track_parse_decimal(mixed $value): float
+{
+    if (is_int($value) || is_float($value)) {
+        return (float) $value;
+    }
+    $s = trim((string) $value);
+    $s = str_replace(["\xc2\xa0", "\xe2\x80\xaf", ' '], '', $s);
+    $s = str_replace(',', '.', $s);
+    if ($s === '' || $s === '-' || $s === '—') {
+        return 0.0;
+    }
+    if (!is_numeric($s)) {
+        return 0.0;
+    }
+
+    return (float) $s;
+}
+
+/**
  * @param array<int, mixed> $lines
  * @return list<array<string, mixed>>
  */
@@ -19,12 +40,12 @@ function fixarivan_track_normalize_order_lines(array $lines): array
         if ($name === '') {
             continue;
         }
-        $qty = (float)($ln['qty'] ?? $ln['quantity'] ?? 1);
+        $qty = fixarivan_track_parse_decimal($ln['qty'] ?? $ln['quantity'] ?? 1);
         if ($qty <= 0) {
             $qty = 1.0;
         }
-        $purchase = (float)($ln['purchase'] ?? $ln['purchase_price'] ?? $ln['cost'] ?? 0);
-        $sale = (float)($ln['sale'] ?? $ln['sale_price'] ?? $ln['price'] ?? 0);
+        $purchase = fixarivan_track_parse_decimal($ln['purchase'] ?? $ln['purchase_price'] ?? $ln['cost'] ?? 0);
+        $sale = fixarivan_track_parse_decimal($ln['sale'] ?? $ln['sale_price'] ?? $ln['price'] ?? 0);
         $sku = trim((string)($ln['sku'] ?? ''));
         $iid = (int)($ln['inventory_item_id'] ?? $ln['inventoryItemId'] ?? 0);
         $fromStock = $ln['from_stock'] ?? $ln['fromStock'] ?? false;
@@ -65,12 +86,12 @@ function fixarivan_track_totals_from_lines(array $lines): array
         if (!is_array($ln)) {
             continue;
         }
-        $q = (float)($ln['qty'] ?? $ln['quantity'] ?? 1);
+        $q = fixarivan_track_parse_decimal($ln['qty'] ?? $ln['quantity'] ?? 1);
         if ($q <= 0) {
             $q = 1.0;
         }
-        $purchase += (float)($ln['purchase'] ?? $ln['purchase_price'] ?? $ln['cost'] ?? 0) * $q;
-        $sale += (float)($ln['sale'] ?? $ln['sale_price'] ?? $ln['price'] ?? 0) * $q;
+        $purchase += fixarivan_track_parse_decimal($ln['purchase'] ?? $ln['purchase_price'] ?? $ln['cost'] ?? 0) * $q;
+        $sale += fixarivan_track_parse_decimal($ln['sale'] ?? $ln['sale_price'] ?? $ln['price'] ?? 0) * $q;
     }
 
     return [$purchase, $sale];

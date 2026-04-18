@@ -256,12 +256,12 @@ function fixarivan_finance_order_lines_purchase_sale(array $orderRow): array
             continue;
         }
         $any = true;
-        $q = (float)($ln['qty'] ?? $ln['quantity'] ?? 1);
+        $q = fixarivan_track_parse_decimal($ln['qty'] ?? $ln['quantity'] ?? 1);
         if ($q <= 0) {
             $q = 1.0;
         }
-        $pp = (float)($ln['purchase'] ?? $ln['purchase_price'] ?? $ln['cost'] ?? 0);
-        $sp = (float)($ln['sale'] ?? $ln['sale_price'] ?? $ln['price'] ?? 0);
+        $pp = fixarivan_track_parse_decimal($ln['purchase'] ?? $ln['purchase_price'] ?? $ln['cost'] ?? 0);
+        $sp = fixarivan_track_parse_decimal($ln['sale'] ?? $ln['sale_price'] ?? $ln['price'] ?? 0);
         $purchase += $pp * $q;
         $sale += $sp * $q;
     }

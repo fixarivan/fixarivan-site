@@ -26,6 +26,10 @@
         .company-preview img { max-height:48px; max-width:200px; display:block; margin-bottom:8px; }
         .validation-errors { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:13px; line-height:1.45; }
         .validation-errors ul { margin:6px 0 0 18px; padding:0; }
+        .saved-links-block { margin-top: 12px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+        .saved-links-block .saved-link-row { margin-bottom: 10px; word-break: break-word; }
+        .saved-links-block .saved-link-row:last-of-type { margin-bottom: 0; }
+        .saved-links-block a { color: #2563eb; }
         @media print {
             .no-print, button, .actions { display: none !important; }
             body { background:#fff; }
@@ -133,6 +137,19 @@
         <button class="secondary" id="btnBack" onclick="window.location.href='dashboard_app.html'">Back</button>
     </div>
     <div class="muted" id="statusLine"></div>
+    <div id="savedLinksBlock" class="saved-links-block no-print" style="display:none;">
+        <div id="savedLinksRowViewer" class="saved-link-row" style="display:none;">
+            <strong id="lblSavedInvoiceLink"></strong>
+            <a id="linkInvoiceViewer" href="#" target="_blank" rel="noopener"></a>
+            <button type="button" class="secondary" id="btnCopyInvoiceViewer" style="margin-left:8px;padding:6px 10px;font-size:12px;"></button>
+        </div>
+        <div id="savedLinksRowPortal" class="saved-link-row" style="display:none;">
+            <strong id="lblSavedPortalLink"></strong>
+            <a id="linkPortal" href="#" target="_blank" rel="noopener"></a>
+            <button type="button" class="secondary" id="btnCopyPortal" style="margin-left:8px;padding:6px 10px;font-size:12px;"></button>
+        </div>
+        <p class="muted" id="savedLinksHint" style="margin:10px 0 0;font-size:12px;"></p>
+    </div>
 </div>
 <script src="js/client_autofill.js"></script>
 <script src="js/format_money.js"></script>
@@ -168,6 +185,56 @@ function refreshOrderBindHint(){
     } else {
         hint.style.display = 'none';
         hint.textContent = '';
+    }
+}
+function hideSavedLinks(){
+    const block = q('savedLinksBlock');
+    if (block) block.style.display = 'none';
+}
+function showSavedLinks(viewerUrl, portalUrl){
+    const block = q('savedLinksBlock');
+    const rowV = q('savedLinksRowViewer');
+    const rowP = q('savedLinksRowPortal');
+    const v = String(viewerUrl || '').trim();
+    const p = String(portalUrl || '').trim();
+    if (rowV) {
+        rowV.style.display = v ? 'block' : 'none';
+        const a = q('linkInvoiceViewer');
+        if (a && v) {
+            a.href = v;
+            a.textContent = tKey('open_in_tab');
+        }
+    }
+    if (rowP) {
+        rowP.style.display = p ? 'block' : 'none';
+        const a = q('linkPortal');
+        if (a && p) {
+            a.href = p;
+            a.textContent = tKey('open_in_tab');
+        }
+    }
+    if (block) block.style.display = (v || p) ? 'block' : 'none';
+}
+async function copyTextToClipboard(text){
+    const t = String(text || '').trim();
+    if (!t) return;
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(t);
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = t;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+        q('statusLine').textContent = tKey('copied');
+    } catch (e) {
+        q('statusLine').textContent = tKey('copy_failed') + ' ' + (e.message || '');
     }
 }
 function refreshInvoiceTrackHint(){
@@ -235,6 +302,11 @@ function applyInvoiceFormLang(lang){
     q('btnPdf').textContent = d.pdf;
     q('btnPrint').textContent = d.print;
     q('btnBack').textContent = d.back;
+    if (q('lblSavedInvoiceLink')) q('lblSavedInvoiceLink').textContent = d.saved_link_invoice || '';
+    if (q('lblSavedPortalLink')) q('lblSavedPortalLink').textContent = d.saved_link_portal || '';
+    if (q('btnCopyInvoiceViewer')) q('btnCopyInvoiceViewer').textContent = d.copy_link || '';
+    if (q('btnCopyPortal')) q('btnCopyPortal').textContent = d.copy_link || '';
+    if (q('savedLinksHint')) q('savedLinksHint').textContent = d.saved_links_hint || '';
     refreshOrderBindHint();
     refreshInvoiceTrackHint();
 }
@@ -563,6 +635,7 @@ q('removeInvoiceLogo').addEventListener('change', (ev) => {
     }
 });
 q('btnSave').addEventListener('click', async () => {
+    hideSavedLinks();
     clearValidationErrors();
     const clientErr = validateInvoiceClient();
     if (clientErr.length) {
@@ -588,14 +661,8 @@ q('btnSave').addEventListener('click', async () => {
     q('invoice_id').value = (json.data && json.data.invoice_id) || json.invoice_id || q('invoice_id').value;
     const viewerUrl = (json.data && json.data.viewer_url) || json.viewer_url || '';
     const portalUrl = (json.data && json.data.portal_url) || json.portal_url || '';
-    let statusMsg = tKey('saved');
-    if (viewerUrl) {
-        statusMsg = tKey('saved_viewer') + ' ' + viewerUrl;
-    }
-    if (portalUrl) {
-        statusMsg += (viewerUrl ? ' · ' : '') + 'Портал: ' + portalUrl;
-    }
-    q('statusLine').textContent = statusMsg;
+    q('statusLine').textContent = tKey('saved');
+    showSavedLinks(viewerUrl, portalUrl);
     pendingInvoiceLogoDataUrl = null;
     q('invoiceLogoFile').value = '';
     q('removeInvoiceLogo').checked = false;
@@ -668,6 +735,12 @@ q('doc_language').addEventListener('change', () => {
     await loadExisting().catch(() => {});
     recalcTotals();
     refreshInvoiceTrackHint();
+    if (q('btnCopyInvoiceViewer')) {
+        q('btnCopyInvoiceViewer').addEventListener('click', () => copyTextToClipboard(q('linkInvoiceViewer').href));
+    }
+    if (q('btnCopyPortal')) {
+        q('btnCopyPortal').addEventListener('click', () => copyTextToClipboard(q('linkPortal').href));
+    }
 })();
 q('btnAddRow').addEventListener('click', () => addRow({ name: '' }));
 if (!q('itemsBody').children.length) addRow({ name: '' });

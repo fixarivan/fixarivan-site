@@ -1921,10 +1921,8 @@ function dt_section_invoice(array $data, array $dict, string $lang, array $profi
         if ($displayMode === 'summary') {
             $tableRows = fixarivan_invoice_summary_display_rows($items, $dict);
         } else {
-            foreach ($items as $row) {
-                if (!is_array($row)) {
-                    continue;
-                }
+            $linesForTable = fixarivan_invoice_filter_line_items($items);
+            foreach ($linesForTable as $row) {
                 $nm = (string)($row['name'] ?? $row['description'] ?? '');
                 $qty = (float)($row['qty'] ?? $row['quantity'] ?? 0);
                 $price = (float)($row['price'] ?? 0);

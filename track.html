@@ -409,6 +409,9 @@
             const clientTok = String(o.client_token || (orderDoc && orderDoc.client_token) || (invDoc && invDoc.client_token) || '');
             const p = new URLSearchParams();
             p.set('document_id', orderDocId || (invDoc ? String(invDoc.document_id || '') : ''));
+            if (orderDocId) {
+                p.set('order_document_id', orderDocId);
+            }
             p.set('order_id', o.order_id || '');
             if (clientTok) {
                 p.set('client_token', clientTok);
@@ -1312,15 +1315,25 @@
             bindOrderSkuHelpers(tbody);
         }
 
+        /** Как в invoice.html: запятая/точка, без поломки «345,50» → 345 */
+        function parseOrderLineDecimal(raw) {
+            let s = String(raw == null ? '' : raw).trim().replace(/\u00a0/g, '').replace(/\s/g, '');
+            s = s.replace(',', '.');
+            if (s === '' || s === '-' || s === '—') return 0;
+            const n = parseFloat(s);
+            return Number.isFinite(n) ? n : 0;
+        }
+
         function collectOrderLinesFromTbody(tbody) {
             const rows = Array.from(tbody.querySelectorAll('tr'));
             const out = [];
             for (const tr of rows) {
                 const name = String(tr.querySelector('.ol-name')?.value || '').trim();
                 if (name === '') continue;
-                const qty = parseFloat(tr.querySelector('.ol-qty')?.value) || 1;
-                const purchase = parseFloat(tr.querySelector('.ol-purchase')?.value) || 0;
-                const sale = parseFloat(tr.querySelector('.ol-sale')?.value) || 0;
+                const qRaw = parseOrderLineDecimal(tr.querySelector('.ol-qty')?.value);
+                const qty = qRaw > 0 ? qRaw : 1;
+                const purchase = parseOrderLineDecimal(tr.querySelector('.ol-purchase')?.value);
+                const sale = parseOrderLineDecimal(tr.querySelector('.ol-sale')?.value);
                 const sku = String(tr.querySelector('.ol-sku')?.value || '').trim();
                 const dedEl = tr.querySelector('.ol-deduct');
                 const deductFromStock = !!(dedEl && !dedEl.disabled && dedEl.checked);
