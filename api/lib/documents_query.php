@@ -48,6 +48,39 @@ function invoice_status_label_ru(?string $status): string {
 }
 
 /**
+ * Компактная строка для поиска по позициям заказа (названия, SKU), в нижнем регистре.
+ */
+function fixarivan_order_lines_json_search_blob(?string $raw): string
+{
+    $raw = trim((string) $raw);
+    if ($raw === '' || $raw === '[]') {
+        return '';
+    }
+    $arr = json_decode($raw, true);
+    if (!is_array($arr)) {
+        return '';
+    }
+    $parts = [];
+    foreach ($arr as $ln) {
+        if (!is_array($ln)) {
+            continue;
+        }
+        foreach (['name', 'title', 'sku'] as $k) {
+            $v = trim((string) ($ln[$k] ?? ''));
+            if ($v !== '') {
+                $parts[] = $v;
+            }
+        }
+    }
+    $joined = implode(' ', $parts);
+    if (function_exists('mb_strtolower')) {
+        return mb_strtolower($joined, 'UTF-8');
+    }
+
+    return strtolower($joined);
+}
+
+/**
  * @return list<array<string,mixed>>
  */
 function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): array {
@@ -56,7 +89,7 @@ function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): a
 
     if ($typeFilter === 'all' || $typeFilter === 'order') {
         $stmt = $pdo->query(
-            'SELECT document_id, order_id, client_id, client_name, client_phone, client_email, device_model, device_type, problem_description, status, public_status, order_status, parts_status, public_expected_date, public_comment, public_estimated_cost, internal_comment, client_token, language, order_type,
+            'SELECT document_id, order_id, client_id, client_name, client_phone, client_email, device_model, device_type, device_serial, problem_description, status, public_status, order_status, parts_status, public_expected_date, public_comment, public_estimated_cost, internal_comment, client_token, language, order_type, unique_code, order_lines_json,
                     COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS sort_date
              FROM orders
              ORDER BY sort_date DESC
@@ -85,6 +118,9 @@ function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): a
                 'client_email' => (string)($row['client_email'] ?? ''),
                 'device_model' => $row['device_model'],
                 'device_type' => (string)($row['device_type'] ?? ''),
+                'device_serial' => trim((string)($row['device_serial'] ?? '')),
+                'unique_code' => trim((string)($row['unique_code'] ?? '')),
+                'lines_search' => fixarivan_order_lines_json_search_blob($row['order_lines_json'] ?? null),
                 'problem_description' => (string)($row['problem_description'] ?? ''),
                 'status' => $row['status'],
                 'public_status' => $pubNorm,

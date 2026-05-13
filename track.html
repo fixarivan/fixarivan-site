@@ -30,7 +30,8 @@
         .quick-filters button.active { background: #2563eb; border-color:#3b82f6; }
         .order-card { border:1px solid rgba(255,255,255,0.10); border-radius:10px; padding:10px; margin-bottom:10px; background: rgba(255,255,255,0.03); }
         .order-card.active { border-color: rgba(59,130,246,0.5); background: rgba(59,130,246,0.08); }
-        .order-card.done { border-color: rgba(34,197,94,0.45); background: rgba(34,197,94,0.07); }
+        .order-card.ready { border-color: rgba(34,197,94,0.42); background: rgba(34,197,94,0.06); }
+        .order-card.done { border-color: rgba(100,116,139,0.5); background: rgba(100,116,139,0.08); }
         .order-card.wait { border-color: rgba(245,158,11,0.45); background: rgba(245,158,11,0.08); }
         .order-card.issue { border-color: rgba(220,38,38,0.55); background: rgba(220,38,38,0.08); }
         .track-select { max-width: 240px; font-size: .86rem; background: rgba(0,0,0,0.35); color: inherit; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 8px 10px; }
@@ -52,7 +53,8 @@
         .order-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; }
         .badge { padding:3px 8px; border-radius:999px; font-size:.75rem; border:1px solid rgba(255,255,255,0.15); margin-left:4px; }
         .badge.active { background:rgba(59,130,246,0.18); border-color:rgba(59,130,246,0.5);}
-        .badge.done { background:rgba(34,197,94,0.18); border-color:rgba(34,197,94,0.5);}
+        .badge.ready { background:rgba(34,197,94,0.16); border-color:rgba(74,222,128,0.45);}
+        .badge.done { background:rgba(100,116,139,0.22); border-color:rgba(148,163,184,0.45);}
         .badge.wait { background:rgba(245,158,11,0.20); border-color:rgba(245,158,11,0.45);}
         .badge.parts-partial { background:rgba(249,115,22,0.22); border-color:rgba(253,186,116,0.45); color:#ffedd5;}
         .docs { list-style:none; margin:8px 0 0 0; padding:0; }
@@ -107,8 +109,11 @@
                 <button id="fAll" class="active">Все</button>
                 <button id="fActive">Активные</button>
                 <button id="fWait">Ожидание</button>
+                <button id="fReady">К выдаче</button>
+                <button id="fTransit">В пути</button>
                 <button id="fDone">Завершённые</button>
             </div>
+            <p id="trackFilterLegend" class="muted" style="font-size:0.78rem;margin:0 0 8px;line-height:1.35;"></p>
             <div class="stats">
                 <span id="sClients">Клиентов: 0</span>
                 <span id="sOrders">Заказов: 0</span>
@@ -126,7 +131,7 @@
     </div>
 
     <script>
-        const TRACK_PREF_KEY = 'fixarivan_track_filters_v2';
+        const TRACK_PREF_KEY = 'fixarivan_track_filters_v3';
         const state = { docs: [], groups: [], activeKey: '', mode: 'all' };
         const orderDocDetailFetch = new Map();
         const internalCommentTimers = new Map();
@@ -140,14 +145,15 @@
             navDash: 'Рабочий стол',
             clientQuickNewOrder: 'Новый заказ с этим клиентом',
             clientQuickStock: 'Склад',
-            searchPh: 'Поиск: имя, телефон, email, устройство, проблема, заказ, номер акта, комментарии',
+            searchPh: 'Поиск: ФИО, тел. (любой формат), email, заказ, код, серийник, модель, тип, проблема, комментарии, дата, статус запчастей, позиции/SKU, № квитанции/счёта, отчёт (токен), примечание оплаты',
             find: 'Найти',
-            fAll: 'Все', fActive: 'Активные', fWait: 'Ожидание', fDone: 'Завершённые',
+            fAll: 'Все', fActive: 'Активные', fWait: 'Ожидание', fReady: 'К выдаче', fTransit: 'В пути', fDone: 'Завершённые',
+            filterLegend: '«Активные» — не выдан и не отменён. «Ожидание» — ожидание запчастей (по статусу и текстам). «К выдаче» — у клиента «Готово», техника ещё у вас. «В пути» — статус «В пути». «Завершённые» — выдан или отменён.',
             sClients: 'Клиентов', sOrders: 'Заказов', sDocs: 'Документов',
             clientTitle: 'Карточка клиента', clientPick: 'Выберите клиента слева',
             noneFound: 'Ничего не найдено',
             order: 'Заказ', deviceUnknown: 'Устройство не указано',
-            activeBadge: 'активный', doneBadge: 'завершён', waitBadge: 'запчасти в ожидании',
+            activeBadge: 'в работе', readyBadge: 'к выдаче', closedBadge: 'закрыт', waitBadge: 'запчасти в ожидании',
             stClient: 'Статус (клиент):',
             expectedDateLbl: 'Ожидаемая дата (клиент / портал)',
             expectedDateHint: 'Единый источник для портала и напоминания о закупке (календарь). Можно менять в любой момент.',
@@ -186,7 +192,7 @@
             partsStReady: 'Запчасти готовы',
             partsStOrdered: 'Заказано',
             partsStInTransit: 'В пути',
-            ordersLbl: 'Заказы', activeLbl: 'Активные', waitLbl: 'Ожидание',
+            ordersLbl: 'Заказы', activeLbl: 'Активн.', waitLbl: 'Ожид.', readyMini: 'К выд.', transitMini: 'Путь',
             st_in_progress: 'в работе', st_waiting_parts: 'ожидает запчасть', st_in_transit: 'в пути', st_done: 'готово', st_delivered: 'выдано', st_cancelled: 'отменён',
             typeOrder: 'Акт', typeReceipt: 'Квитанция', typeInvoice: 'Счёт', typeReport: 'Отчёт', typeDoc: 'Документ',
         };
@@ -194,6 +200,20 @@
 
         const esc = (v) => { const d = document.createElement('div'); d.textContent = String(v ?? ''); return d.innerHTML; };
         const fvErr = (e) => (window.FixariVan?.ui?.humanizeApiError ? window.FixariVan.ui.humanizeApiError(e) : ((e && e.message) || String(e)));
+        function trackDigitsOnly(s) {
+            return String(s ?? '').replace(/\D/g, '');
+        }
+        /** Совпадение телефона при вводе только цифр (358… / 04… / пробелы). */
+        function trackQueryMatchesPhone(queryRaw, phoneRaw) {
+            const qd = trackDigitsOnly(queryRaw);
+            if (qd.length < 4) return false;
+            const pd = trackDigitsOnly(phoneRaw);
+            if (pd.length < 4) return false;
+            return pd.includes(qd) || qd.includes(pd);
+        }
+        function trackStrIncludesLoose(hay, needle) {
+            return String(hay ?? '').toLowerCase().includes(needle);
+        }
         function trackPartsStatusRu(code) {
             const c = String(code || '').toLowerCase().trim();
             const T = trackT();
@@ -296,12 +316,26 @@
         function pubStatusNorm(o) {
             return String(o.order_status || o.public_status || '').toLowerCase().trim();
         }
-        function isPublicDone(o) {
+        /** Заказ закрыт по смыслу Track: выдан клиенту или отменён. «Готово» (готов к выдаче) сюда не входит. */
+        function isTrackClosed(o) {
             const p = pubStatusNorm(o);
-            return p === 'done' || p === 'delivered' || p === 'cancelled';
+            return p === 'delivered' || p === 'cancelled';
+        }
+        function isPublicDone(o) {
+            return isTrackClosed(o);
         }
         function isPublicActive(o) {
-            return !isPublicDone(o);
+            return !isTrackClosed(o);
+        }
+        function trackOrderBadgeHtml(o) {
+            const T = trackT();
+            if (isTrackClosed(o)) {
+                return '<span class="badge done">' + esc(T.closedBadge) + '</span>';
+            }
+            if (pubStatusNorm(o) === 'done') {
+                return '<span class="badge ready">' + esc(T.readyBadge) + '</span>';
+            }
+            return '<span class="badge active">' + esc(T.activeBadge) + '</span>';
         }
         const isPartsWait = (o) => {
             const os = String(o.order_status || o.public_status || '').toLowerCase();
@@ -332,7 +366,7 @@
                 const p = JSON.parse(raw);
                 if (p && typeof p === 'object') {
                     if (p.qGlobal) document.getElementById('qGlobal').value = String(p.qGlobal);
-                    if (['all','active','wait','done'].includes(String(p.mode))) state.mode = String(p.mode);
+                    if (['all','active','wait','ready','transit','done'].includes(String(p.mode))) state.mode = String(p.mode);
                 }
             } catch (_) {}
         }
@@ -360,18 +394,29 @@
             const fa = document.getElementById('fAll');
             const fac = document.getElementById('fActive');
             const fw = document.getElementById('fWait');
+            const fr = document.getElementById('fReady');
+            const ft = document.getElementById('fTransit');
             const fd = document.getElementById('fDone');
             if (fa) fa.textContent = T.fAll;
             if (fac) fac.textContent = T.fActive;
             if (fw) fw.textContent = T.fWait;
+            if (fr) fr.textContent = T.fReady;
+            if (ft) ft.textContent = T.fTransit;
             if (fd) fd.textContent = T.fDone;
+            const fl = document.getElementById('trackFilterLegend');
+            if (fl) fl.textContent = T.filterLegend;
         }
 
         function setMode(mode) {
             state.mode = mode;
-            ['fAll','fActive','fWait','fDone'].forEach((id) => document.getElementById(id).classList.remove('active'));
+            ['fAll','fActive','fWait','fReady','fTransit','fDone'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('active');
+            });
             if (mode === 'active') document.getElementById('fActive').classList.add('active');
             else if (mode === 'wait') document.getElementById('fWait').classList.add('active');
+            else if (mode === 'ready') document.getElementById('fReady').classList.add('active');
+            else if (mode === 'transit') document.getElementById('fTransit').classList.add('active');
             else if (mode === 'done') document.getElementById('fDone').classList.add('active');
             else document.getElementById('fAll').classList.add('active');
             applyTrackStaticI18n();
@@ -397,8 +442,9 @@
         }
         function orderClass(o){
             if (isOrderIssue(o)) return 'issue';
-            if (isPartsWait(o)) return 'wait';
-            if (isPublicDone(o) || isDone(o.status)) return 'done';
+            if (isPartsWait(o) && !isTrackClosed(o)) return 'wait';
+            if (isTrackClosed(o) || isDone(o.status)) return 'done';
+            if (pubStatusNorm(o) === 'done') return 'ready';
             return 'active';
         }
 
@@ -577,6 +623,11 @@
                     g.orders.set(oKey, {
                         order_id:oKey,
                         device_model:r.device_model || '',
+                        device_type:'',
+                        device_serial:'',
+                        unique_code:'',
+                        lines_search:'',
+                        order_type: 'repair',
                         problem_description:r.problem_description || '',
                         status:r.status || '',
                         order_status:'',
@@ -584,6 +635,7 @@
                         public_expected_date:'',
                         public_comment:'',
                         internal_comment:'',
+                        public_estimated_cost:'',
                         client_token:'',
                         portal_url:'',
                         language: 'ru',
@@ -593,6 +645,14 @@
                 const o = g.orders.get(oKey);
                 if (r.type === 'order'){
                     if (!o.device_model) o.device_model = r.device_model || '';
+                    if (!o.device_type) o.device_type = r.device_type || '';
+                    if (!o.device_serial) o.device_serial = String(r.device_serial || '').trim();
+                    if (!o.unique_code) o.unique_code = String(r.unique_code || '').trim();
+                    if (!o.lines_search) o.lines_search = String(r.lines_search || '').trim();
+                    if (!o.order_type) o.order_type = String(r.order_type || 'repair').trim() || 'repair';
+                    if (r.public_estimated_cost != null && String(r.public_estimated_cost).trim() !== '') {
+                        o.public_estimated_cost = String(r.public_estimated_cost);
+                    }
                     if (!o.problem_description) o.problem_description = r.problem_description || '';
                     if (!o.status) o.status = r.status || '';
                     o.order_status = (r.public_status || r.order_status || o.order_status || '');
@@ -619,7 +679,7 @@
             const out = Array.from(map.values()).map((g) => {
                 const orders = Array.from(g.orders.values());
                 g.active = orders.filter((o) => isPublicActive(o)).length;
-                g.wait = orders.filter((o) => isPartsWait(o)).length;
+                g.wait = orders.filter((o) => isPartsWait(o) && !isTrackClosed(o)).length;
                 g.orders = orders.sort((a,b) => String(b.order_id).localeCompare(String(a.order_id)));
                 return g;
             });
@@ -628,7 +688,9 @@
 
         function applyModeToOrders(orders){
             if (state.mode === 'active') return orders.filter((o) => isPublicActive(o));
-            if (state.mode === 'wait') return orders.filter((o) => isPartsWait(o));
+            if (state.mode === 'wait') return orders.filter((o) => isPartsWait(o) && !isTrackClosed(o));
+            if (state.mode === 'ready') return orders.filter((o) => isPublicActive(o) && pubStatusNorm(o) === 'done');
+            if (state.mode === 'transit') return orders.filter((o) => isPublicActive(o) && pubStatusNorm(o) === 'in_transit');
             if (state.mode === 'done') return orders.filter((o) => isPublicDone(o));
             return orders;
         }
@@ -639,19 +701,32 @@
 
             if (qg){
                 groups = groups.filter((g) => {
-                    const hitClient = String(g.client_name).toLowerCase().includes(qg)
-                        || String(g.client_phone).toLowerCase().includes(qg)
-                        || String(g.client_email || '').toLowerCase().includes(qg);
+                    const hitClient = trackStrIncludesLoose(g.client_name, qg)
+                        || trackStrIncludesLoose(g.client_phone, qg)
+                        || trackStrIncludesLoose(g.client_email, qg)
+                        || trackQueryMatchesPhone(document.getElementById('qGlobal').value || '', g.client_phone);
                     const hitOrder = g.orders.some((o) => {
-                        const base = String(o.order_id).toLowerCase().includes(qg)
-                            || String(o.device_model).toLowerCase().includes(qg)
-                            || String(o.problem_description).toLowerCase().includes(qg)
-                            || String(o.public_comment || '').toLowerCase().includes(qg)
-                            || String(o.internal_comment || '').toLowerCase().includes(qg);
-                        const hitDocs = Array.isArray(o.documents) && o.documents.some((d) =>
-                            String(d.document_id || '').toLowerCase().includes(qg)
-                            || String(d.display_id || '').toLowerCase().includes(qg)
-                        );
+                        const base = trackStrIncludesLoose(o.order_id, qg)
+                            || trackStrIncludesLoose(o.unique_code, qg)
+                            || trackStrIncludesLoose(o.device_serial, qg)
+                            || trackStrIncludesLoose(o.device_model, qg)
+                            || trackStrIncludesLoose(o.device_type, qg)
+                            || trackStrIncludesLoose(o.order_type, qg)
+                            || trackStrIncludesLoose(o.parts_status, qg)
+                            || trackStrIncludesLoose(o.public_expected_date, qg)
+                            || trackStrIncludesLoose(o.problem_description, qg)
+                            || trackStrIncludesLoose(o.public_comment, qg)
+                            || trackStrIncludesLoose(o.internal_comment, qg)
+                            || trackStrIncludesLoose(o.public_estimated_cost, qg)
+                            || trackStrIncludesLoose(o.lines_search, qg);
+                        const hitDocs = Array.isArray(o.documents) && o.documents.some((d) => {
+                            const t = String(d.type || '');
+                            if (trackStrIncludesLoose(d.document_id, qg) || trackStrIncludesLoose(d.display_id, qg)) return true;
+                            if (trackStrIncludesLoose(d.payment_note, qg) || trackStrIncludesLoose(d.payment_status, qg) || trackStrIncludesLoose(d.payment_method, qg)) return true;
+                            if (t === 'invoice' && (trackStrIncludesLoose(d.status, qg) || trackStrIncludesLoose(d.device_model, qg))) return true;
+                            if (t === 'report' && trackStrIncludesLoose(d.client_token, qg)) return true;
+                            return false;
+                        });
                         return base || hitDocs;
                     });
                     return hitClient || hitOrder;
@@ -669,13 +744,21 @@
             document.getElementById('sOrders').textContent = T.sOrders + ': ' + groups.reduce((a,g)=>a+g.orders.length,0);
             document.getElementById('sDocs').textContent = T.sDocs + ': ' + groups.reduce((a,g)=>a+g.orders.reduce((x,o)=>x+o.documents.length,0),0);
             if (!groups.length){ box.innerHTML = '<div class="muted">' + esc(T.noneFound) + '</div>'; return; }
-            box.innerHTML = groups.map((g) => `
+            box.innerHTML = groups.map((g) => {
+                const base = state.groups.find((x) => x.key === g.key);
+                const allO = base && Array.isArray(base.orders) ? base.orders : g.orders;
+                const nAct = allO.filter((o) => isPublicActive(o)).length;
+                const nWait = allO.filter((o) => isPartsWait(o) && !isTrackClosed(o)).length;
+                const nReady = allO.filter((o) => isPublicActive(o) && pubStatusNorm(o) === 'done').length;
+                const nTransit = allO.filter((o) => isPublicActive(o) && pubStatusNorm(o) === 'in_transit').length;
+                const statsLine = `${esc(T.ordersLbl)}: ${allO.length} • ${esc(T.activeLbl)}: ${nAct} • ${esc(T.waitLbl)}: ${nWait} • ${esc(T.readyMini)}: ${nReady} • ${esc(T.transitMini)}: ${nTransit}`;
+                return `
                 <div class="client-item${g.key===state.activeKey?' active':''}" data-key="${esc(g.key)}">
                     <strong>${esc(g.client_name)}</strong>
                     <div class="muted">${esc(g.client_phone || '—')} • ${esc(g.client_email || '—')}</div>
-                    <div class="muted">${esc(T.ordersLbl)}: ${g.orders.length} • ${esc(T.activeLbl)}: ${g.orders.filter((o)=>isPublicActive(o)).length} • ${esc(T.waitLbl)}: ${g.orders.filter((o)=>isPartsWait(o)).length}</div>
-                </div>
-            `).join('');
+                    <div class="muted">${statsLine}</div>
+                </div>`;
+            }).join('');
             box.querySelectorAll('.client-item').forEach((el) => el.addEventListener('click', () => { state.activeKey = el.getAttribute('data-key') || ''; renderSidebar(); renderDetails(); }));
             if (!state.activeKey && groups.length){ state.activeKey = groups[0].key; renderSidebar(); renderDetails(); }
         }
@@ -733,7 +816,7 @@
                         </div>
                         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
                             ${isOrderIssue(o) ? '<span title="Ожидание запчасти, срок истёк">⚠️</span>' : ''}
-                            ${isPublicActive(o) ? '<span class="badge active">' + esc(T.activeBadge) + '</span>' : '<span class="badge done">' + esc(T.doneBadge) + '</span>'}
+                            ${trackOrderBadgeHtml(o)}
                             ${isPartsWait(o) ? '<span class="badge wait">' + esc(T.waitBadge) + '</span>' : ''}
                         </div>
                     </div>
@@ -1501,6 +1584,8 @@
         document.getElementById('fAll').addEventListener('click', () => setMode('all'));
         document.getElementById('fActive').addEventListener('click', () => setMode('active'));
         document.getElementById('fWait').addEventListener('click', () => setMode('wait'));
+        document.getElementById('fReady').addEventListener('click', () => setMode('ready'));
+        document.getElementById('fTransit').addEventListener('click', () => setMode('transit'));
         document.getElementById('fDone').addEventListener('click', () => setMode('done'));
 
         document.addEventListener('DOMContentLoaded', () => {
