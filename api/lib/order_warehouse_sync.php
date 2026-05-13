@@ -420,15 +420,15 @@ function fixarivan_recompute_order_parts_aggregate(PDO $pdo, string $orderId): v
 
     $pPub = fixarivan_normalize_public_status($pubRow['public_status'] ?? null);
     $pOrd = fixarivan_normalize_public_status($pubRow['order_status'] ?? null);
-    if (in_array($pPub, ['done', 'delivered'], true) || in_array($pOrd, ['done', 'delivered'], true)) {
+    if (in_array($pPub, ['done', 'delivered', 'cancelled'], true) || in_array($pOrd, ['done', 'delivered', 'cancelled'], true)) {
         return;
     }
 
     $pub = fixarivan_normalize_public_status($pubRow['public_status'] ?? $pubRow['order_status'] ?? null);
 
     $whereOrder = '(order_id = :oid OR document_id = :did)'
-        . ' AND COALESCE(public_status, \'\') NOT IN (\'done\',\'delivered\')'
-        . ' AND COALESCE(order_status, \'\') NOT IN (\'done\',\'delivered\')';
+        . ' AND COALESCE(public_status, \'\') NOT IN (\'done\',\'delivered\',\'cancelled\')'
+        . ' AND COALESCE(order_status, \'\') NOT IN (\'done\',\'delivered\',\'cancelled\')';
 
     // Согласовать публичный статус с агрегатом по строкам склада:
     // — ничего не пришло → «ожидает запчасть»;

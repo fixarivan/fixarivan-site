@@ -1033,6 +1033,90 @@ function fixarivan_deduct_inventory_for_completed_order(PDO $pdo, string $orderI
 }
 
 /**
+ * Вернуть на склад OUT-движения по заказу (ref order / order_close). Идемпотентно: ORDER_CANCEL_UNDO:{movement_id}.
+ *
+ * @param list<string> $variants order_id / document_id варианты для ref_id
+ */
+function fixarivan_restore_inventory_on_order_cancel(PDO $pdo, array $variants): void
+{
+    $variants = array_values(array_unique(array_filter(array_map(static function ($v) {
+        return trim((string) $v);
+    }, $variants))));
+    if ($variants === []) {
+        return;
+    }
+    $ph = implode(',', array_fill(0, count($variants), '?'));
+    $st = $pdo->prepare(
+        "SELECT id, item_id, quantity_delta, unit_cost, ref_id FROM inventory_movements
+         WHERE ref_kind IN ('order', 'order_close') AND movement_type = 'out' AND quantity_delta < 0
+         AND ref_id IN ($ph)"
+    );
+    $st->execute($variants);
+    $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $now = date('c');
+    $chk = $pdo->prepare('SELECT id FROM inventory_movements WHERE note = ? LIMIT 1');
+    $ins = $pdo->prepare(
+        'INSERT INTO inventory_movements (item_id, movement_type, quantity_delta, unit_cost, ref_kind, ref_id, note, created_at, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    foreach ($rows as $r) {
+        $mid = (int) ($r['id'] ?? 0);
+        if ($mid <= 0) {
+            continue;
+        }
+        $undoNote = 'ORDER_CANCEL_UNDO:' . $mid;
+        $chk->execute([$undoNote]);
+        if ($chk->fetchColumn()) {
+            continue;
+        }
+        $itemId = (int) ($r['item_id'] ?? 0);
+        if ($itemId <= 0) {
+            continue;
+        }
+        $delta = (float) ($r['quantity_delta'] ?? 0);
+        if ($delta >= 0) {
+            continue;
+        }
+        $refId = trim((string) ($r['ref_id'] ?? ''));
+        if ($refId === '') {
+            $refId = $variants[0];
+        }
+        $ucRaw = $r['unit_cost'] ?? null;
+        $uc = $ucRaw !== null && $ucRaw !== '' ? (float) $ucRaw : null;
+        $ins->execute([
+            $itemId,
+            'in',
+            -$delta,
+            $uc,
+            'order_cancel',
+            $refId,
+            $undoNote,
+            $now,
+            null,
+        ]);
+    }
+}
+
+/**
+ * Отмена заказа: снять напоминания по поставке, вернуть списанное со склада (если было), обновить JSON заказа в storage.
+ */
+function fixarivan_on_order_cancelled(PDO $pdo, string $orderIdHook, string $documentId): void
+{
+    $orderIdHook = trim($orderIdHook);
+    $documentId = trim($documentId);
+    if ($documentId === '') {
+        return;
+    }
+    $variants = fixarivan_order_id_variants_for_pdo($pdo, $documentId, $orderIdHook);
+    if ($variants === []) {
+        $variants = array_values(array_filter([$orderIdHook, $documentId]));
+    }
+    fixarivan_clear_supply_calendar_for_order_ids($pdo, $variants);
+    fixarivan_restore_inventory_on_order_cancel($pdo, $variants);
+    fixarivan_patch_order_json_public_status_if_exists($documentId, 'cancelled');
+}
+
+/**
  * Публичный статус «готово» / «выдано»: убрать напоминание AUTO_SUPPLY из календаря и списать учтённые позиции со склада.
  */
 /**
@@ -1133,6 +1217,9 @@ function fixarivan_sync_order_status_after_paid_receipt(PDO $pdo, string $orderI
     if ($pub === 'delivered') {
         fixarivan_set_public_completed_at_if_needed($pdo, $orderIdHint, 'delivered');
 
+        return;
+    }
+    if ($pub === 'cancelled') {
         return;
     }
     $now = date('c');

@@ -5,7 +5,7 @@ require_once __DIR__ . '/client_token.php';
 
 /** Публичный статус заказа (TZ v3). */
 function fixarivan_allowed_order_statuses(): array {
-    return ['in_progress', 'waiting_parts', 'in_transit', 'done', 'delivered'];
+    return ['in_progress', 'waiting_parts', 'in_transit', 'done', 'delivered', 'cancelled'];
 }
 
 /** Статус запчастей по заказу (TZ v3 + v4.4 агрегат по заказу). */
@@ -36,6 +36,13 @@ function fixarivan_normalize_public_status(?string $s): string {
         'готово' => 'done',
         'выдан' => 'delivered',
         'выдано' => 'delivered',
+        'отмена' => 'cancelled',
+        'отменен' => 'cancelled',
+        'отменён' => 'cancelled',
+        'отменено' => 'cancelled',
+        'cancel' => 'cancelled',
+        'canceled' => 'cancelled',
+        'cancelled' => 'cancelled',
     ];
 
     return $legacy[$lower] ?? 'in_progress';

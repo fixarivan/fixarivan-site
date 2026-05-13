@@ -129,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $linkType = isset($input['link_type']) ? trim((string) $input['link_type']) : '';
     $linkId = isset($input['link_id']) ? trim((string) $input['link_id']) : '';
-    if ($linkType !== '' && !in_array($linkType, ['order', 'receipt', 'report'], true)) {
+    if ($linkType !== '' && !in_array($linkType, ['order', 'receipt', 'report', 'invoice'], true)) {
         $linkType = '';
         $linkId = '';
     }

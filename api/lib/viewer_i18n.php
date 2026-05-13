@@ -171,6 +171,11 @@ function fixarivan_viewer_portal_ui(string $lang): array
             'snake_fast' => 'Быстро',
             'snake_new_record' => 'Новый общий рекорд!',
             'snake_load_error' => 'Не удалось загрузить рекорд',
+            'thanks_title' => 'Спасибо, что выбрали нас!',
+            'thanks_body' => 'Нам было приятно помочь. Будем рады видеть вас снова.',
+            'google_review_intro' => 'Если всё прошло хорошо, мы будем благодарны за короткий отзыв на Google — для небольшой мастерской это очень важно. Поставьте, пожалуйста',
+            'google_review_stars' => '5 звёзд',
+            'google_review_cta' => 'Оставить отзыв на Google',
         ],
         'en' => [
             'page_title' => 'FixariVan — client portal',
@@ -230,6 +235,11 @@ function fixarivan_viewer_portal_ui(string $lang): array
             'snake_fast' => 'Fast',
             'snake_new_record' => 'New global record!',
             'snake_load_error' => 'Could not load record',
+            'thanks_title' => 'Thank you for choosing us!',
+            'thanks_body' => 'We were glad to help. Hope to see you again.',
+            'google_review_intro' => 'If everything went well, a quick Google review means a lot to a small business. Please leave',
+            'google_review_stars' => '5 stars',
+            'google_review_cta' => 'Leave a review on Google',
         ],
         'fi' => [
             'page_title' => 'FixariVan — asiakasportaali',
@@ -289,6 +299,11 @@ function fixarivan_viewer_portal_ui(string $lang): array
             'snake_fast' => 'Nopea',
             'snake_new_record' => 'Uusi paras tulos!',
             'snake_load_error' => 'Tuloksen lataus epäonnistui',
+            'thanks_title' => 'Kiitos kun valitsit meidät!',
+            'thanks_body' => 'Olimme iloisia voidessamme auttaa. Toivottavasti näemme uudelleen.',
+            'google_review_intro' => 'Jos kaikki sujui hyvin, lyhyt Google-arvostelu auttaa pientä yritystä paljon. Anna',
+            'google_review_stars' => '5 tähteä',
+            'google_review_cta' => 'Kirjoita arvostelu Googleen',
         ],
     ];
 
@@ -469,6 +484,7 @@ function fixarivan_portal_public_status_emoji(string $code): string
         'in_transit' => '🚚',
         'done' => '✅',
         'delivered' => '📦',
+        'cancelled' => '⛔',
     ];
 
     return $map[$code] ?? '📋';
@@ -545,6 +561,7 @@ function fixarivan_portal_client_public_status_meta(string $lang, ?string $order
                 'in_progress' => ['label' => 'В работе', 'icon' => '🔧', 'slug' => 'processing'],
                 'done' => ['label' => 'Готов', 'icon' => '🟢', 'slug' => 'ready'],
                 'delivered' => ['label' => 'Выдан', 'icon' => '📤', 'slug' => 'delivered'],
+                'cancelled' => ['label' => 'Отменён', 'icon' => '⛔', 'slug' => 'cancelled'],
                 'unknown' => ['label' => 'Ожидание', 'icon' => '⏳', 'slug' => 'waiting'],
             ],
             'en' => [
@@ -553,6 +570,7 @@ function fixarivan_portal_client_public_status_meta(string $lang, ?string $order
                 'in_progress' => ['label' => 'In service', 'icon' => '🔧', 'slug' => 'processing'],
                 'done' => ['label' => 'Ready', 'icon' => '🟢', 'slug' => 'ready'],
                 'delivered' => ['label' => 'Delivered', 'icon' => '📤', 'slug' => 'delivered'],
+                'cancelled' => ['label' => 'Cancelled', 'icon' => '⛔', 'slug' => 'cancelled'],
                 'unknown' => ['label' => 'Waiting', 'icon' => '⏳', 'slug' => 'waiting'],
             ],
             'fi' => [
@@ -561,6 +579,7 @@ function fixarivan_portal_client_public_status_meta(string $lang, ?string $order
                 'in_progress' => ['label' => 'Työssä', 'icon' => '🔧', 'slug' => 'processing'],
                 'done' => ['label' => 'Valmis', 'icon' => '🟢', 'slug' => 'ready'],
                 'delivered' => ['label' => 'Luovutettu', 'icon' => '📤', 'slug' => 'delivered'],
+                'cancelled' => ['label' => 'Peruttu', 'icon' => '⛔', 'slug' => 'cancelled'],
                 'unknown' => ['label' => 'Odottaa', 'icon' => '⏳', 'slug' => 'waiting'],
             ],
         ],
@@ -571,6 +590,7 @@ function fixarivan_portal_client_public_status_meta(string $lang, ?string $order
                 'in_progress' => ['label' => 'Заказ оформлен', 'icon' => '🧾', 'slug' => 'accepted'],
                 'done' => ['label' => 'К выдаче', 'icon' => '🟢', 'slug' => 'ready'],
                 'delivered' => ['label' => 'Выдан', 'icon' => '📤', 'slug' => 'delivered'],
+                'cancelled' => ['label' => 'Отменён', 'icon' => '⛔', 'slug' => 'cancelled'],
                 'unknown' => ['label' => 'Заказ оформлен', 'icon' => '🧾', 'slug' => 'accepted'],
             ],
             'en' => [
@@ -579,6 +599,7 @@ function fixarivan_portal_client_public_status_meta(string $lang, ?string $order
                 'in_progress' => ['label' => 'Order placed', 'icon' => '🧾', 'slug' => 'accepted'],
                 'done' => ['label' => 'Ready pickup', 'icon' => '🟢', 'slug' => 'ready'],
                 'delivered' => ['label' => 'Delivered', 'icon' => '📤', 'slug' => 'delivered'],
+                'cancelled' => ['label' => 'Cancelled', 'icon' => '⛔', 'slug' => 'cancelled'],
                 'unknown' => ['label' => 'Order placed', 'icon' => '🧾', 'slug' => 'accepted'],
             ],
             'fi' => [
@@ -587,6 +608,7 @@ function fixarivan_portal_client_public_status_meta(string $lang, ?string $order
                 'in_progress' => ['label' => 'Tilaus tehty', 'icon' => '🧾', 'slug' => 'accepted'],
                 'done' => ['label' => 'Noudettavissa', 'icon' => '🟢', 'slug' => 'ready'],
                 'delivered' => ['label' => 'Luovutettu', 'icon' => '📤', 'slug' => 'delivered'],
+                'cancelled' => ['label' => 'Peruttu', 'icon' => '⛔', 'slug' => 'cancelled'],
                 'unknown' => ['label' => 'Tilaus tehty', 'icon' => '🧾', 'slug' => 'accepted'],
             ],
         ],
@@ -597,6 +619,7 @@ function fixarivan_portal_client_public_status_meta(string $lang, ?string $order
                 'in_progress' => ['label' => 'В работе', 'icon' => '🔧', 'slug' => 'processing'],
                 'done' => ['label' => 'Готов', 'icon' => '🟢', 'slug' => 'ready'],
                 'delivered' => ['label' => 'Выдан', 'icon' => '📤', 'slug' => 'delivered'],
+                'cancelled' => ['label' => 'Отменён', 'icon' => '⛔', 'slug' => 'cancelled'],
                 'unknown' => ['label' => 'Заказ принят', 'icon' => '🧾', 'slug' => 'accepted'],
             ],
             'en' => [
@@ -605,6 +628,7 @@ function fixarivan_portal_client_public_status_meta(string $lang, ?string $order
                 'in_progress' => ['label' => 'In work', 'icon' => '🔧', 'slug' => 'processing'],
                 'done' => ['label' => 'Ready', 'icon' => '🟢', 'slug' => 'ready'],
                 'delivered' => ['label' => 'Delivered', 'icon' => '📤', 'slug' => 'delivered'],
+                'cancelled' => ['label' => 'Cancelled', 'icon' => '⛔', 'slug' => 'cancelled'],
                 'unknown' => ['label' => 'Accepted', 'icon' => '🧾', 'slug' => 'accepted'],
             ],
             'fi' => [
@@ -613,6 +637,7 @@ function fixarivan_portal_client_public_status_meta(string $lang, ?string $order
                 'in_progress' => ['label' => 'Työssä', 'icon' => '🔧', 'slug' => 'processing'],
                 'done' => ['label' => 'Valmis', 'icon' => '🟢', 'slug' => 'ready'],
                 'delivered' => ['label' => 'Luovutettu', 'icon' => '📤', 'slug' => 'delivered'],
+                'cancelled' => ['label' => 'Peruttu', 'icon' => '⛔', 'slug' => 'cancelled'],
                 'unknown' => ['label' => 'Vastaanotettu', 'icon' => '🧾', 'slug' => 'accepted'],
             ],
         ],

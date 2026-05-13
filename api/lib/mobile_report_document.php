@@ -17,6 +17,7 @@ function fixarivan_mobile_report_row_to_document(array $row): ?array {
 
     $base = [
         'document_id' => (string) $row['report_id'],
+        'token' => (string) ($row['token'] ?? ''),
         'client_name' => (string) ($row['client_name'] ?? ''),
         'client_phone' => (string) ($row['phone'] ?? ''),
         'client_email' => '',
@@ -48,7 +49,13 @@ function fixarivan_mobile_report_row_to_document(array $row): ?array {
         $raw = [];
     }
 
-    return dt_merge_data($base, $raw);
+    $out = dt_merge_data($base, $raw);
+    $tok = trim((string) ($row['token'] ?? ''));
+    if ($tok !== '') {
+        $out['token'] = $tok;
+    }
+
+    return $out;
 }
 
 /**

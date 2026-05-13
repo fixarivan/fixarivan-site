@@ -229,6 +229,7 @@
         .lines-table td:nth-child(6) { width: 84px; max-width: 96px; }
         .lines-table td:nth-child(7) { min-width: 120px; font-size: 12px; color: #64748b; line-height: 1.35; }
         .lines-table .line-from-stock { width: 20px; height: 20px; cursor: pointer; accent-color: #4f46e5; }
+        .lines-table .line-deduct-now { width: 20px; height: 20px; cursor: pointer; accent-color: #0d9488; }
         .lines-table .line-inv-id { min-height: 40px; font-size: 14px; }
         .lines-table input[type="text"],
         .lines-table input[type="number"] {
@@ -450,7 +451,7 @@
                     <p class="muted show-sale-only" style="margin-top:0;"><strong>Обязательно минимум одна строка.</strong> Название, количество, закуп и продажа: по этим строкам работает склад — резервирование, движения и списание при статусе «готово» / «выдано», как в Track.</p>
                     <p class="muted show-custom-only" style="margin-top:0;">Можно использовать как гибкий список работ, товаров или смешанных позиций. Если добавлены строки, они сохраняются в заказ как обычно и совместимы со складской логикой.</p>
                     <p class="muted show-repair-only">Формат цен в строках: закуп €… / продажа €… — для учёта на складе.</p>
-                    <p class="muted" style="margin-top:8px;">Галочка «Со склада» и ID позиции из <a href="inventory.html" target="_blank" rel="noopener">каталога склада</a>: строка не попадает в заявку на закупку; при статусе «готово» / «выдано» списывается остаток (не больше количества в строке).</p>
+                    <p class="muted" style="margin-top:8px;">Галочка «Со склада» и ID позиции из <a href="inventory.html" target="_blank" rel="noopener">каталога склада</a>: строка не попадает в заявку на закупку; при статусе «готово» / «выдано» списывается остаток (не больше колич.) в строке. «Сразу» — то же со складом, но списание выполняется при сохранении заказа (для срочной выдачи).</p>
                 </div>
             </div>
             <div class="lines-table-wrap" id="linesTableWrap">
@@ -462,6 +463,7 @@
                             <th scope="col">Закуп (€)</th>
                             <th scope="col">Продажа (€)</th>
                             <th scope="col" title="Списать с остатка при выдаче">Склад</th>
+                            <th scope="col" title="Списать с остатка при сохранении заказа">Сразу</th>
                             <th scope="col" title="ID карточки в inventory">ID</th>
                             <th scope="col"></th>
                         </tr>
@@ -483,7 +485,7 @@
                         <option value="in_transit">В пути</option>
                         <option value="done">Готово</option>
                         <option value="delivered">Выдано</option>
-                    </select>
+                        <option value="cancelled">Отменён</option>
                 </div>
                 <div class="form-group">
                     <label>Ориентировочная дата</label>
@@ -650,12 +652,15 @@
             const s = data && data.sale != null ? data.sale : '';
             const invId = data && data.inventory_item_id != null ? data.inventory_item_id : '';
             const fromStock = data && (data.from_stock === true || data.from_stock === 1 || data.fromStock === true);
+            const deductNow = data && (data.deduct_from_stock === true || data.deduct_from_stock === 1 || data.deductFromStock === true);
+            const stockChecked = !deductNow && (fromStock || invId > 0);
             tr.innerHTML =
                 '<td><input type="text" class="line-name" placeholder="Наименование позиции" value="' + escapeAttr(name) + '"></td>' +
                 '<td><input type="number" class="line-qty" placeholder="1" min="0.01" step="any" value="' + escapeAttr(qty) + '"></td>' +
                 '<td><input type="number" class="line-purchase" placeholder="0" min="0" step="0.01" value="' + escapeAttr(p) + '"></td>' +
                 '<td><input type="number" class="line-sale" placeholder="0" min="0" step="0.01" value="' + escapeAttr(s) + '"></td>' +
-                '<td><input type="checkbox" class="line-from-stock" title="Брать со склада, списать при выдаче"' + (fromStock || invId ? ' checked' : '') + '></td>' +
+                '<td><input type="checkbox" class="line-from-stock" title="Брать со склада, списать при выдаче"' + (stockChecked ? ' checked' : '') + '></td>' +
+                '<td><input type="checkbox" class="line-deduct-now" title="Списать с остатка при сохранении заказа (срочно)"' + (deductNow ? ' checked' : '') + '></td>' +
                 '<td><input type="number" class="line-inv-id" placeholder="№" min="1" step="1" value="' + escapeAttr(invId) + '" title="ID карточки в каталоге"></td>' +
                 '<td class="line-stock-hint"></td>';
             document.getElementById('linesBody').appendChild(tr);
@@ -664,19 +669,26 @@
 
         function wireLineStockRow(tr) {
             const cb = tr.querySelector('.line-from-stock');
+            const dn = tr.querySelector('.line-deduct-now');
             const iid = tr.querySelector('.line-inv-id');
             const hint = tr.querySelector('.line-stock-hint');
-            if (!cb || !iid || !hint) return;
+            if (!cb || !dn || !iid || !hint) return;
             cb.addEventListener('change', function () {
+                if (cb.checked) dn.checked = false;
                 if (!cb.checked) hint.textContent = '';
+            });
+            dn.addEventListener('change', function () {
+                if (dn.checked) cb.checked = false;
             });
             iid.addEventListener('blur', function () {
                 const id = parseInt(iid.value, 10);
                 if (!id) {
-                    if (!cb.checked) hint.textContent = '';
+                    if (!cb.checked && !dn.checked) hint.textContent = '';
                     return;
                 }
-                cb.checked = true;
+                if (!dn.checked) {
+                    cb.checked = true;
+                }
                 fetchJson('./api/inventory_list.php?id=' + id).then(function (res) {
                     const items = (res && res.data && res.data.items) ? res.data.items : [];
                     const it = items[0];
@@ -701,6 +713,7 @@
                 const purchase = parseFloat(tr.querySelector('.line-purchase').value) || 0;
                 const sale = parseFloat(tr.querySelector('.line-sale').value) || 0;
                 const fromStock = tr.querySelector('.line-from-stock') && tr.querySelector('.line-from-stock').checked;
+                const deductNow = tr.querySelector('.line-deduct-now') && tr.querySelector('.line-deduct-now').checked;
                 const invId = parseInt((tr.querySelector('.line-inv-id') && tr.querySelector('.line-inv-id').value) || '', 10) || 0;
                 if (!name && invId <= 0) return;
                 if (!name && invId > 0) name = '—';
@@ -708,7 +721,9 @@
                 if (invId > 0) {
                     o.inventory_item_id = invId;
                 }
-                if (fromStock) {
+                if (deductNow) {
+                    o.deduct_from_stock = true;
+                } else if (fromStock) {
                     o.from_stock = true;
                 }
                 out.push(o);
@@ -861,6 +876,10 @@
             }
             for (let i = 0; i < lines.length; i++) {
                 const ln = lines[i];
+                if (ln.deduct_from_stock && (!ln.inventory_item_id || ln.inventory_item_id <= 0)) {
+                    alert('Строка «списать сразу»: укажите ID позиции из каталога.');
+                    return;
+                }
                 if (ln.from_stock && (!ln.inventory_item_id || ln.inventory_item_id <= 0)) {
                     alert('Строка «со склада»: укажите ID позиции из каталога (или снимите галочку).');
                     return;

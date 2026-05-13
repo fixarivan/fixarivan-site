@@ -22,6 +22,7 @@ require_once __DIR__ . '/lib/order_supply.php';
 require_once __DIR__ . '/lib/order_warehouse_sync.php';
 require_once __DIR__ . '/lib/order_json_storage.php';
 require_once __DIR__ . '/lib/order_track_lines.php';
+require_once __DIR__ . '/lib/order_line_stock_deduct.php';
 
 /** @return float|null */
 function fixarivan_optional_float(mixed $v) {
@@ -415,6 +416,39 @@ function saveOrderFixed(array $data): array {
             $merged['client_id'] = $resolvedClientId;
             $merged['order_id'] = $orderIdForDb;
 
+            $linesForDeduct = json_decode($merged['order_lines_json'] ?? '[]', true);
+            if (!is_array($linesForDeduct)) {
+                $linesForDeduct = [];
+            }
+            if ($isMasterForm && $linesForDeduct !== []) {
+                foreach ($linesForDeduct as &$lnSku) {
+                    if (!is_array($lnSku)) {
+                        continue;
+                    }
+                    $iidPre = (int)($lnSku['inventory_item_id'] ?? $lnSku['inventoryItemId'] ?? 0);
+                    $skuPre = trim((string)($lnSku['sku'] ?? ''));
+                    if ($iidPre <= 0 && $skuPre !== '') {
+                        $ridPre = fixarivan_track_resolve_inventory_item_id($pdo, 0, $skuPre);
+                        if ($ridPre > 0) {
+                            $lnSku['inventory_item_id'] = $ridPre;
+                        }
+                    }
+                }
+                unset($lnSku);
+                fixarivan_order_lines_apply_stock_deductions($pdo, $orderIdForDb, $linesForDeduct);
+                $linesForDeduct = fixarivan_order_lines_clean_for_order_json($linesForDeduct);
+                $encAfter = json_encode($linesForDeduct, JSON_UNESCAPED_UNICODE);
+                if ($encAfter !== false) {
+                    $merged['order_lines_json'] = fixarivan_prepare_order_lines_json_for_persist($pdo, $encAfter);
+                }
+                $linesParsedAfter = fixarivan_parse_order_lines_array($merged['order_lines_json'] ?? '[]');
+                if ($linesParsedAfter !== []) {
+                    $merged['supply_request'] = fixarivan_supply_request_from_order_lines($linesParsedAfter);
+                    $merged['supply_derived_from'] = 'order_lines';
+                    [$merged['parts_purchase_total'], $merged['parts_sale_total']] = fixarivan_track_totals_from_lines($linesParsedAfter);
+                }
+            }
+
             $stmt = $pdo->prepare(
             'INSERT INTO orders (
                 document_id, date_created, date_updated, place_of_acceptance, date_of_acceptance, unique_code, language,
@@ -624,11 +658,12 @@ function saveOrderFixed(array $data): array {
             if ($oidHook === '') {
                 $oidHook = trim((string)($merged['document_id'] ?? ''));
             }
-            fixarivan_on_order_terminal_public_status(
-                $pdo,
-                $oidHook,
-                fixarivan_normalize_public_status($merged['public_status'] ?? $merged['order_status'] ?? null)
-            );
+            $pubHook = fixarivan_normalize_public_status($merged['public_status'] ?? $merged['order_status'] ?? null);
+            if ($pubHook === 'cancelled') {
+                fixarivan_on_order_cancelled($pdo, $oidHook, (string)($merged['document_id'] ?? ''));
+            } else {
+                fixarivan_on_order_terminal_public_status($pdo, $oidHook, $pubHook);
+            }
         } catch (Throwable $whEx) {
             $warehouseWarning = $whEx->getMessage();
         }

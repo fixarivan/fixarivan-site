@@ -329,6 +329,16 @@
                         </select>
                     </div>
                     <div class="form-group">
+                        <label for="fPurpose">Назначение даты</label>
+                        <select id="fPurpose">
+                            <option value="none">Общее напоминание</option>
+                            <option value="supply">Закупка / снабжение</option>
+                            <option value="repair_estimate">Ориентир: ремонт</option>
+                            <option value="other">Другое</option>
+                        </select>
+                        <p class="muted" style="font-size:12px;margin-top:6px;line-height:1.35;">Авто-события из заказа (AUTO_SUPPLY) привязаны к закупке; это поле тогда только для справки и не меняет логику синхронизации.</p>
+                    </div>
+                    <div class="form-group">
                         <label for="fNotes">Заметки</label>
                         <textarea id="fNotes"></textarea>
                     </div>
@@ -336,9 +346,10 @@
                         <label for="fLinkType">Связь с документом</label>
                         <select id="fLinkType">
                             <option value="">Без привязки</option>
-                            <option value="order">Акт приёма</option>
+                            <option value="order">Заказ (акт / Track)</option>
                             <option value="receipt">Квитанция</option>
-                            <option value="report">Диагностика</option>
+                            <option value="invoice">Счёт</option>
+                            <option value="report">Диагностика (отчёт)</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -347,7 +358,8 @@
                     </div>
                     <div class="btn-row">
                         <button type="submit" class="btn btn-primary">Сохранить</button>
-                        <button type="button" class="btn hidden" id="btnOpenLinkedDoc">Открыть документ</button>
+                        <button type="button" class="btn hidden" id="btnOpenTrack" style="border:1px solid #2563eb;color:#2563eb;background:#fff;">Track</button>
+                        <button type="button" class="btn hidden" id="btnOpenLinkedDoc">Просмотр / портал</button>
                         <button type="button" class="btn btn-danger hidden" id="btnDelete">Удалить</button>
                         <button type="button" class="btn" id="btnCancelForm">Отмена</button>
                     </div>
@@ -449,8 +461,56 @@
             events: [],
             editingId: null,
             statusFilter: 'all',
-            viewMode: 'month'
+            viewMode: 'month',
+            notesLockedAutoSupply: false
         };
+
+        const CAL_PURPOSE_RE = /^__CAL_PURPOSE:(none|supply|repair_estimate|other)\r?\n/;
+
+        function notesContainAutoSupply(notes) {
+            return String(notes || '').indexOf('AUTO_SUPPLY') !== -1;
+        }
+
+        function parseCalendarNotes(raw) {
+            const s = String(raw || '');
+            if (notesContainAutoSupply(s)) {
+                return { purpose: 'supply', body: s, locked: true };
+            }
+            const m = CAL_PURPOSE_RE.exec(s);
+            if (m) {
+                return { purpose: m[1], body: s.slice(m[0].length), locked: false };
+            }
+            return { purpose: 'none', body: s, locked: false };
+        }
+
+        function buildCalendarNotes(purpose, body, lockedAutoSupply) {
+            if (lockedAutoSupply) {
+                return String(body || '');
+            }
+            const b = String(body || '').replace(CAL_PURPOSE_RE, '').trim();
+            const p = purpose || 'none';
+            if (p === 'none') {
+                return b;
+            }
+            return '__CAL_PURPOSE:' + p + '\n' + b;
+        }
+
+        function calendarEventPurposeShort(ev) {
+            const n = parseCalendarNotes(ev.notes || '');
+            if (n.locked) {
+                return 'Закупка';
+            }
+            if (n.purpose === 'repair_estimate') {
+                return 'Ремонт (ориентир)';
+            }
+            if (n.purpose === 'supply') {
+                return 'Закупка';
+            }
+            if (n.purpose === 'other') {
+                return 'Другое';
+            }
+            return '';
+        }
 
         function monthStrFromKey(dateKey) {
             return dateKey.slice(0, 7);
@@ -548,8 +608,10 @@
             }
             list.innerHTML = evs.map((ev) => {
                 const hasLink = ev.link_type && ev.link_id;
+                const pur = calendarEventPurposeShort(ev);
+                const purHtml = pur ? `<span class="link-chip" style="margin-left:6px;">${escapeHtml(pur)}</span>` : '';
                 return `<li>
-                    <strong>${escapeHtml(ev.title || 'Без названия')}</strong>
+                    <strong>${escapeHtml(ev.title || 'Без названия')}</strong>${purHtml}
                     <div class="meta">${escapeHtml(formatEventTime(ev))} • ${escapeHtml(eventStatusRu(ev.status || 'planned'))}</div>
                     ${hasLink ? `<div class="link-chip">Связь: ${escapeHtml(ev.link_type)} / ${escapeHtml(ev.link_id)}</div>` : ''}
                 </li>`;
@@ -648,7 +710,9 @@
                     const t = escapeHtml(ev.title || '');
                     const tm = formatEventTime(ev);
                     const link = (ev.link_type && ev.link_id) ? `<div class="link-chip">🔗 ${escapeHtml(ev.link_type)} / ${escapeHtml(ev.link_id)}</div>` : '';
-                    return '<li class="' + active.trim() + '" data-eid="' + id.replace(/"/g, '&quot;') + '"><strong>' + t + '</strong><br><span style="color:#64748b;font-size:0.85rem;">' + tm + '</span>' + link + '</li>';
+                    const pur = calendarEventPurposeShort(ev);
+                    const purHtml = pur ? '<span class="link-chip" style="margin-left:6px;">' + escapeHtml(pur) + '</span>' : '';
+                    return '<li class="' + active.trim() + '" data-eid="' + id.replace(/"/g, '&quot;') + '"><strong>' + t + '</strong>' + purHtml + '<br><span style="color:#64748b;font-size:0.85rem;">' + tm + '</span>' + link + '</li>';
                 }).join('');
                 list.querySelectorAll('li[data-eid]').forEach((li) => {
                     li.addEventListener('click', () => {
@@ -685,10 +749,13 @@
 
         function hideForm() {
             state.editingId = null;
+            state.notesLockedAutoSupply = false;
             const panel = document.getElementById('eventFormPanel');
             if (panel) panel.classList.add('hidden');
             const delBtn = document.getElementById('btnDelete');
             if (delBtn) delBtn.classList.add('hidden');
+            const fp = document.getElementById('fPurpose');
+            if (fp) fp.disabled = false;
         }
 
         function openNew() {
@@ -724,11 +791,20 @@
             document.getElementById('fStartDt').value = (state.selectedDate || todayKey()) + 'T09:00';
             document.getElementById('fEndDt').value = '';
             document.getElementById('fStatus').value = 'planned';
+            const fp = document.getElementById('fPurpose');
+            if (fp) {
+                fp.value = 'none';
+                fp.disabled = false;
+            }
+            state.notesLockedAutoSupply = false;
             document.getElementById('fNotes').value = '';
             document.getElementById('fLinkType').value = '';
             document.getElementById('fLinkId').value = '';
             document.getElementById('btnOpenLinkedDoc').classList.add('hidden');
+            const bt = document.getElementById('btnOpenTrack');
+            if (bt) bt.classList.add('hidden');
             toggleAllDayUi();
+            updateOpenLinkedButtons();
             renderDayPanel();
         }
 
@@ -754,15 +830,18 @@
             }
             document.getElementById('fEndDt').value = ev.ends_at ? isoToDatetimeLocal(ev.ends_at) : '';
             document.getElementById('fStatus').value = ev.status || 'planned';
-            document.getElementById('fNotes').value = ev.notes || '';
+            const parsedNotes = parseCalendarNotes(ev.notes || '');
+            state.notesLockedAutoSupply = parsedNotes.locked;
+            const fp = document.getElementById('fPurpose');
+            if (fp) {
+                fp.value = parsedNotes.purpose;
+                fp.disabled = parsedNotes.locked;
+            }
+            document.getElementById('fNotes').value = parsedNotes.body;
             document.getElementById('fLinkType').value = ev.link_type || '';
             document.getElementById('fLinkId').value = ev.link_id || '';
-            const openBtn = document.getElementById('btnOpenLinkedDoc');
-            if (openBtn) {
-                const hasLink = !!(ev.link_type && ev.link_id);
-                openBtn.classList.toggle('hidden', !hasLink);
-            }
             toggleAllDayUi();
+            updateOpenLinkedButtons();
             renderDayPanel();
         }
 
@@ -779,7 +858,10 @@
             const endVal = document.getElementById('fEndDt').value;
             const endsAt = allDay ? '' : (endVal ? fromDatetimeLocal(endVal) : '');
             const status = document.getElementById('fStatus').value;
-            const notes = (document.getElementById('fNotes').value || '').trim();
+            const purposeEl = document.getElementById('fPurpose');
+            const purpose = purposeEl ? purposeEl.value : 'none';
+            const notesRaw = document.getElementById('fNotes').value || '';
+            const notes = buildCalendarNotes(purpose, notesRaw, state.notesLockedAutoSupply).trim();
             const eventId = (document.getElementById('fEventId').value || '').trim();
             const linkType = (document.getElementById('fLinkType').value || '').trim();
             const linkId = (document.getElementById('fLinkId').value || '').trim();
@@ -798,6 +880,16 @@
             };
         }
 
+        function openTrackFromForm() {
+            const linkType = (document.getElementById('fLinkType').value || '').trim();
+            const linkId = (document.getElementById('fLinkId').value || '').trim();
+            if (linkType !== 'order' || !linkId) {
+                showToast('Для Track укажите тип «Заказ» и ID', 'warning');
+                return;
+            }
+            window.open('track.html?q=' + encodeURIComponent(linkId), '_blank', 'noopener');
+        }
+
         async function openLinkedDocument() {
             const linkType = (document.getElementById('fLinkType').value || '').trim();
             const linkId = (document.getElementById('fLinkId').value || '').trim();
@@ -808,23 +900,46 @@
             try {
                 const result = await fetchJson('./api/get_document.php?id=' + encodeURIComponent(linkId) + '&type=' + encodeURIComponent(linkType), { credentials: 'same-origin' });
                 const data = result.data && typeof result.data === 'object' ? result.data : {};
+                if (linkType === 'order') {
+                    if (data.portal_url) {
+                        window.open(data.portal_url, '_blank', 'noopener');
+                        return;
+                    }
+                    showToast('У заказа нет токена портала. Используйте кнопку «Track».', 'warning');
+                    return;
+                }
                 const viewerUrl = data.viewer_url || result.viewer_url || '';
                 if (viewerUrl) {
                     window.open(viewerUrl, '_blank', 'noopener');
                     return;
                 }
-                showToast('Для документа нет viewer URL', 'warning');
+                showToast('Для документа нет ссылки просмотра', 'warning');
             } catch (err) {
+                if (linkType === 'order' && linkId) {
+                    window.open('track.html?q=' + encodeURIComponent(linkId), '_blank', 'noopener');
+                    return;
+                }
                 showToast(err.message || 'Не удалось открыть документ', 'error');
             }
         }
 
-        function updateOpenLinkedButtonVisibility() {
+        function updateOpenLinkedButtons() {
             const openBtn = document.getElementById('btnOpenLinkedDoc');
-            if (!openBtn) return;
+            const trackBtn = document.getElementById('btnOpenTrack');
             const linkType = (document.getElementById('fLinkType').value || '').trim();
             const linkId = (document.getElementById('fLinkId').value || '').trim();
-            openBtn.classList.toggle('hidden', !(linkType && linkId));
+            const hasLink = !!(linkType && linkId);
+            if (openBtn) {
+                openBtn.classList.toggle('hidden', !hasLink);
+                if (hasLink && linkType === 'order') {
+                    openBtn.textContent = 'Портал клиента';
+                } else if (hasLink) {
+                    openBtn.textContent = 'Просмотр для клиента';
+                }
+            }
+            if (trackBtn) {
+                trackBtn.classList.toggle('hidden', !(linkType === 'order' && linkId));
+            }
         }
 
         document.getElementById('prevMonth').addEventListener('click', () => {
@@ -854,8 +969,10 @@
             renderDayPanel();
         });
         document.getElementById('btnOpenLinkedDoc').addEventListener('click', openLinkedDocument);
-        document.getElementById('fLinkType').addEventListener('change', updateOpenLinkedButtonVisibility);
-        document.getElementById('fLinkId').addEventListener('input', updateOpenLinkedButtonVisibility);
+        const btnTrack = document.getElementById('btnOpenTrack');
+        if (btnTrack) btnTrack.addEventListener('click', openTrackFromForm);
+        document.getElementById('fLinkType').addEventListener('change', updateOpenLinkedButtons);
+        document.getElementById('fLinkId').addEventListener('input', updateOpenLinkedButtons);
 
         document.getElementById('fAllDay').addEventListener('change', toggleAllDayUi);
 

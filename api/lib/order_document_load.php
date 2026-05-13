@@ -77,8 +77,8 @@ function fixarivan_load_order_from_sqlite_or_json(PDO $pdo, string $documentId):
         return [];
     }
     try {
-        $stmt = $pdo->prepare('SELECT * FROM orders WHERE document_id = :id LIMIT 1');
-        $stmt->execute([':id' => $documentId]);
+        $stmt = $pdo->prepare('SELECT * FROM orders WHERE document_id = :id OR order_id = :oid LIMIT 1');
+        $stmt->execute([':id' => $documentId, ':oid' => $documentId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (is_array($row) && $row !== []) {
             $row = fixarivan_merge_order_json_overlay($row);

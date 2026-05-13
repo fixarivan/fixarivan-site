@@ -216,7 +216,11 @@ try {
     }
 
     if ($hasPublic) {
-        fixarivan_on_order_terminal_public_status($pdo, $oidHook, $pubNorm);
+        if ($pubNorm === 'cancelled') {
+            fixarivan_on_order_cancelled($pdo, $oidHook, $documentId);
+        } else {
+            fixarivan_on_order_terminal_public_status($pdo, $oidHook, $pubNorm);
+        }
     }
     if ($hasPublicEstimatedCost) {
         fixarivan_track_sync_receipts_work_cost($pdo, $oidHook, $publicEstimatedCostVal);

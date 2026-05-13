@@ -63,8 +63,8 @@ function client_portal_sort_orders(array $rows, string $token): array {
         }
         $psA = fixarivan_normalize_public_status($a['public_status'] ?? $a['order_status'] ?? null);
         $psB = fixarivan_normalize_public_status($b['public_status'] ?? $b['order_status'] ?? null);
-        $termA = in_array($psA, ['done', 'delivered'], true) ? 1 : 0;
-        $termB = in_array($psB, ['done', 'delivered'], true) ? 1 : 0;
+        $termA = in_array($psA, ['done', 'delivered', 'cancelled'], true) ? 1 : 0;
+        $termB = in_array($psB, ['done', 'delivered', 'cancelled'], true) ? 1 : 0;
         if ($termA !== $termB) {
             return $termA <=> $termB;
         }
@@ -405,6 +405,10 @@ $companyProfile = fixarivan_company_profile_load();
 $companyName = trim((string)($companyProfile['company_name'] ?? 'FixariVan')) ?: 'FixariVan';
 $companyAddress = trim((string)($companyProfile['company_address'] ?? 'Turku, Finland')) ?: 'Turku, Finland';
 $companyPhone = trim((string)($companyProfile['company_phone'] ?? '')) ?: '+358 44 954 5263';
+$googleReviewUrl = trim((string)($companyProfile['google_review_url'] ?? ''));
+if ($googleReviewUrl !== '' && !preg_match('#^https?://#i', $googleReviewUrl)) {
+    $googleReviewUrl = '';
+}
 $companyPhoneDigits = preg_replace('/\D+/', '', $companyPhone) ?? '';
 $whatsAppUrl = $companyPhoneDigits !== '' ? 'https://wa.me/' . $companyPhoneDigits : '';
 $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $clientName : $companyName, 0, 1)));
@@ -967,6 +971,54 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
             background: rgba(148, 163, 184, 0.12);
             color: #e2e8f0;
         }
+        .portal-thanks-card {
+            margin-top: 16px;
+            padding: 16px 16px 18px;
+            border-radius: 14px;
+            background: linear-gradient(145deg, rgba(251, 191, 36, 0.12), rgba(139, 92, 246, 0.1));
+            border: 1px solid rgba(251, 191, 36, 0.28);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+        .portal-thanks-kicker {
+            font-size: 1.35rem;
+            margin-bottom: 6px;
+        }
+        .portal-thanks-title {
+            margin: 0 0 8px;
+            font-size: 1.15rem;
+            color: #fef3c7;
+            font-weight: 700;
+        }
+        .portal-thanks-body,
+        .portal-thanks-review {
+            margin: 0 0 10px;
+            font-size: 0.95rem;
+            line-height: 1.45;
+            color: #e5e7eb;
+        }
+        .portal-thanks-review {
+            margin-bottom: 8px;
+        }
+        .portal-thanks-stars-label {
+            color: #fcd34d;
+        }
+        .portal-thanks-star-row {
+            font-size: 1.25rem;
+            letter-spacing: 3px;
+            color: #fbbf24;
+            margin: 4px 0 14px;
+            line-height: 1;
+        }
+        .portal-google-btn {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            background: linear-gradient(135deg, #4285f4, #34a853);
+            box-shadow: 0 6px 20px rgba(66, 133, 244, 0.25);
+        }
+        .portal-google-btn:hover {
+            filter: brightness(1.06);
+        }
     </style>
 </head>
 <body>
@@ -1028,6 +1080,17 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
                 <div class="comment-card">
                     <div class="comment-title">💬 <?= htmlspecialchars($tr['comment_title']) ?></div>
                     <div class="comment-body"><?= nl2br(htmlspecialchars($publicComment)) ?></div>
+                </div>
+            <?php } ?>
+
+            <?php if ($orderTerminal && $googleReviewUrl !== '') { ?>
+                <div class="portal-thanks-card">
+                    <div class="portal-thanks-kicker" aria-hidden="true">✨</div>
+                    <h3 class="portal-thanks-title"><?= htmlspecialchars($tr['thanks_title']) ?></h3>
+                    <p class="portal-thanks-body"><?= htmlspecialchars($tr['thanks_body']) ?></p>
+                    <p class="portal-thanks-review"><?= htmlspecialchars($tr['google_review_intro']) ?> <strong class="portal-thanks-stars-label"><?= htmlspecialchars($tr['google_review_stars']) ?></strong>.</p>
+                    <div class="portal-thanks-star-row" aria-hidden="true">★★★★★</div>
+                    <a class="btn portal-google-btn" href="<?= htmlspecialchars($googleReviewUrl, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer"><?= htmlspecialchars($tr['google_review_cta']) ?></a>
                 </div>
             <?php } ?>
 

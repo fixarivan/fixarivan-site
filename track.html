@@ -187,7 +187,7 @@
             partsStOrdered: 'Заказано',
             partsStInTransit: 'В пути',
             ordersLbl: 'Заказы', activeLbl: 'Активные', waitLbl: 'Ожидание',
-            st_in_progress: 'в работе', st_waiting_parts: 'ожидает запчасть', st_in_transit: 'в пути', st_done: 'готово', st_delivered: 'выдано',
+            st_in_progress: 'в работе', st_waiting_parts: 'ожидает запчасть', st_in_transit: 'в пути', st_done: 'готово', st_delivered: 'выдано', st_cancelled: 'отменён',
             typeOrder: 'Акт', typeReceipt: 'Квитанция', typeInvoice: 'Счёт', typeReport: 'Отчёт', typeDoc: 'Документ',
         };
         function trackT() { return TRACK_LANG; }
@@ -298,7 +298,7 @@
         }
         function isPublicDone(o) {
             const p = pubStatusNorm(o);
-            return p === 'done' || p === 'delivered';
+            return p === 'done' || p === 'delivered' || p === 'cancelled';
         }
         function isPublicActive(o) {
             return !isPublicDone(o);
@@ -449,6 +449,7 @@
                 { v: 'in_transit', label: T.st_in_transit },
                 { v: 'done', label: T.st_done },
                 { v: 'delivered', label: T.st_delivered },
+                { v: 'cancelled', label: T.st_cancelled },
             ];
             const cur = (optsList.some((x) => x.v === String(current || '').toLowerCase()))
                 ? String(current || '').toLowerCase()

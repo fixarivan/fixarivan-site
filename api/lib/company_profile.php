@@ -21,6 +21,8 @@ function fixarivan_company_profile_defaults(): array {
         'bank_name' => '',
         /** Относительный путь от корня сайта, напр. assets/company_logo.png */
         'company_logo' => '',
+        /** Ссылка на отзыв Google (клиентский портал, завершённые заказы). Пусто — блок скрыт. */
+        'google_review_url' => 'https://share.google/saZoUi8tRidx6Y7kc',
     ];
 }
 

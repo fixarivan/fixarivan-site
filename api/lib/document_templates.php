@@ -391,6 +391,14 @@ function dt_translations(string $language): array
                 'warranty' => [
                     '0' => 'Без гарантии',
                     '1' => 'С гарантией'
+                ],
+                'public_order_status' => [
+                    'in_progress' => 'В работе',
+                    'waiting_parts' => 'Ожидает запчасть',
+                    'in_transit' => 'В пути',
+                    'done' => 'Готово',
+                    'delivered' => 'Выдано',
+                    'cancelled' => 'Отменён',
                 ]
             ],
             'signature_caption' => 'Подпись подтверждает согласие с условиями обслуживания',
@@ -535,6 +543,7 @@ function dt_translations(string $language): array
                     'in_transit' => 'In transit',
                     'done' => 'Ready',
                     'delivered' => 'Delivered',
+                    'cancelled' => 'Cancelled',
                 ],
             ],
             'signature_caption' => 'Signature confirms acceptance of service terms',
@@ -679,6 +688,7 @@ function dt_translations(string $language): array
                     'in_transit' => 'Matkalla',
                     'done' => 'Valmis',
                     'delivered' => 'Luovutettu',
+                    'cancelled' => 'Peruttu',
                 ],
             ],
             'signature_caption' => 'Allekirjoitus vahvistaa palveluehdot',

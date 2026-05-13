@@ -44,6 +44,45 @@ function loadJsonDocument(string $documentType, string $documentId): array {
     return is_array($decoded) ? $decoded : [];
 }
 
+/**
+ * Ссылки для UI (Track, портал, просмотр квитанции/счёта) — относительные от корня сайта.
+ *
+ * @param array<string, mixed> $doc
+ * @return array<string, mixed>
+ */
+function fixarivan_enrich_document_navigation_urls(array $doc, string $documentType): array
+{
+    $tok = trim((string) ($doc['client_token'] ?? ''));
+    if ($documentType === 'order') {
+        $q = trim((string) ($doc['order_id'] ?? ''));
+        if ($q === '') {
+            $q = trim((string) ($doc['document_id'] ?? ''));
+        }
+        if ($q !== '') {
+            $doc['track_url'] = 'track.html?q=' . rawurlencode($q);
+        }
+        if ($tok !== '') {
+            $doc['portal_url'] = 'client_portal.php?token=' . rawurlencode($tok);
+        }
+    }
+    if ($tok !== '') {
+        if ($documentType === 'receipt' && empty($doc['viewer_url'])) {
+            $doc['viewer_url'] = 'receipt_view.php?token=' . rawurlencode($tok);
+        }
+        if ($documentType === 'invoice' && empty($doc['viewer_url'])) {
+            $doc['viewer_url'] = 'invoice_view.php?token=' . rawurlencode($tok);
+        }
+    }
+    if ($documentType === 'report') {
+        $rt = trim((string) ($doc['token'] ?? ''));
+        if ($rt !== '' && empty($doc['viewer_url'])) {
+            $doc['viewer_url'] = 'report_view.php?token=' . rawurlencode($rt);
+        }
+    }
+
+    return $doc;
+}
+
 function loadDocumentFromSqliteOrJson(string $documentType, string $documentId): array {
     if ($documentType === 'order') {
         try {
@@ -86,6 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $items = json_decode((string)$doc['items_json'], true);
                 $doc['items'] = is_array($items) ? $items : [];
             }
+            $doc = fixarivan_enrich_document_navigation_urls($doc, $documentType);
             echo json_encode(['success' => true, 'data' => $doc], JSON_UNESCAPED_UNICODE);
             exit;
         }
@@ -98,6 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $pdo = getSqliteConnection();
             $doc = fixarivan_load_mobile_report_by_id($pdo, (string) $documentId);
             if ($doc !== null) {
+                $doc = fixarivan_enrich_document_navigation_urls($doc, 'report');
                 echo json_encode(['success' => true, 'data' => $doc], JSON_UNESCAPED_UNICODE);
                 exit;
             }
