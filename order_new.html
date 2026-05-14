@@ -712,8 +712,8 @@
                 <h2 id="stockPickerTitle">Выбор со склада</h2>
                 <button type="button" class="stock-picker-x" id="stockPickerClose" title="Закрыть" aria-label="Закрыть">×</button>
             </div>
-            <p class="stock-picker-hint">Поиск по названию, артикулу (SKU) или полю «совместимость». Строка заполнится автоматически; при необходимости поправьте количество или цены.</p>
-            <input type="search" id="stockPickerSearch" class="stock-picker-search" placeholder="Начните вводить или смотрите первые позиции списка…" autocomplete="off">
+            <p class="stock-picker-hint">Без запроса: только рабочий список (скрыты позиции с именем на «-…» — черновики под заказ; сначала то, что с остатком). <strong>Введите поиск</strong> — покажутся все совпадения, включая «-…». Строка заказа заполнится автоматически.</p>
+            <input type="search" id="stockPickerSearch" class="stock-picker-search" placeholder="Поиск по складу… (оставьте пустым — короткий список)" autocomplete="off">
             <div id="stockPickerList" class="stock-picker-list"></div>
         </div>
     </div>
@@ -1028,14 +1028,18 @@
                 var url = './api/inventory_list.php?';
                 var term = String(q || '').trim();
                 if (term.length >= 1) {
-                    url += 'q=' + encodeURIComponent(term) + '&limit=100';
+                    url += 'q=' + encodeURIComponent(term) + '&limit=100&sort=qty_desc';
                 } else {
-                    url += 'limit=80';
+                    url += 'limit=80&sort=qty_desc&browse_hide_supply=1';
                 }
                 var res = await fetchJson(url);
                 var items = (res && res.data && res.data.items) ? res.data.items : [];
                 if (!items.length) {
-                    list.innerHTML = '<div class="stock-picker-status">Ничего не найдено. Попробуйте другой запрос или откройте <a href="inventory.html" target="_blank" rel="noopener">склад</a>.</div>';
+                    if (term.length < 1) {
+                        list.innerHTML = '<div class="stock-picker-status">Пока пусто: либо нет карточек в каталоге, либо все скрыты как «под заказ» (имя с «-…»). <strong>Введите поиск</strong> — появятся и такие позиции.</div>';
+                    } else {
+                        list.innerHTML = '<div class="stock-picker-status">Ничего не найдено. Попробуйте другой запрос или откройте <a href="inventory.html" target="_blank" rel="noopener">склад</a>.</div>';
+                    }
                     return;
                 }
                 list.innerHTML = items.map(function (it) {

@@ -73,6 +73,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $category = isset($_GET['category']) ? trim((string)$_GET['category']) : '';
     $q = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
     $idExact = isset($_GET['id']) ? trim((string)$_GET['id']) : '';
+    $sort = isset($_GET['sort']) ? strtolower(trim((string)$_GET['sort'])) : '';
+    if ($sort !== 'qty_desc') {
+        $sort = '';
+    }
+    $browseHideSupply = isset($_GET['browse_hide_supply'])
+        && ($_GET['browse_hide_supply'] === '1' || strtolower(trim((string)$_GET['browse_hide_supply'])) === 'true');
 
     $sql = '
         SELECT i.id, i.sku, i.name, i.category, i.compatibility, i.unit, i.min_stock, i.default_cost,
@@ -105,7 +111,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $params[] = $like;
         $params[] = $like;
     }
-    $sql .= ' ORDER BY i.name COLLATE NOCASE';
+    if (
+        $browseHideSupply
+        && $q === ''
+        && ($idExact === '' || !ctype_digit($idExact))
+    ) {
+        // В коротком списке без поиска не показываем черновики «под заказ» (название с ведущим -/–). По поиску — показываются все.
+        $sql .= ' AND NOT (TRIM(IFNULL(i.name, \'\')) LIKE \'-%\' OR TRIM(IFNULL(i.name, \'\')) LIKE \'–%\')';
+    }
+    if ($sort === 'qty_desc') {
+        // Сначала ненулевой остаток; среди нулей — без ведущего «-» (часто черновики/под заказ) выше.
+        $sql .= ' ORDER BY COALESCE(b.quantity, 0) DESC, '
+            . '(CASE WHEN TRIM(IFNULL(i.name, \'\')) LIKE \'-%\' OR TRIM(IFNULL(i.name, \'\')) LIKE \'–%\' THEN 1 ELSE 0 END) ASC, '
+            . 'i.name COLLATE NOCASE';
+    } else {
+        $sql .= ' ORDER BY i.name COLLATE NOCASE';
+    }
     if ($q !== '' && ($idExact === '' || !ctype_digit($idExact))) {
         $limitQ = isset($_GET['limit']) ? (int)$_GET['limit'] : 40;
         if ($limitQ < 1) {
