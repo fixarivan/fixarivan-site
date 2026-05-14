@@ -564,12 +564,14 @@ function parseQuery(){
     const ql = (p.get('lang') || '').toLowerCase();
     if (ql === 'ru' || ql === 'en' || ql === 'fi') q('doc_language').value = ql;
 }
+let invoiceLoadedFromApi = false;
 async function loadExisting(){
     const id = q('document_id').value.trim();
     if (!id) return;
     const res = await fetch(`./api/get_invoice.php?id=${encodeURIComponent(id)}`, { credentials:'same-origin', cache:'no-store' });
     const json = await res.json();
     if (!json.success || !json.data) return;
+    invoiceLoadedFromApi = true;
     const d = json.data;
     q('invoice_date_created').value = d.date_created || '';
     q('invoice_id').value = d.invoice_id || '';
@@ -607,6 +609,53 @@ async function loadExisting(){
     q('removeInvoiceLogo').checked = false;
     updateInvoiceLogoPreviewFromPath(d.invoice_logo || '');
     refreshInvoiceTrackHint();
+}
+/** Строки счёта из order_lines_json при открытии из order_new / Track (счёт ещё не в БД). */
+function invoiceRowFromOrderLine(line) {
+    if (!line || typeof line !== 'object') return null;
+    const name = String(line.name || line.title || line.description || '').trim();
+    if (!name) return null;
+    const qtyRaw = line.qty != null ? line.qty : line.quantity;
+    let qn = normalizeDecimalInput(qtyRaw);
+    if (isNaN(qn) || qn <= 0) qn = 1;
+    const priceRaw = line.sale != null ? line.sale : (line.sale_price != null ? line.sale_price : (line.price != null ? line.price : 0));
+    let price = normalizeDecimalInput(priceRaw);
+    if (isNaN(price)) price = 0;
+    let vat = normalizeDecimalInput(line.vat != null ? line.vat : (line.tax_rate != null ? line.tax_rate : 0));
+    if (isNaN(vat)) vat = 0;
+    vat = coerceVatRate(vat);
+    return { name, qty: qn, price, vat };
+}
+async function prefillInvoiceLinesFromOrder() {
+    if (invoiceLoadedFromApi) return;
+    if (parseItems().length > 0) return;
+    const orderDoc = (q('orderDocumentId') && q('orderDocumentId').value.trim()) || '';
+    const oid = (q('order_id') && q('order_id').value.trim()) || '';
+    const orderKey = orderDoc || oid;
+    if (!orderKey) return;
+    try {
+        const res = await fetch('./api/get_document.php?type=order&id=' + encodeURIComponent(orderKey), { credentials: 'same-origin', cache: 'no-store' });
+        const json = await res.json();
+        if (!json.success || !json.data) return;
+        const raw = json.data.order_lines_json;
+        let lines = [];
+        if (typeof raw === 'string' && raw.trim() !== '') {
+            try {
+                const p = JSON.parse(raw);
+                lines = Array.isArray(p) ? p : [];
+            } catch (e) {
+                lines = [];
+            }
+        } else if (Array.isArray(raw)) {
+            lines = raw;
+        }
+        if (!lines.length) return;
+        const mapped = lines.map(invoiceRowFromOrderLine).filter(Boolean);
+        if (!mapped.length) return;
+        q('itemsBody').innerHTML = '';
+        mapped.forEach((it) => addRow(it));
+        recalcTotals();
+    } catch (e) {}
 }
 q('invoiceLogoFile').addEventListener('change', (e) => {
     const input = e.target;
@@ -733,8 +782,13 @@ q('doc_language').addEventListener('change', () => {
     applyInvoiceFormLang(formLang());
     await loadCompanyPreview();
     await loadExisting().catch(() => {});
+    await prefillInvoiceLinesFromOrder();
     recalcTotals();
     refreshInvoiceTrackHint();
+    if (!q('itemsBody').children.length) {
+        addRow({ name: '' });
+        recalcTotals();
+    }
     if (q('btnCopyInvoiceViewer')) {
         q('btnCopyInvoiceViewer').addEventListener('click', () => copyTextToClipboard(q('linkInvoiceViewer').href));
     }
@@ -743,7 +797,6 @@ q('doc_language').addEventListener('change', () => {
     }
 })();
 q('btnAddRow').addEventListener('click', () => addRow({ name: '' }));
-if (!q('itemsBody').children.length) addRow({ name: '' });
 q('subtotal').addEventListener('input', recalcTotals);
 q('tax_rate').addEventListener('input', recalcTotals);
 q('total_amount').addEventListener('input', recalcTotals);
