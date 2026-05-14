@@ -46,6 +46,16 @@ body.fv-dashboard .nebula {
     background: radial-gradient(ellipse 80% 60% at 50% 18%, rgba(99, 102, 241, 0.24), transparent 65%),
         radial-gradient(ellipse 55% 45% at 88% 72%, rgba(124, 58, 237, 0.14), transparent 55%);
     animation: fv-nebula-pulse 12s ease-in-out infinite;
+    transform: translateZ(0);
+    will-change: opacity;
+    backface-visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.fv-dashboard .nebula {
+        animation: none;
+        opacity: 0.65;
+    }
 }
 
 @keyframes fv-nebula-pulse {
