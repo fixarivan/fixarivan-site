@@ -1385,6 +1385,89 @@
             gap: 14px;
         }
 
+        /* Быстрые заметки (над змейкой) */
+        .dash-quick-notes {
+            margin-bottom: 20px;
+            background: rgba(15, 23, 42, 0.45);
+            border: 1px solid rgba(99, 102, 241, 0.28);
+            border-radius: 16px;
+            padding: 14px 16px 16px;
+        }
+        .dash-quick-notes-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px 14px;
+            margin-bottom: 10px;
+        }
+        .dash-quick-notes-title {
+            margin: 0;
+            color: rgba(248, 250, 252, 0.95);
+            font-size: 1.05rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dash-quick-notes-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .dash-quick-notes-status {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: rgba(148, 163, 184, 0.95);
+        }
+        .dash-quick-notes-status.is-dirty {
+            color: #fcd34d;
+        }
+        .dash-quick-notes-status.is-ok {
+            color: #86efac;
+        }
+        .dash-quick-notes-status.is-err {
+            color: #fca5a5;
+        }
+        .dash-quick-notes-open {
+            color: #a5b4fc;
+            font-size: 0.88rem;
+            font-weight: 600;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .dash-quick-notes-open:hover {
+            text-decoration: underline;
+        }
+        .dash-quick-notes-body {
+            width: 100%;
+            min-height: 110px;
+            max-height: 220px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            background: rgba(11, 18, 32, 0.72);
+            color: #e2e8f0;
+            font-size: 0.92rem;
+            line-height: 1.45;
+            font-family: inherit;
+            resize: vertical;
+        }
+        .dash-quick-notes-body::placeholder {
+            color: rgba(148, 163, 184, 0.7);
+        }
+        .dash-quick-notes-body:focus {
+            outline: 2px solid rgba(99, 102, 241, 0.55);
+            outline-offset: 2px;
+        }
+        .dash-quick-notes-hint {
+            margin: 8px 0 0;
+            font-size: 0.78rem;
+            color: rgba(148, 163, 184, 0.88);
+            line-height: 1.35;
+        }
+
         /* Змейка (дашборд) */
         .snake-section {
             margin-bottom: 28px;
@@ -1842,18 +1925,24 @@
                 <div class="nav-card-desc">Диагностика ПК/ноутбуков; только с существующим заказом (ссылка из Track)</div>
             </a>
 
-            <a href="notes.html" class="nav-card dashboard-card">
-                <span class="nav-card-icon">📝</span>
-                <div class="nav-card-title">Заметки</div>
-                <div class="nav-card-desc">Быстрые заметки в стиле iPhone: поиск, список и текст в SQLite</div>
-            </a>
-
             <a href="admin/settings.php" class="nav-card dashboard-card">
                 <span class="nav-card-icon">🔐</span>
                 <div class="nav-card-title">Настройки безопасности</div>
                 <div class="nav-card-desc">Смена логина и пароля администратора (без дублирования рабочего стола)</div>
             </a>
         </div>
+
+        <section class="dash-quick-notes" id="dashQuickNotes" aria-label="Быстрые заметки">
+            <div class="dash-quick-notes-head">
+                <h2 class="dash-quick-notes-title"><span aria-hidden="true">📝</span> Быстрые заметки</h2>
+                <div class="dash-quick-notes-meta">
+                    <span class="dash-quick-notes-status" id="dashQuickNotesStatus" aria-live="polite"></span>
+                    <a href="notes.html" class="dash-quick-notes-open">Все заметки →</a>
+                </div>
+            </div>
+            <textarea id="dashQuickNotesBody" class="dash-quick-notes-body" placeholder="Телефон, детали заказа, что не забыть…" rows="4" autocomplete="off"></textarea>
+            <p class="dash-quick-notes-hint">Пишите прямо здесь — сохраняется на сервер автоматически. Полный список и поиск — по ссылке «Все заметки». Ctrl/⌘+S — сохранить сразу.</p>
+        </section>
 
         <section class="snake-section" id="snakeSection" aria-label="Мини-игра змейка">
             <div class="snake-head-row">
@@ -2887,5 +2976,110 @@
         });
     </script>
     <script src="js/dashboard_snake.js"></script>
+    <script>
+        (function dashQuickNotes() {
+            var LS_KEY = 'fv_dashboard_quick_note_id';
+            var ta = document.getElementById('dashQuickNotesBody');
+            var st = document.getElementById('dashQuickNotesStatus');
+            if (!ta || !st) return;
+
+            var noteId = '';
+            var saveTimer = null;
+            var loading = true;
+
+            function setStatus(kind, text) {
+                st.classList.remove('is-dirty', 'is-ok', 'is-err');
+                if (kind === 'dirty') st.classList.add('is-dirty');
+                else if (kind === 'ok') st.classList.add('is-ok');
+                else if (kind === 'err') st.classList.add('is-err');
+                st.textContent = text;
+            }
+
+            function parseJsonPayload(j) {
+                var note = (j.data && j.data.note) || j.note;
+                var nid = (j.data && j.data.note_id) || j.note_id;
+                return { note: note, noteId: nid };
+            }
+
+            function api(method, body) {
+                var opt = { method: method, credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } };
+                if (body) opt.body = JSON.stringify(body);
+                return fetch('./api/notes.php', opt).then(function (r) {
+                    return r.json().then(function (j) {
+                        if (!r.ok || j.success === false) throw new Error(j.message || 'Ошибка');
+                        return j;
+                    });
+                });
+            }
+
+            function loadNote(id) {
+                return fetch('./api/notes.php?note_id=' + encodeURIComponent(id), { credentials: 'same-origin' }).then(function (r) {
+                    return r.json().then(function (j) {
+                        if (!r.ok || j.success === false) throw new Error(j.message || 'Ошибка');
+                        var p = parseJsonPayload(j);
+                        if (!p.note) throw new Error('Заметка не найдена');
+                        return p.note;
+                    });
+                });
+            }
+
+            function ensureNote() {
+                noteId = localStorage.getItem(LS_KEY) || '';
+                if (noteId) {
+                    return loadNote(noteId).then(function (note) {
+                        ta.value = note.body || '';
+                    }).catch(function () {
+                        noteId = '';
+                        localStorage.removeItem(LS_KEY);
+                        return ensureNote();
+                    });
+                }
+                return api('POST', { action: 'save', body: '', title: '📌 Быстрый блок (дашборд)' }).then(function (j) {
+                    var p = parseJsonPayload(j);
+                    noteId = p.noteId || '';
+                    if (!noteId) throw new Error('Нет note_id');
+                    localStorage.setItem(LS_KEY, noteId);
+                    ta.value = '';
+                });
+            }
+
+            function saveNow() {
+                if (loading || !noteId) return Promise.resolve();
+                setStatus('ok', 'Сохранение…');
+                return api('POST', { action: 'save', note_id: noteId, body: ta.value }).then(function () {
+                    setStatus('ok', 'Сохранено');
+                }).catch(function (e) {
+                    setStatus('err', e.message || 'Ошибка');
+                });
+            }
+
+            function scheduleSave() {
+                if (loading) return;
+                clearTimeout(saveTimer);
+                setStatus('dirty', 'Изменения…');
+                saveTimer = setTimeout(function () {
+                    saveNow();
+                }, 900);
+            }
+
+            ta.addEventListener('input', scheduleSave);
+            ta.addEventListener('keydown', function (e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    clearTimeout(saveTimer);
+                    saveNow();
+                }
+            });
+
+            setStatus('ok', 'Загрузка…');
+            ensureNote().then(function () {
+                loading = false;
+                setStatus('ok', 'Сохранено');
+            }).catch(function (e) {
+                loading = false;
+                setStatus('err', e.message || 'Не удалось загрузить');
+            });
+        })();
+    </script>
 </body>
 </html>
