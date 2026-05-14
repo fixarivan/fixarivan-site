@@ -148,7 +148,7 @@
             searchPh: 'Поиск: ФИО, тел. (любой формат), email, заказ, код, серийник, модель, тип, проблема, комментарии, дата, статус запчастей, позиции/SKU, № квитанции/счёта, отчёт (токен), примечание оплаты',
             find: 'Найти',
             fAll: 'Все', fActive: 'Активные', fWait: 'Ожидание', fReady: 'К выдаче', fTransit: 'В пути', fDone: 'Завершённые',
-            filterLegend: '«Активные» — не выдан и не отменён. «Ожидание» — ожидание запчастей (по статусу и текстам). «К выдаче» — у клиента «Готово», техника ещё у вас. «В пути» — статус «В пути». «Завершённые» — выдан или отменён.',
+            filterLegend: '«Активные» — не выдан и не отменён. «Ожидание» — ожидание запчастей (по статусу и текстам). «К выдаче» — у клиента «Готово», техника ещё у вас. «В пути» — статус «В пути». «Завершённые» — выдан или отменён; если в карточке только счёт(а) без акта — когда все счета «Оплачен» или «Отменён».',
             sClients: 'Клиентов', sOrders: 'Заказов', sDocs: 'Документов',
             clientTitle: 'Карточка клиента', clientPick: 'Выберите клиента слева',
             noneFound: 'Ничего не найдено',
@@ -192,13 +192,18 @@
             partsStReady: 'Запчасти готовы',
             partsStOrdered: 'Заказано',
             partsStInTransit: 'В пути',
-            ordersLbl: 'Заказы', activeLbl: 'Активн.', waitLbl: 'Ожид.', readyMini: 'К выд.', transitMini: 'Путь',
+            ordersLbl: 'Заказы',
+            sidebarClientTotal: 'Заказов: {n}',
+            sidebarClientSubset: 'В списке: {a} из {b}',
+            /** Подсказка на строке клиента: полные названия как у кнопок фильтров (не сокращения «Путь» и т.д.). */
+            sidebarClientTipLead: 'Сводка по всем заказам клиента:',
             st_in_progress: 'в работе', st_waiting_parts: 'ожидает запчасть', st_in_transit: 'в пути', st_done: 'готово', st_delivered: 'выдано', st_cancelled: 'отменён',
             typeOrder: 'Акт', typeReceipt: 'Квитанция', typeInvoice: 'Счёт', typeReport: 'Отчёт', typeDoc: 'Документ',
         };
         function trackT() { return TRACK_LANG; }
 
         const esc = (v) => { const d = document.createElement('div'); d.textContent = String(v ?? ''); return d.innerHTML; };
+        const escAttr = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/\r?\n/g, ' ');
         const fvErr = (e) => (window.FixariVan?.ui?.humanizeApiError ? window.FixariVan.ui.humanizeApiError(e) : ((e && e.message) || String(e)));
         function trackDigitsOnly(s) {
             return String(s ?? '').replace(/\D/g, '');
@@ -316,10 +321,29 @@
         function pubStatusNorm(o) {
             return String(o.order_status || o.public_status || '').toLowerCase().trim();
         }
+        /** Есть акт заказа — публичный статус и фильтры ведутся по нему. */
+        function trackOrderHasAct(o) {
+            return !!(o.documents && o.documents.some((d) => d.type === 'order'));
+        }
+        /**
+         * Цепочка без акта (например только счёт): считаем завершённой, когда по всем счетам финальный статус
+         * (оплачен или отменён). Частичная оплата / выставлен / просрочен — ещё «в работе».
+         */
+        function isInvoiceOnlyTrackDone(o) {
+            if (!o.documents || !o.documents.length || trackOrderHasAct(o)) return false;
+            const invs = o.documents.filter((d) => String(d.type || '').toLowerCase() === 'invoice');
+            if (!invs.length) return false;
+            return invs.every((d) => {
+                const s = String(d.status || '').toLowerCase();
+                return s === 'paid' || s === 'cancelled';
+            });
+        }
         /** Заказ закрыт по смыслу Track: выдан клиенту или отменён. «Готово» (готов к выдаче) сюда не входит. */
         function isTrackClosed(o) {
             const p = pubStatusNorm(o);
-            return p === 'delivered' || p === 'cancelled';
+            if (p === 'delivered' || p === 'cancelled') return true;
+            if (isInvoiceOnlyTrackDone(o)) return true;
+            return false;
         }
         function isPublicDone(o) {
             return isTrackClosed(o);
@@ -751,12 +775,15 @@
                 const nWait = allO.filter((o) => isPartsWait(o) && !isTrackClosed(o)).length;
                 const nReady = allO.filter((o) => isPublicActive(o) && pubStatusNorm(o) === 'done').length;
                 const nTransit = allO.filter((o) => isPublicActive(o) && pubStatusNorm(o) === 'in_transit').length;
-                const statsLine = `${esc(T.ordersLbl)}: ${allO.length} • ${esc(T.activeLbl)}: ${nAct} • ${esc(T.waitLbl)}: ${nWait} • ${esc(T.readyMini)}: ${nReady} • ${esc(T.transitMini)}: ${nTransit}`;
+                const tip = `${T.sidebarClientTipLead} ${T.ordersLbl}: ${allO.length} · ${T.fActive}: ${nAct} · ${T.fWait}: ${nWait} · ${T.fReady}: ${nReady} · ${T.fTransit}: ${nTransit}`;
+                const statsLine = g.orders.length === allO.length
+                    ? T.sidebarClientTotal.replace('{n}', String(allO.length))
+                    : T.sidebarClientSubset.replace('{a}', String(g.orders.length)).replace('{b}', String(allO.length));
                 return `
-                <div class="client-item${g.key===state.activeKey?' active':''}" data-key="${esc(g.key)}">
+                <div class="client-item${g.key===state.activeKey?' active':''}" data-key="${esc(g.key)}" title="${escAttr(tip)}">
                     <strong>${esc(g.client_name)}</strong>
                     <div class="muted">${esc(g.client_phone || '—')} • ${esc(g.client_email || '—')}</div>
-                    <div class="muted">${statsLine}</div>
+                    <div class="muted">${esc(statsLine)}</div>
                 </div>`;
             }).join('');
             box.querySelectorAll('.client-item').forEach((el) => el.addEventListener('click', () => { state.activeKey = el.getAttribute('data-key') || ''; renderSidebar(); renderDetails(); }));

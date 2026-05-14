@@ -34,7 +34,16 @@ if (!in_array($typeFilter, ['all', 'order', 'receipt', 'report', 'invoice'], tru
 
 try {
     $pdo = getSqliteConnection();
-    $list = documents_list_from_sqlite($pdo, $typeFilter, 50);
+    // Track и др. экраны группируют по order_id: слишком маленький общий лимит отрезал старый акт,
+    // оставляя в выдаче только счёт («Нет акта») и ломая статусы/фильтры.
+    $lim = isset($_GET['limit']) ? (int) $_GET['limit'] : 300;
+    if ($lim < 1) {
+        $lim = 300;
+    }
+    if ($lim > 500) {
+        $lim = 500;
+    }
+    $list = documents_list_from_sqlite($pdo, $typeFilter, $lim);
     $results = [];
     foreach ($list as $row) {
         $results[] = [

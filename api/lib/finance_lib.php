@@ -195,7 +195,11 @@ function fixarivan_finance_receipt_is_unpaid(array $row): bool
     return in_array($ps, ['unpaid', 'pending', ''], true) || $ps === '';
 }
 
-/** Дата оплаты счёта только из явного payment_date (без fallback на date_updated). */
+/**
+ * Дата оплаты счёта для кассового периода: в приоритете payment_date.
+ * Если статус paid, а дата не заполнена (старые записи / импорт), берём дату из date_updated —
+ * иначе оплаченный счёт не попадает в доход и «пропадает» из финансов.
+ */
 function fixarivan_finance_invoice_paid_date(array $row): string
 {
     $st = strtolower(trim((string)($row['status'] ?? '')));
@@ -203,7 +207,15 @@ function fixarivan_finance_invoice_paid_date(array $row): string
         return '';
     }
 
-    return fixarivan_finance_sql_date((string)($row['payment_date'] ?? ''));
+    $pd = fixarivan_finance_sql_date((string)($row['payment_date'] ?? ''));
+    if ($pd !== '') {
+        return $pd;
+    }
+
+    $fb = (string)($row['date_updated'] ?? $row['date_created'] ?? '');
+    $fb = fixarivan_finance_sql_date($fb);
+
+    return $fb;
 }
 
 function fixarivan_finance_invoice_is_overdue(array $row, string $todayYmd): bool
@@ -531,7 +543,7 @@ function fixarivan_finance_overview(PDO $pdo, string $start, string $end, ?strin
             'approx_profit' => round($profitTaxApprox, 2),
         ],
         'notes' => [
-            'revenue_basis' => 'Касса только по явной payment_date. Частичная оплата: доход = amount_paid (если не задано — 0, не total_amount). Счёт paid: только при заполненной payment_date.',
+            'revenue_basis' => 'Касса: квитанции — по payment_date при оплате; счёт paid — по payment_date, если пусто — по дате обновления записи (чтобы старые оплаченные счета не терялись). Частичная оплата квитанции: доход = amount_paid.',
             'expense_basis' => 'Для cash summary/tax расход по запчастям считается по заказам, у которых есть оплаченные квитанции/счета в периоде. Для блока «Запчасти по заказам» расход/продажа считаются по заказам с датой приёма в периоде.',
             'parts_sync' => 'Если в заказе заполнены позиции (order_lines_json), закупка/продажа и маржа по запчастям считаются по строкам (purchase/sale × qty); иначе — по полям parts_purchase_total / parts_sale_total.',
             'labor_orders' => 'Сумма оценки работ по заказам за период: orders.estimated_labor_cost (число); для старых строк без колонки — берётся первое число из public_estimated_cost.',
