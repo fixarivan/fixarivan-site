@@ -115,6 +115,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $limitQ = 100;
         }
         $sql .= ' LIMIT ' . $limitQ;
+    } elseif ($q === '' && ($idExact === '' || !ctype_digit($idExact))) {
+        // Первые N позиций по алфавиту (для picker в новом заказе и т.п.) — только если явно limit=
+        $limitBrowse = isset($_GET['limit']) ? (int)$_GET['limit'] : 0;
+        if ($limitBrowse > 0) {
+            if ($limitBrowse > 200) {
+                $limitBrowse = 200;
+            }
+            $sql .= ' LIMIT ' . $limitBrowse;
+        }
     }
 
     $stmt = $pdo->prepare($sql);

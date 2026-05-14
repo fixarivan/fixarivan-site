@@ -221,7 +221,7 @@
         .lines-table tbody tr:last-child td { border-bottom: none; }
         .lines-table tbody tr:last-child td:first-child { border-radius: 0 0 0 12px; }
         .lines-table tbody tr:last-child td:last-child { border-radius: 0 0 12px 0; }
-        .lines-table td:nth-child(1) { min-width: 200px; }
+        .lines-table td:nth-child(1) { min-width: 260px; }
         .lines-table td:nth-child(2) { width: 88px; max-width: 100px; }
         .lines-table td:nth-child(3),
         .lines-table td:nth-child(4) { width: 104px; max-width: 118px; }
@@ -341,6 +341,145 @@
         .order-type-block.order-type-hidden {
             display: none !important;
         }
+        /* Выбор позиции со склада */
+        .line-name-cell { display: flex; align-items: stretch; gap: 8px; }
+        .line-name-cell .line-name { flex: 1; min-width: 0; }
+        .btn-pick-stock {
+            flex-shrink: 0;
+            align-self: center;
+            padding: 8px 11px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            border-radius: 9px;
+            border: 1.5px solid #6366f1;
+            background: linear-gradient(180deg, #eef2ff 0%, #e0e7ff 100%);
+            color: #312e81;
+            cursor: pointer;
+            white-space: nowrap;
+            line-height: 1.2;
+        }
+        .btn-pick-stock:hover { filter: brightness(1.03); border-color: #4f46e5; }
+        .stock-picker-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.55);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding: max(12px, env(safe-area-inset-bottom, 0px)) 12px 16px;
+            box-sizing: border-box;
+        }
+        .stock-picker-backdrop[hidden] { display: none !important; }
+        .stock-picker-dialog {
+            width: 100%;
+            max-width: 520px;
+            max-height: min(86vh, 640px);
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+        .stock-picker-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 14px 16px;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .stock-picker-head h2 {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #312e81;
+        }
+        .stock-picker-x {
+            border: none;
+            background: #e2e8f0;
+            color: #475569;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            font-size: 1.4rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .stock-picker-x:hover { background: #cbd5e1; }
+        .stock-picker-hint {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin: 0;
+            padding: 10px 16px 0;
+            line-height: 1.45;
+        }
+        .stock-picker-search {
+            margin: 10px 16px 8px;
+            width: calc(100% - 32px);
+            box-sizing: border-box;
+            padding: 11px 12px;
+            border: 1.5px solid #94a3b8;
+            border-radius: 10px;
+            font-size: 15px;
+        }
+        .stock-picker-search:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+        .stock-picker-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 10px 14px;
+            min-height: 120px;
+        }
+        .stock-picker-status {
+            padding: 20px 12px;
+            text-align: center;
+            color: #64748b;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .stock-picker-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            width: 100%;
+            text-align: left;
+            padding: 11px 12px;
+            margin-bottom: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #fff;
+            cursor: pointer;
+            font: inherit;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .stock-picker-item:hover {
+            background: #f8fafc;
+            border-color: #a5b4fc;
+        }
+        .stock-picker-item .spi-name {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 0.95rem;
+        }
+        .stock-picker-item .spi-meta {
+            font-size: 0.8rem;
+            color: #64748b;
+            line-height: 1.35;
+        }
+        @media (min-width: 640px) {
+            .stock-picker-backdrop {
+                align-items: center;
+                padding: 24px;
+            }
+        }
     </style>
     <link rel="stylesheet" href="mobile_fixes.css">
 </head>
@@ -451,6 +590,7 @@
                     <p class="muted show-sale-only" style="margin-top:0;"><strong>Обязательно минимум одна строка.</strong> Название, количество, закуп и продажа: по этим строкам работает склад — резервирование, движения и списание при статусе «готово» / «выдано», как в Track.</p>
                     <p class="muted show-custom-only" style="margin-top:0;">Можно использовать как гибкий список работ, товаров или смешанных позиций. Если добавлены строки, они сохраняются в заказ как обычно и совместимы со складской логикой.</p>
                     <p class="muted show-repair-only">Формат цен в строках: закуп €… / продажа €… — для учёта на складе.</p>
+                    <p class="muted" style="margin-top:8px;">Кнопка <strong>«Склад»</strong> у названия строки открывает список позиций каталога (поиск по названию и артикулу) — подставятся название, закуп/продажа из карточки, ID и галочка «Со склада». Полный каталог по-прежнему в <a href="inventory.html" target="_blank" rel="noopener">складе</a>.</p>
                     <p class="muted" style="margin-top:8px;">Галочка «Со склада» и ID позиции из <a href="inventory.html" target="_blank" rel="noopener">каталога склада</a>: строка не попадает в заявку на закупку; при статусе «готово» / «выдано» списывается остаток (не больше колич.) в строке. «Сразу» — то же со складом, но списание выполняется при сохранении заказа (для срочной выдачи).</p>
                 </div>
             </div>
@@ -566,6 +706,18 @@
         </form>
     </div>
 
+    <div id="stockPickerBackdrop" class="stock-picker-backdrop" hidden>
+        <div class="stock-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="stockPickerTitle">
+            <div class="stock-picker-head">
+                <h2 id="stockPickerTitle">Выбор со склада</h2>
+                <button type="button" class="stock-picker-x" id="stockPickerClose" title="Закрыть" aria-label="Закрыть">×</button>
+            </div>
+            <p class="stock-picker-hint">Поиск по названию, артикулу (SKU) или полю «совместимость». Строка заполнится автоматически; при необходимости поправьте количество или цены.</p>
+            <input type="search" id="stockPickerSearch" class="stock-picker-search" placeholder="Начните вводить или смотрите первые позиции списка…" autocomplete="off">
+            <div id="stockPickerList" class="stock-picker-list"></div>
+        </div>
+    </div>
+
     <script>
         function genId() {
             const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
@@ -575,6 +727,12 @@
 
         function escapeAttr(s) {
             return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        }
+
+        function escapeHtml(s) {
+            const d = document.createElement('div');
+            d.textContent = s == null ? '' : s;
+            return d.innerHTML;
         }
 
         function buildClientPortalMessage(portalUrl) {
@@ -655,7 +813,10 @@
             const deductNow = data && (data.deduct_from_stock === true || data.deduct_from_stock === 1 || data.deductFromStock === true);
             const stockChecked = !deductNow && (fromStock || invId > 0);
             tr.innerHTML =
-                '<td><input type="text" class="line-name" placeholder="Наименование позиции" value="' + escapeAttr(name) + '"></td>' +
+                '<td><div class="line-name-cell">' +
+                '<input type="text" class="line-name" placeholder="Наименование позиции" value="' + escapeAttr(name) + '">' +
+                '<button type="button" class="btn-pick-stock" title="Подобрать позицию из каталога склада">Склад</button>' +
+                '</div></td>' +
                 '<td><input type="number" class="line-qty" placeholder="1" min="0.01" step="any" value="' + escapeAttr(qty) + '"></td>' +
                 '<td><input type="number" class="line-purchase" placeholder="0" min="0" step="0.01" value="' + escapeAttr(p) + '"></td>' +
                 '<td><input type="number" class="line-sale" placeholder="0" min="0" step="0.01" value="' + escapeAttr(s) + '"></td>' +
@@ -664,6 +825,11 @@
                 '<td><input type="number" class="line-inv-id" placeholder="№" min="1" step="1" value="' + escapeAttr(invId) + '" title="ID карточки в каталоге"></td>' +
                 '<td class="line-stock-hint"></td>';
             document.getElementById('linesBody').appendChild(tr);
+            if (data && data.sku != null && String(data.sku).trim() !== '') {
+                tr.dataset.lineSku = String(data.sku).trim();
+            } else {
+                delete tr.dataset.lineSku;
+            }
             wireLineStockRow(tr);
         }
 
@@ -672,7 +838,19 @@
             const dn = tr.querySelector('.line-deduct-now');
             const iid = tr.querySelector('.line-inv-id');
             const hint = tr.querySelector('.line-stock-hint');
+            const nameInp = tr.querySelector('.line-name');
+            const pickBtn = tr.querySelector('.btn-pick-stock');
             if (!cb || !dn || !iid || !hint) return;
+            if (nameInp) {
+                nameInp.addEventListener('input', function () {
+                    delete tr.dataset.lineSku;
+                });
+            }
+            if (pickBtn) {
+                pickBtn.addEventListener('click', function () {
+                    openStockPicker(tr);
+                });
+            }
             cb.addEventListener('change', function () {
                 if (cb.checked) dn.checked = false;
                 if (!cb.checked) hint.textContent = '';
@@ -715,9 +893,13 @@
                 const fromStock = tr.querySelector('.line-from-stock') && tr.querySelector('.line-from-stock').checked;
                 const deductNow = tr.querySelector('.line-deduct-now') && tr.querySelector('.line-deduct-now').checked;
                 const invId = parseInt((tr.querySelector('.line-inv-id') && tr.querySelector('.line-inv-id').value) || '', 10) || 0;
+                const sku = (tr.dataset.lineSku || '').trim();
                 if (!name && invId <= 0) return;
                 if (!name && invId > 0) name = '—';
                 const o = { name: name, qty: qty > 0 ? qty : 1, purchase: purchase, sale: sale };
+                if (sku) {
+                    o.sku = sku;
+                }
                 if (invId > 0) {
                     o.inventory_item_id = invId;
                 }
@@ -765,6 +947,152 @@
                 throw new Error('Некорректный JSON: ' + text.slice(0, 200));
             }
         }
+
+        var stockPickerTargetRow = null;
+        var stockPickerTimer = null;
+
+        function fmtStockMoney(n) {
+            var x = parseFloat(n);
+            if (!isFinite(x)) {
+                return '—';
+            }
+            return x.toFixed(2) + '\u202f€';
+        }
+
+        function stockPickPayload(it) {
+            return {
+                id: it.id,
+                name: it.name,
+                sku: it.sku,
+                default_cost: it.default_cost,
+                sale_price: it.sale_price,
+                quantity: it.quantity
+            };
+        }
+
+        function applyStockPick(tr, it) {
+            if (!tr || !it) return;
+            var nameEl = tr.querySelector('.line-name');
+            var pq = tr.querySelector('.line-purchase');
+            var ps = tr.querySelector('.line-sale');
+            var iid = tr.querySelector('.line-inv-id');
+            var cb = tr.querySelector('.line-from-stock');
+            var dn = tr.querySelector('.line-deduct-now');
+            if (nameEl) nameEl.value = String(it.name || '');
+            if (pq) {
+                var pc = it.default_cost;
+                pq.value = pc != null && pc !== '' && isFinite(parseFloat(pc)) ? String(parseFloat(pc)) : '0';
+            }
+            if (ps) {
+                var sp = it.sale_price;
+                ps.value = sp != null && sp !== '' && isFinite(parseFloat(sp)) ? String(parseFloat(sp)) : '0';
+            }
+            if (iid) iid.value = it.id != null ? String(it.id) : '';
+            if (dn) dn.checked = false;
+            if (cb) cb.checked = true;
+            var sku = String(it.sku || '').trim();
+            if (sku) {
+                tr.dataset.lineSku = sku;
+            } else {
+                delete tr.dataset.lineSku;
+            }
+            if (iid) {
+                iid.dispatchEvent(new Event('blur', { bubbles: false }));
+            }
+        }
+
+        function openStockPicker(tr) {
+            stockPickerTargetRow = tr;
+            var bd = document.getElementById('stockPickerBackdrop');
+            if (!bd) return;
+            bd.hidden = false;
+            var inp = document.getElementById('stockPickerSearch');
+            if (inp) {
+                inp.value = '';
+                inp.focus();
+            }
+            loadStockPickerResults('');
+        }
+
+        function closeStockPicker() {
+            var bd = document.getElementById('stockPickerBackdrop');
+            if (bd) bd.hidden = true;
+            stockPickerTargetRow = null;
+        }
+
+        async function loadStockPickerResults(q) {
+            var list = document.getElementById('stockPickerList');
+            if (!list) return;
+            list.innerHTML = '<div class="stock-picker-status">Загрузка…</div>';
+            try {
+                var url = './api/inventory_list.php?';
+                var term = String(q || '').trim();
+                if (term.length >= 1) {
+                    url += 'q=' + encodeURIComponent(term) + '&limit=100';
+                } else {
+                    url += 'limit=80';
+                }
+                var res = await fetchJson(url);
+                var items = (res && res.data && res.data.items) ? res.data.items : [];
+                if (!items.length) {
+                    list.innerHTML = '<div class="stock-picker-status">Ничего не найдено. Попробуйте другой запрос или откройте <a href="inventory.html" target="_blank" rel="noopener">склад</a>.</div>';
+                    return;
+                }
+                list.innerHTML = items.map(function (it) {
+                    var payload = stockPickPayload(it);
+                    var name = String(it.name || '—');
+                    var sku = String(it.sku || '—');
+                    var qty = it.quantity != null ? it.quantity : 0;
+                    var cost = fmtStockMoney(it.default_cost);
+                    var sale = fmtStockMoney(it.sale_price);
+                    return '<button type="button" class="stock-picker-item" data-item="' + escapeAttr(JSON.stringify(payload)) + '">' +
+                        '<span class="spi-name">' + escapeHtml(name) + '</span>' +
+                        '<span class="spi-meta">' + escapeHtml(sku) + ' · ост.\u00a0' + escapeHtml(String(qty)) + ' · закуп\u00a0' + cost + ' · продажа\u00a0' + sale + '</span>' +
+                        '</button>';
+                }).join('');
+                list.querySelectorAll('.stock-picker-item').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        try {
+                            var raw = btn.getAttribute('data-item');
+                            if (!raw || !stockPickerTargetRow) return;
+                            var parsed = JSON.parse(raw);
+                            applyStockPick(stockPickerTargetRow, parsed);
+                            closeStockPicker();
+                        } catch (e2) {}
+                    });
+                });
+            } catch (e) {
+                list.innerHTML = '<div class="stock-picker-status">Ошибка: ' + escapeHtml(e.message || e) + '</div>';
+            }
+        }
+
+        (function initStockPickerUi() {
+            var bd = document.getElementById('stockPickerBackdrop');
+            var closeBtn = document.getElementById('stockPickerClose');
+            var search = document.getElementById('stockPickerSearch');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeStockPicker);
+            }
+            if (bd) {
+                bd.addEventListener('click', function (ev) {
+                    if (ev.target === bd) closeStockPicker();
+                });
+            }
+            document.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Escape' && bd && !bd.hidden) {
+                    closeStockPicker();
+                }
+            });
+            if (search) {
+                search.addEventListener('input', function () {
+                    if (stockPickerTimer) clearTimeout(stockPickerTimer);
+                    var v = search.value;
+                    stockPickerTimer = setTimeout(function () {
+                        loadStockPickerResults(v);
+                    }, 280);
+                });
+            }
+        })();
 
         function getModeDatasetValue(el, prefix, mode) {
             if (!el || !el.dataset) return '';
