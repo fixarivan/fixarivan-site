@@ -712,7 +712,7 @@
                 <h2 id="stockPickerTitle">Выбор со склада</h2>
                 <button type="button" class="stock-picker-x" id="stockPickerClose" title="Закрыть" aria-label="Закрыть">×</button>
             </div>
-            <p class="stock-picker-hint">Без запроса: только рабочий список (скрыты позиции с именем на «-…» — черновики под заказ; сначала то, что с остатком). <strong>Введите поиск</strong> — покажутся все совпадения, включая «-…». Строка заказа заполнится автоматически.</p>
+            <p class="stock-picker-hint">Без запроса: список без черновиков «-…» и без карточек из заявок по заказам (пометка <code>[REQ …]</code> в складе); сначала позиции с остатком. <strong>Введите поиск</strong> — появятся и такие. Строка заказа заполнится автоматически.</p>
             <input type="search" id="stockPickerSearch" class="stock-picker-search" placeholder="Поиск по складу… (оставьте пустым — короткий список)" autocomplete="off">
             <div id="stockPickerList" class="stock-picker-list"></div>
         </div>
@@ -1036,7 +1036,7 @@
                 var items = (res && res.data && res.data.items) ? res.data.items : [];
                 if (!items.length) {
                     if (term.length < 1) {
-                        list.innerHTML = '<div class="stock-picker-status">Пока пусто: либо нет карточек в каталоге, либо все скрыты как «под заказ» (имя с «-…»). <strong>Введите поиск</strong> — появятся и такие позиции.</div>';
+                        list.innerHTML = '<div class="stock-picker-status">Пока пусто для короткого списка (все карточки попали в скрытые: «-…» или заявка <code>[REQ …]</code>). <strong>Введите поиск</strong> — найдётся любая позиция.</div>';
                     } else {
                         list.innerHTML = '<div class="stock-picker-status">Ничего не найдено. Попробуйте другой запрос или откройте <a href="inventory.html" target="_blank" rel="noopener">склад</a>.</div>';
                     }
