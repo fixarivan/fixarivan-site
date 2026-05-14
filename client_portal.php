@@ -77,6 +77,60 @@ function client_portal_sort_orders(array $rows, string $token): array {
     return $rows;
 }
 
+/**
+ * Короткий хвост номера документа для кнопки в портале (например RCT-…-00J9 → 00J9, FV-2026-0002 → 0002).
+ */
+function client_portal_doc_short_suffix(string $raw, int $maxLen = 4): string
+{
+    $s = trim($raw);
+    if ($s === '' || $s === '—') {
+        return '—';
+    }
+    $lastHyphen = strrpos($s, '-');
+    if ($lastHyphen !== false && $lastHyphen < strlen($s) - 1) {
+        $seg = substr($s, $lastHyphen + 1);
+        if ($seg !== '' && strlen($seg) <= 16 && preg_match('/^[A-Za-z0-9]+$/', $seg)) {
+            if (strlen($seg) > $maxLen) {
+                return substr($seg, -$maxLen);
+            }
+
+            return $seg;
+        }
+    }
+    $alnum = preg_replace('/[^A-Za-z0-9]/', '', $s);
+    if ($alnum !== '' && strlen($alnum) >= $maxLen) {
+        return substr($alnum, -$maxLen);
+    }
+    if ($alnum !== '') {
+        return $alnum;
+    }
+
+    return substr($s, -min(max($maxLen, 4), strlen($s)));
+}
+
+/**
+ * Укороченная строка для бэйджа справа (модель устройства и т.п.).
+ */
+function client_portal_doc_badge_short(string $raw, int $maxLen = 16): string
+{
+    $s = trim($raw);
+    if ($s === '') {
+        return '';
+    }
+    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+        if (mb_strlen($s, 'UTF-8') <= $maxLen) {
+            return $s;
+        }
+
+        return mb_substr($s, 0, max(1, $maxLen - 1), 'UTF-8') . '…';
+    }
+    if (strlen($s) <= $maxLen) {
+        return $s;
+    }
+
+    return substr($s, 0, max(1, $maxLen - 1)) . '…';
+}
+
 try {
     $pdo = getSqliteConnection();
 } catch (Throwable $e) {
@@ -623,6 +677,33 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
         .comment-body { color:#cbd5e1; line-height:1.5; font-size:0.94rem; word-break: break-word; overflow-wrap: anywhere; }
         .doc-btn-wrap { display:flex; flex-wrap:wrap; gap:8px; }
         .doc-btn-wrap .btn { margin:0; }
+        .btn-doc-row {
+            justify-content: space-between;
+            text-align: left;
+            gap: 10px;
+            min-width: 0;
+            max-width: 100%;
+        }
+        .btn-doc-main {
+            flex: 1;
+            min-width: 0;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .btn-doc-badge {
+            flex-shrink: 0;
+            font-size: 0.78rem;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(99, 102, 241, 0.32);
+            border: 1px solid rgba(165, 180, 252, 0.4);
+            color: #e0e7ff;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.2;
+        }
         .detail-shell {
             margin-top: 16px;
             display: grid;
@@ -754,9 +835,15 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
             .doc-btn-wrap .btn {
                 width: 100%;
                 margin: 0;
-                text-align: center;
                 box-sizing: border-box;
+            }
+            .doc-btn-wrap .btn:not(.btn-doc-row) {
+                text-align: center;
                 justify-content: center;
+            }
+            .doc-btn-wrap .btn.btn-doc-row {
+                justify-content: space-between;
+                text-align: left;
             }
             .card h2 { font-size: 1.08rem; word-break: break-word; }
             .row .btn { display: block; width: 100%; text-align: center; box-sizing: border-box; margin-left: 0; margin-right: 0; }
@@ -999,9 +1086,6 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
         .portal-thanks-review {
             margin-bottom: 8px;
         }
-        .portal-thanks-stars-label {
-            color: #fcd34d;
-        }
         .portal-thanks-star-row {
             font-size: 1.25rem;
             letter-spacing: 3px;
@@ -1087,8 +1171,8 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
                 <div class="portal-thanks-card">
                     <div class="portal-thanks-kicker" aria-hidden="true">✨</div>
                     <h3 class="portal-thanks-title"><?= htmlspecialchars($tr['thanks_title']) ?></h3>
-                    <p class="portal-thanks-body"><?= htmlspecialchars($tr['thanks_body']) ?></p>
-                    <p class="portal-thanks-review"><?= htmlspecialchars($tr['google_review_intro']) ?> <strong class="portal-thanks-stars-label"><?= htmlspecialchars($tr['google_review_stars']) ?></strong>.</p>
+                    <p class="portal-thanks-body"><?= nl2br(htmlspecialchars($tr['thanks_body'])) ?></p>
+                    <p class="portal-thanks-review"><?= htmlspecialchars($tr['google_review_intro']) ?></p>
                     <div class="portal-thanks-star-row" aria-hidden="true">★★★★★</div>
                     <a class="btn portal-google-btn" href="<?= htmlspecialchars($googleReviewUrl, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener noreferrer"><?= htmlspecialchars($tr['google_review_cta']) ?></a>
                 </div>
@@ -1153,9 +1237,23 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
                 </div>
             <?php } ?>
 
-            <?php if ($orderTypeMeta['code'] !== 'sale' && trim((string)($featured['document_id'] ?? '')) !== '') { ?>
-                <div class="row" style="margin-top:12px;">
-                    <a class="btn" href="<?= htmlspecialchars('order_view.php?' . http_build_query(['token' => trim((string)($featured['client_token'] ?? $token)), 'lang' => $viewerLang])) ?>"><?= htmlspecialchars($tr['view_act']) ?></a>
+            <?php if ($orderTypeMeta['code'] !== 'sale' && trim((string)($featured['document_id'] ?? '')) !== '') {
+                $actDocId = trim((string)($featured['document_id'] ?? ''));
+                $actShort = client_portal_doc_short_suffix($actDocId, 4);
+                $actDevice = trim((string)($featured['device_model'] ?? ''));
+                $actBadgeRaw = client_portal_doc_badge_short($actDevice, 16);
+                $actBadge = $actBadgeRaw !== '' ? $actBadgeRaw : '—';
+                $actTip = $tr['view_act'] . ': ' . $actDocId;
+                if ($actDevice !== '') {
+                    $actTip .= ' · ' . $actDevice;
+                }
+                $actUrl = 'order_view.php?' . http_build_query(['token' => trim((string)($featured['client_token'] ?? $token)), 'lang' => $viewerLang]);
+                ?>
+                <div class="doc-btn-wrap" style="margin-top:12px;">
+                    <a class="btn btn-secondary btn-doc-row" href="<?= htmlspecialchars($actUrl) ?>" title="<?= htmlspecialchars($actTip) ?>">
+                        <span class="btn-doc-main">📄 <?= htmlspecialchars($tr['doc_act']) ?> #<?= htmlspecialchars($actShort) ?></span>
+                        <span class="btn-doc-badge"><?= htmlspecialchars($actBadge) ?></span>
+                    </a>
                 </div>
             <?php } ?>
         </div>
@@ -1176,9 +1274,14 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
                         $url = 'receipt_view.php?' . http_build_query(['token' => $rt, 'lang' => $viewerLang]);
                         $label = (string)($r['receipt_number'] ?? $r['document_id'] ?? '—');
                         $sum = isset($r['total_amount']) ? (float)$r['total_amount'] : 0.0;
-                        $sumTxt = ' · ' . number_format($sum, 2, ',', ' ') . ' €';
+                        $sumBadge = number_format($sum, 2, ',', ' ') . "\xC2\xA0€";
+                        $short = client_portal_doc_short_suffix($label, 4);
+                        $tip = $tr['view_receipt'] . ': ' . $label . ' · ' . str_replace("\xC2\xA0", ' ', $sumBadge);
                         ?>
-                        <a class="btn btn-secondary" href="<?= htmlspecialchars($url) ?>">🧾 <?= htmlspecialchars($tr['view_receipt']) ?> · <?= htmlspecialchars($label . $sumTxt) ?></a>
+                        <a class="btn btn-secondary btn-doc-row" href="<?= htmlspecialchars($url) ?>" title="<?= htmlspecialchars($tip) ?>">
+                            <span class="btn-doc-main">📄 <?= htmlspecialchars($tr['doc_receipt']) ?> #<?= htmlspecialchars($short) ?></span>
+                            <span class="btn-doc-badge"><?= htmlspecialchars($sumBadge) ?></span>
+                        </a>
                     <?php } ?>
                     </div>
                 <?php } ?>
@@ -1193,12 +1296,18 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
                         $url = 'invoice_view.php?' . http_build_query(['token' => $it, 'lang' => $viewerLang]);
                         $label = (string)($inv['invoice_id'] ?? $inv['document_id'] ?? '—');
                         $sum = isset($inv['total_amount']) ? (float)$inv['total_amount'] : 0.0;
-                        $sumTxt = ' · ' . number_format($sum, 2, ',', ' ') . ' €';
+                        $sumBadge = number_format($sum, 2, ',', ' ') . "\xC2\xA0€";
                         $stInv = trim((string)($inv['status'] ?? ''));
-                        $stExtra = $stInv !== '' ? ' (' . $stInv . ')' : '';
-                        $invBtn = $label . $sumTxt . $stExtra;
+                        $short = client_portal_doc_short_suffix($label, 4);
+                        $tip = $tr['view_invoice'] . ': ' . $label . ' · ' . str_replace("\xC2\xA0", ' ', $sumBadge);
+                        if ($stInv !== '') {
+                            $tip .= ' (' . $stInv . ')';
+                        }
                         ?>
-                        <a class="btn btn-secondary" href="<?= htmlspecialchars($url) ?>">📄 <?= htmlspecialchars($tr['view_invoice']) ?> · <?= htmlspecialchars($invBtn) ?></a>
+                        <a class="btn btn-secondary btn-doc-row" href="<?= htmlspecialchars($url) ?>" title="<?= htmlspecialchars($tip) ?>">
+                            <span class="btn-doc-main">📄 <?= htmlspecialchars($tr['doc_invoice']) ?> #<?= htmlspecialchars($short) ?></span>
+                            <span class="btn-doc-badge"><?= htmlspecialchars($sumBadge) ?></span>
+                        </a>
                     <?php } ?>
                     </div>
                 <?php } ?>
@@ -1213,9 +1322,18 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
                         $url = 'report_view.php?' . http_build_query(['token' => $rt, 'lang' => $viewerLang]);
                         $label = (string)($rep['report_id'] ?? '—');
                         $mod = trim((string)($rep['model'] ?? ''));
-                        $modTxt = $mod !== '' ? ' · ' . $mod : '';
+                        $short = client_portal_doc_short_suffix($label, 4);
+                        $badgeRaw = client_portal_doc_badge_short($mod, 16);
+                        $repBadge = $badgeRaw !== '' ? $badgeRaw : '—';
+                        $repTip = $tr['view_report'] . ': ' . $label;
+                        if ($mod !== '') {
+                            $repTip .= ' · ' . $mod;
+                        }
                         ?>
-                        <a class="btn btn-secondary" href="<?= htmlspecialchars($url) ?>">🔬 <?= htmlspecialchars($tr['view_report']) ?> · <?= htmlspecialchars($label) ?><?= htmlspecialchars($modTxt) ?></a>
+                        <a class="btn btn-secondary btn-doc-row" href="<?= htmlspecialchars($url) ?>" title="<?= htmlspecialchars($repTip) ?>">
+                            <span class="btn-doc-main">🔬 <?= htmlspecialchars($tr['doc_report']) ?> #<?= htmlspecialchars($short) ?></span>
+                            <span class="btn-doc-badge"><?= htmlspecialchars($repBadge) ?></span>
+                        </a>
                     <?php } ?>
                     </div>
                 <?php } ?>
@@ -1235,9 +1353,18 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
                     $url = 'report_view.php?' . http_build_query(['token' => $rt, 'lang' => $viewerLang]);
                     $label = (string)($rep['report_id'] ?? '—');
                     $mod = trim((string)($rep['model'] ?? ''));
-                    $modTxt = $mod !== '' ? ' · ' . $mod : '';
+                    $short = client_portal_doc_short_suffix($label, 4);
+                    $badgeRaw = client_portal_doc_badge_short($mod, 16);
+                    $repBadge = $badgeRaw !== '' ? $badgeRaw : '—';
+                    $repTip = $tr['view_report'] . ': ' . $label;
+                    if ($mod !== '') {
+                        $repTip .= ' · ' . $mod;
+                    }
                     ?>
-                    <a class="btn btn-secondary" href="<?= htmlspecialchars($url) ?>">🔬 <?= htmlspecialchars($tr['view_report']) ?> · <?= htmlspecialchars($label) ?><?= htmlspecialchars($modTxt) ?></a>
+                    <a class="btn btn-secondary btn-doc-row" href="<?= htmlspecialchars($url) ?>" title="<?= htmlspecialchars($repTip) ?>">
+                        <span class="btn-doc-main">🔬 <?= htmlspecialchars($tr['doc_report']) ?> #<?= htmlspecialchars($short) ?></span>
+                        <span class="btn-doc-badge"><?= htmlspecialchars($repBadge) ?></span>
+                    </a>
                 <?php } ?>
                 </div>
             </div>
