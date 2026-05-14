@@ -2359,6 +2359,8 @@
                 dashboardState.statsFetchInFlight = false;
             }
         }
+
+        function updateOrderCards(stats) {
             const pending = document.getElementById('pendingCount');
             const inProgress = document.getElementById('inProgressCount');
             const completed = document.getElementById('completedCount');
