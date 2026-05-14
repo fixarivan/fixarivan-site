@@ -106,6 +106,13 @@ try {
 
     $pdo->beginTransaction();
     try {
+        foreach ($normalized as $idxR => &$lnRes) {
+            if (!is_array($lnRes)) {
+                continue;
+            }
+            fixarivan_order_line_resolve_or_create_inventory_item($pdo, $lnRes, $orderIdForDb, (int) $idxR);
+        }
+        unset($lnRes);
         $deductNotes = fixarivan_order_lines_apply_stock_deductions($pdo, $orderIdForDb, $normalized);
         $linesForJson = fixarivan_order_lines_clean_for_order_json($normalized);
 

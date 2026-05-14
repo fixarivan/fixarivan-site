@@ -435,6 +435,13 @@ function saveOrderFixed(array $data): array {
                     }
                 }
                 unset($lnSku);
+                foreach ($linesForDeduct as $idxPre => &$lnRes) {
+                    if (!is_array($lnRes)) {
+                        continue;
+                    }
+                    fixarivan_order_line_resolve_or_create_inventory_item($pdo, $lnRes, $orderIdForDb, (int) $idxPre);
+                }
+                unset($lnRes);
                 fixarivan_order_lines_apply_stock_deductions($pdo, $orderIdForDb, $linesForDeduct);
                 $linesForDeduct = fixarivan_order_lines_clean_for_order_json($linesForDeduct);
                 $encAfter = json_encode($linesForDeduct, JSON_UNESCAPED_UNICODE);
