@@ -815,7 +815,7 @@
                             <option value="sale">Продажа (позиции + склад)</option>
                             <option value="custom">Нестандарт / другое (позиции + склад)</option>
                         </select>
-                        <p class="order-mode-auto-note" id="orderModeAutoNote">Тип подбирается автоматически по заполненным полям. Измените вручную при необходимости — это отключит авто-подбор до сброса.</p>
+                        <p class="order-mode-auto-note" id="orderModeAutoNote">Тип подбирается автоматически: модель или тип устройства — ремонт; только позиции (без устройства и без текста в описании) — продажа; иначе часто — нестандарт. Ручной выбор отключает авто до сброса.</p>
                         <button type="button" class="link-reset-auto" id="orderModeResetAuto" hidden>Вернуть авто-подбор типа</button>
                     </div>
                     </div>
@@ -1014,10 +1014,13 @@
             if (!hasLines && !hasDevice && !hasProblem) {
                 return 'repair';
             }
-            if (hasProblem && hasDevice) {
+            if (hasLines && !hasDevice && !hasProblem) {
+                return 'sale';
+            }
+            if (hasDevice) {
                 return 'repair';
             }
-            if (hasLines && !hasDevice && !hasProblem) {
+            if (hasLines && !hasProblem) {
                 return 'sale';
             }
             return 'custom';
@@ -1032,7 +1035,7 @@
                 el.classList.add('is-override');
                 if (btn) btn.hidden = false;
             } else {
-                el.textContent = 'Тип подбирается автоматически: устройство и описание — ремонт; только позиции без устройства и текста — продажа; иначе — нестандарт. Ручной выбор ниже отключает авто до сброса.';
+                el.textContent = 'Тип подбирается автоматически: модель или тип устройства — ремонт; только позиции (без устройства и без текста в описании) — продажа; описание или позиции без устройства — нестандарт. Ручной выбор ниже отключает авто до сброса.';
                 el.classList.remove('is-override');
                 if (btn) btn.hidden = true;
             }
