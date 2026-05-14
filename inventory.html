@@ -119,6 +119,13 @@
             }
         }
 
+        @media (max-width: 768px) {
+            body::before {
+                animation: none;
+                opacity: 0.48;
+            }
+        }
+
         .sqlite-degraded-banner {
             display: none;
             margin: 0 24px 16px;
@@ -241,12 +248,12 @@
         }
 
         .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(168, 85, 247, 0.6);
+            transform: translateY(-1.5px);
+            box-shadow: 0 6px 18px rgba(168, 85, 247, 0.48);
         }
 
         .btn:active {
-            transform: translateY(-1px);
+            transform: translateY(0);
         }
 
         /* Stats Grid */
@@ -277,17 +284,17 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 70%);
-            animation: rotate 10s linear infinite;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.12) 0%, transparent 70%);
+            transform: rotate(18deg);
         }
 
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        .stat-card:hover::before {
+            transform: rotate(22deg);
+            transition: transform 0.6s ease;
         }
 
         .stat-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-3px);
             border-color: var(--highlight);
             box-shadow: 0 10px 30px rgba(168, 85, 247, 0.3);
         }
@@ -301,7 +308,11 @@
             font-size: 48px;
             margin-bottom: 12px;
             filter: drop-shadow(0 0 10px var(--glow));
-            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .stat-card:hover .stat-icon {
+            filter: drop-shadow(0 0 14px var(--glow));
+            transition: filter 0.35s ease;
         }
 
         .stat-value {
@@ -411,7 +422,7 @@
         .chip:hover {
             background: var(--accent);
             border-color: var(--highlight);
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
 
         .chip.active {
@@ -467,21 +478,23 @@
             content: '';
             position: absolute;
             top: 0;
-            left: -100%;
+            left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.2), transparent);
-            transition: left 0.5s ease;
+            opacity: 0;
+            background: linear-gradient(105deg, transparent 40%, rgba(168, 85, 247, 0.14) 50%, transparent 60%);
+            transition: opacity 0.35s ease;
+            pointer-events: none;
         }
 
         .item-card:hover::before {
-            left: 100%;
+            opacity: 1;
         }
 
         .item-card:hover {
-            transform: translateY(-8px);
+            transform: translateY(-4px);
             border-color: var(--highlight);
-            box-shadow: 0 12px 40px rgba(168, 85, 247, 0.4);
+            box-shadow: 0 10px 32px rgba(168, 85, 247, 0.38);
         }
 
         .item-content {
@@ -506,7 +519,11 @@
         .item-icon {
             font-size: 52px;
             filter: drop-shadow(0 0 10px var(--glow));
-            animation: float 3s ease-in-out infinite;
+        }
+
+        .item-card:hover .item-icon {
+            filter: drop-shadow(0 0 14px var(--glow));
+            transition: filter 0.35s ease;
         }
 
         .item-image {
@@ -534,10 +551,10 @@
         }
 
         .status-low-stock {
-            background: rgba(245, 158, 11, 0.2);
+            background: rgba(245, 158, 11, 0.22);
             color: var(--warning);
             border: 1px solid var(--warning);
-            animation: pulse 2s ease-in-out infinite;
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.28);
         }
 
         .status-out-of-stock {
@@ -843,8 +860,8 @@
 
         .shopping-item.priority-urgent {
             border-color: var(--danger);
-            background: rgba(239, 68, 68, 0.1);
-            animation: pulse 2s ease-in-out infinite;
+            background: rgba(239, 68, 68, 0.12);
+            box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.45), 0 0 14px rgba(239, 68, 68, 0.2);
         }
 
         .shopping-item.priority-high {
@@ -1563,7 +1580,6 @@
             console.log('orderPurchaseQueueLines after loadInventory()', orderPurchaseQueueLines);
             renderInventory();
             updateStats();
-            updateUsageChart();
             renderCategoryAnalytics();
         }
 
@@ -1919,8 +1935,11 @@
 
         function renderInventory() {
             const grid = document.getElementById('inventoryGrid');
+            const finish = () => { scheduleUsageChartUpdate(); };
+
             if (currentFilter === 'for-order') {
                 grid.innerHTML = renderOrderQueueCardsHtml();
+                finish();
                 return;
             }
 
@@ -1963,6 +1982,7 @@
                         <p style="color: var(--text-secondary);">Попробуйте изменить фильтры или добавьте новую позицию</p>
                     </div>
                 `;
+                finish();
                 return;
             }
 
@@ -2010,6 +2030,7 @@
                     </div>
                 `;
             }).join('');
+            finish();
         }
 
         function getStatus(item) {
@@ -2221,7 +2242,6 @@
             saveInventory();
             renderInventory();
             updateStats();
-            updateUsageChart();
             closeModal();
         }
 
@@ -2270,7 +2290,6 @@
             saveInventory();
             renderInventory();
             updateStats();
-            updateUsageChart();
             closeAdjustModal();
         }
 
@@ -2371,6 +2390,15 @@
 
         function closeViewModal() {
             document.getElementById('viewModal').classList.remove('show');
+        }
+
+        let invUsageChartDebounce = null;
+        function scheduleUsageChartUpdate() {
+            clearTimeout(invUsageChartDebounce);
+            invUsageChartDebounce = setTimeout(function () {
+                invUsageChartDebounce = null;
+                updateUsageChart();
+            }, 320);
         }
 
         // Usage Chart

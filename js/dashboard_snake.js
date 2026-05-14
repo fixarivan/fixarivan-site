@@ -497,6 +497,16 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+            clearGameTimer();
+            return;
+        }
+        if (running && !paused) {
+            startGameTimer();
+        }
+    });
+
     window.addEventListener('beforeunload', function () {
         clearGameTimer();
     });

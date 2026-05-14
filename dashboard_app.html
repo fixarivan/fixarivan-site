@@ -2130,7 +2130,11 @@
             recentDocumentsExpanded: false,
             dbStatusToastShown: false,
             sqliteDegradedNotified: false,
-            calendarSummary: null
+            calendarSummary: null,
+            statsFetchInFlight: false,
+            recentFetchInFlight: false,
+            calendarFetchInFlight: false,
+            dbCheckInFlight: false
         };
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -2151,13 +2155,33 @@
             initializeDashboard();
         });
 
+        function dashScheduleSecondaryLoad() {
+            const run = () => {
+                loadRecentDocuments();
+                loadDashboardCalendar();
+            };
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(() => run(), { timeout: 1800 });
+            } else {
+                setTimeout(run, 120);
+            }
+        }
+
+        function dashScheduleDbCheckIdle() {
+            const run = () => checkDatabaseStatus();
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(() => run(), { timeout: 2500 });
+            } else {
+                setTimeout(run, 200);
+            }
+        }
+
         function initializeDashboard() {
             bindRefreshButton();
             setupNotificationHandlers();
             loadStatistics(true);
-            loadRecentDocuments();
-            loadDashboardCalendar();
-            checkDatabaseStatus();
+            dashScheduleSecondaryLoad();
+            dashScheduleDbCheckIdle();
             startAutoRefresh();
             document.addEventListener('visibilitychange', handleVisibilityChange);
         }
@@ -2198,24 +2222,26 @@
             if (dashboardState.recentIntervalId) clearInterval(dashboardState.recentIntervalId);
             if (dashboardState.dbIntervalId) clearInterval(dashboardState.dbIntervalId);
 
+            const jitter = () => Math.floor(Math.random() * 5000);
+
             dashboardState.statsIntervalId = setInterval(() => {
                 if (!document.hidden) {
                     loadStatistics();
                 }
-            }, 30000);
+            }, 30000 + jitter());
 
             dashboardState.recentIntervalId = setInterval(() => {
                 if (!document.hidden) {
                     loadRecentDocuments();
                     loadDashboardCalendar();
                 }
-            }, 60000);
+            }, 60000 + jitter());
 
             dashboardState.dbIntervalId = setInterval(() => {
                 if (!document.hidden) {
                     checkDatabaseStatus();
                 }
-            }, 30000);
+            }, 30000 + jitter());
         }
 
         function setStatisticsLoading(isLoading) {
@@ -2281,10 +2307,14 @@
         }
 
         async function loadStatistics(force = false) {
+            if (dashboardState.statsFetchInFlight && !force) {
+                return;
+            }
             if (dashboardState.statsLoading && !force) {
                 return;
             }
 
+            dashboardState.statsFetchInFlight = true;
             setStatisticsLoading(true);
 
             try {
@@ -2326,10 +2356,9 @@
                 loadInventoryFromCache();
             } finally {
                 setStatisticsLoading(false);
+                dashboardState.statsFetchInFlight = false;
             }
         }
-
-        function updateOrderCards(stats) {
             const pending = document.getElementById('pendingCount');
             const inProgress = document.getElementById('inProgressCount');
             const completed = document.getElementById('completedCount');
@@ -2540,7 +2569,7 @@
         function renderRecentDocumentsList(docList) {
             const container = document.getElementById('recentDocuments');
             if (!container) return;
-            const limit = 5;
+            const limit = 12;
             const expanded = dashboardState.recentDocumentsExpanded === true;
             const visibleDocs = expanded ? docList : docList.slice(0, limit);
             const typeLabelFallback = { order: 'Акт', receipt: 'Квитанция', invoice: 'Счёт', report: 'Отчёт' };
@@ -2645,9 +2674,13 @@
         }
 
         async function loadRecentDocuments() {
+            if (dashboardState.recentFetchInFlight) {
+                return;
+            }
             const container = document.getElementById('recentDocuments');
             if (!container) return;
 
+            dashboardState.recentFetchInFlight = true;
             try {
                 const result = await fetchJson('./api/get_recent_documents.php');
                 const dataBlock = result.data && typeof result.data === 'object' ? result.data : {};
@@ -2671,7 +2704,7 @@
 
                 if (result.success && docList.length) {
                     dashboardState.allRecentDocuments = docList;
-                    dashboardState.recentDocuments = docList.slice(0, 5);
+                    dashboardState.recentDocuments = docList.slice(0, 12);
                     renderRecentDocumentsList(docList);
                 } else {
                     dashboardState.recentDocuments = [];
@@ -2693,6 +2726,8 @@
                         <p>Попробуйте обновить страницу позже</p>
                     </div>
                 `;
+            } finally {
+                dashboardState.recentFetchInFlight = false;
             }
         }
 
@@ -2771,7 +2806,9 @@
             const todayEl = document.getElementById('dashEventsToday');
             const upcomingEl = document.getElementById('dashEventsUpcoming');
             if (!overdueEl || !todayEl || !upcomingEl) return;
+            if (dashboardState.calendarFetchInFlight) return;
 
+            dashboardState.calendarFetchInFlight = true;
             try {
                 const result = await fetchJson('./api/calendar_events.php?summary=1', { credentials: 'same-origin' });
                 const { today, upcoming, overdue } = pickCalendarSummaryPayload(result);
@@ -2789,6 +2826,8 @@
                 upcomingEl.innerHTML = errHtml;
                 dashboardState.calendarSummary = null;
                 refreshNotifications();
+            } finally {
+                dashboardState.calendarFetchInFlight = false;
             }
         }
 
@@ -2884,7 +2923,9 @@
             const statusLight = document.getElementById('statusLight');
             const statusText = document.getElementById('statusText');
             if (!statusLight || !statusText) return;
+            if (dashboardState.dbCheckInFlight) return;
 
+            dashboardState.dbCheckInFlight = true;
             try {
                 const data = await fetchJson('./api/db_status.php');
                 if (data.status === 'connected') {
@@ -2910,6 +2951,8 @@
                     showToast('Не удалось проверить подключение к базе данных: ' + humanizeErr(error), 'warning');
                     dashboardState.dbStatusToastShown = true;
                 }
+            } finally {
+                dashboardState.dbCheckInFlight = false;
             }
         }
 
