@@ -58,6 +58,14 @@ body.fv-dashboard .nebula {
     }
 }
 
+/* Мобильные: пульсация туманности каждый кадр пересчитывает большой fixed-слой — выключаем без потери вида */
+@media (max-width: 768px) {
+    body.fv-dashboard .nebula {
+        animation: none;
+        opacity: 0.62;
+    }
+}
+
 @keyframes fv-nebula-pulse {
     0%,
     100% {
@@ -201,6 +209,10 @@ body.fv-dashboard .logo-tagline {
 
     body.fv-dashboard .logo-wordmark-row {
         gap: 0.5rem;
+    }
+
+    body.fv-dashboard .logo-space-van .fv-brand-mark-img {
+        animation: none;
     }
 }
 
