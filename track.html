@@ -61,6 +61,20 @@
         .docs li { border-top:1px dashed rgba(255,255,255,0.10); padding:8px 0; }
         .doc-actions { display:flex; gap:6px; flex-wrap: wrap; margin-top:6px; }
         .doc-actions button { padding:6px 8px; font-size:.82rem; }
+        .track-wa {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: .82rem;
+            padding: 6px 10px;
+            border-radius: 8px;
+            text-decoration: none;
+            border: 1px solid rgba(37, 211, 102, 0.45);
+            background: rgba(37, 211, 102, 0.14);
+            color: inherit;
+        }
+        .track-wa:hover { background: rgba(37, 211, 102, 0.24); }
+        .track-wa.is-disabled { opacity: .45; pointer-events: none; cursor: not-allowed; }
         .payment-mini { font-size: 0.88rem; margin-top: 4px; opacity: 0.92; }
         .order-lines-box { margin-top:12px; border-top:1px dashed rgba(255,255,255,0.14); padding-top:10px; }
         .order-lines-box .title { font-weight: 600; margin-bottom: 6px; }
@@ -167,6 +181,11 @@
             noOrderDoc: 'Нет акта заказа — статус недоступен',
             rec: 'Квитанция', inv: 'Счёт', repMob: 'Отчёт (mobile)', repPc: 'Отчёт (PC)',
             portalOpen: 'Открыть портал', portalCopy: 'Скопировать ссылку',
+            waClient: 'WhatsApp клиенту',
+            waClientHint: 'Написать в WhatsApp на номер из карточки клиента.',
+            waOrder: 'WhatsApp по заказу',
+            waOrderHint: 'Текст формируется по статусу заказа — в WhatsApp его можно изменить перед отправкой.',
+            waNoPhoneHint: 'Нет номера телефона для WhatsApp',
             problemNone: 'Проблема не указана',
             view: 'Просмотр', edit: 'Редактировать', pdf: 'PDF',
             orderLinesTitle: '📋 Позиции заказа',
@@ -215,6 +234,77 @@
             const pd = trackDigitsOnly(phoneRaw);
             if (pd.length < 4) return false;
             return pd.includes(qd) || qd.includes(pd);
+        }
+        /** Минимальная длина набора для wa.me */
+        function trackWhatsappPhoneOk(phoneRaw) {
+            return trackDigitsOnly(phoneRaw).length >= 8;
+        }
+        function trackWhatsappUrl(phoneRaw, message) {
+            const d = trackDigitsOnly(phoneRaw);
+            if (d.length < 8) return '';
+            const t = String(message || '').trim();
+            if (!t) return 'https://wa.me/' + d;
+            return 'https://wa.me/' + d + '?text=' + encodeURIComponent(t);
+        }
+        /** Дата для текста клиенту (дд.мм.гггг) */
+        function trackFormatDateRuFromOrder(raw) {
+            const v = toDateInputValue(raw);
+            if (!v) return '';
+            const p = v.split('-');
+            if (p.length !== 3) return '';
+            return `${p[2]}.${p[1]}.${p[0]}`;
+        }
+        /**
+         * Текст WhatsApp по статусу запчастей и публичному статусу заказа (удобно править перед отправкой в приложении).
+         */
+        function trackBuildWhatsappOrderMessage(g, o) {
+            const hello = (name) => {
+                const n = String(name || '').trim().split(/\s+/).filter(Boolean)[0];
+                return n ? ('Здравствуйте, ' + n + '!') : 'Здравствуйте!';
+            };
+            const orderId = String(o.order_id || '').trim() || '—';
+            const device = String(o.device_model || '').trim() || resolveTrackCardTitle(o);
+            const problem = String(o.problem_description || '').trim();
+            const pst = String(o.parts_status || '').toLowerCase().trim();
+            const pub = pubStatusNorm(o);
+            const expRu = trackFormatDateRuFromOrder(o.public_expected_date);
+            const H = hello(g.client_name);
+            if (pst === 'ready' || pst === 'partial') {
+                return H + ' Запчасти по заказу ' + orderId + ' (' + device + ') на месте. Подскажите, когда Вам удобно согласовать дату и время ремонта? — FixariVan, Turku';
+            }
+            if (pst === 'waiting' || pst === 'ordered' || pst === 'in_transit') {
+                let s = H + ' По заказу ' + orderId + ' (' + device + ') ожидаем поставку запчастей';
+                if (expRu) s += ' (ориентир по дате: ' + expRu + ')';
+                s += '. Напишем, как только можно будет назначить визит. — FixariVan';
+                return s;
+            }
+            if (pub === 'done') {
+                return H + ' По заказу ' + orderId + ': ремонт завершён, устройство готово к выдаче. Напишите удобное время, чтобы забрать. — FixariVan';
+            }
+            if (pub === 'delivered') {
+                return H + ' Спасибо, что обратились в FixariVan! Если понадобится помощь — пишите.';
+            }
+            if (pub === 'waiting_parts') {
+                let s = H + ' По заказу ' + orderId + ' (' + device + ') пока ожидаем запчасти';
+                if (expRu) s += ' (ориентир: ' + expRu + ')';
+                s += '. Держим в курсе. — FixariVan';
+                return s;
+            }
+            if (pub === 'in_transit') {
+                return H + ' По заказу ' + orderId + ' (' + device + ') — статус «в пути». Сообщим о готовности. — FixariVan';
+            }
+            let s = H + ' FixariVan, заказ ' + orderId;
+            if (device && device !== '—') s += ': ' + device;
+            if (problem) s += '. ' + problem;
+            s += '. Если есть вопросы — напишите сюда.';
+            return s;
+        }
+        function trackBuildWhatsappClientHello(g) {
+            const H = (() => {
+                const n = String(g.client_name || '').trim().split(/\s+/).filter(Boolean)[0];
+                return n ? ('Здравствуйте, ' + n + '!') : 'Здравствуйте!';
+            })();
+            return H + ' Связь с мастерской FixariVan (Turku). Чем могу помочь?';
         }
         function trackStrIncludesLoose(hay, needle) {
             return String(hay ?? '').toLowerCase().includes(needle);
@@ -811,9 +901,15 @@
                 if (g.client_phone) qs.set('client_phone', g.client_phone);
                 if (g.client_email) qs.set('client_email', g.client_email);
                 const qstr = qs.toString();
+                const waPhone = g.client_phone || '';
+                const waClientUrl = trackWhatsappUrl(waPhone, trackBuildWhatsappClientHello(g));
+                const waClientHtml = trackWhatsappPhoneOk(waPhone)
+                    ? `<a href="${escAttr(waClientUrl)}" class="track-wa" target="_blank" rel="noopener noreferrer" title="${escAttr(T.waClientHint)}">${esc(T.waClient)}</a>`
+                    : `<span class="track-wa is-disabled" title="${escAttr(T.waNoPhoneHint)}">${esc(T.waClient)}</span>`;
                 quickBar.style.display = 'flex';
                 quickBar.innerHTML = `<a href="order_new.html${qstr ? '?' + qstr : ''}">${esc(T.clientQuickNewOrder)}</a>` +
-                    `<a href="inventory.html">${esc(T.clientQuickStock)}</a>`;
+                    `<a href="inventory.html">${esc(T.clientQuickStock)}</a>` +
+                    waClientHtml;
             }
             tree.innerHTML = g.orders.map((o) => {
                 const orderDoc = o.documents.find((d) => d.type === 'order');
@@ -914,6 +1010,9 @@
                     <div class="doc-actions" style="margin:8px 0;">
                         <button type="button" class="primary portal-open" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalOpen)}</button>
                         <button type="button" class="portal-copy" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalCopy)}</button>
+                        ${trackWhatsappPhoneOk(g.client_phone || '')
+                            ? `<a href="${escAttr(trackWhatsappUrl(g.client_phone || '', trackBuildWhatsappOrderMessage(g, o)))}" class="track-wa" target="_blank" rel="noopener noreferrer" title="${escAttr(T.waOrderHint)}">${esc(T.waOrder)}</a>`
+                            : `<span class="track-wa is-disabled" title="${escAttr(T.waNoPhoneHint)}">${esc(T.waOrder)}</span>`}
                     </div>
                     <div class="muted">${esc(o.problem_description || T.problemNone)}</div>
                     <ul class="docs">
