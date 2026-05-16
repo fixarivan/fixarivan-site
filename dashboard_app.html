@@ -1527,6 +1527,34 @@
             gap: 10px;
             margin-bottom: 12px;
         }
+        .snake-head-left {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px 16px;
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+        .snake-toggle-btn {
+            flex-shrink: 0;
+            align-self: center;
+            min-height: 44px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(99, 102, 241, 0.45);
+            background: rgba(99, 102, 241, 0.2);
+            color: #e0e7ff;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .snake-toggle-btn:hover {
+            background: rgba(99, 102, 241, 0.32);
+        }
+        .snake-panel[hidden] {
+            display: none !important;
+        }
         .snake-section-title {
             margin: 0;
             color: rgba(248, 250, 252, 0.95);
@@ -2018,47 +2046,52 @@
 
         <section class="snake-section" id="snakeSection" aria-label="Мини-игра змейка">
             <div class="snake-head-row">
-                <h2 class="snake-section-title"><span aria-hidden="true">🐍</span> Змейка</h2>
-                <div class="snake-stats">
-                    <span>Очки: <strong id="snakeScoreEl">0</strong></span>
-                    <span>Рекорд: <strong id="snakeBestEl">0</strong></span>
+                <div class="snake-head-left">
+                    <h2 class="snake-section-title"><span aria-hidden="true">🐍</span> Змейка</h2>
+                    <div class="snake-stats">
+                        <span>Очки: <strong id="snakeScoreEl">0</strong></span>
+                        <span>Рекорд: <strong id="snakeBestEl">0</strong></span>
+                    </div>
                 </div>
+                <button type="button" class="snake-toggle-btn" id="snakeToggleBtn" aria-expanded="false" aria-controls="snakePanel">🐍 Показать змейку</button>
             </div>
-            <div class="snake-speed-row">
-                <label class="snake-speed-label" for="snakeSpeedSelect">Скорость</label>
-                <select id="snakeSpeedSelect" class="snake-speed-select" aria-label="Скорость игры">
-                    <option value="slow">Медленно</option>
-                    <option value="normal" selected>Норма</option>
-                    <option value="fast">Быстро</option>
-                </select>
+            <div id="snakePanel" class="snake-panel" hidden>
+                <div class="snake-speed-row">
+                    <label class="snake-speed-label" for="snakeSpeedSelect">Скорость</label>
+                    <select id="snakeSpeedSelect" class="snake-speed-select" aria-label="Скорость игры">
+                        <option value="slow">Медленно</option>
+                        <option value="normal" selected>Норма</option>
+                        <option value="fast">Быстро</option>
+                    </select>
+                </div>
+                <div class="snake-canvas-wrap" id="snakeCanvasWrap">
+                    <canvas id="snakeCanvas" width="400" height="400" aria-label="Игровое поле змейки"></canvas>
+                    <div class="snake-overlay" id="snakeOverlay" role="status">Нажмите «Старт» или стрелку</div>
+                </div>
+                <div class="snake-dpad" id="snakeDpad">
+                    <span class="snake-dpad-spacer" aria-hidden="true"></span>
+                    <button type="button" class="snake-dir-btn" id="snakeBtnUp" aria-label="Вверх">↑</button>
+                    <span class="snake-dpad-spacer" aria-hidden="true"></span>
+                    <button type="button" class="snake-dir-btn" id="snakeBtnLeft" aria-label="Влево">←</button>
+                    <span class="snake-dpad-spacer" aria-hidden="true"></span>
+                    <button type="button" class="snake-dir-btn" id="snakeBtnRight" aria-label="Вправо">→</button>
+                    <span class="snake-dpad-spacer" aria-hidden="true"></span>
+                    <button type="button" class="snake-dir-btn" id="snakeBtnDown" aria-label="Вниз">↓</button>
+                    <span class="snake-dpad-spacer" aria-hidden="true"></span>
+                </div>
+                <div class="snake-actions">
+                    <button type="button" class="snake-action-btn" id="snakeBtnStart">Старт</button>
+                    <button type="button" class="snake-action-btn secondary" id="snakeBtnPause" disabled>Пауза</button>
+                </div>
+                <p class="snake-hint">Управление — четыре кнопки. Собирайте фишки FixariVan. Скорость можно сменить до старта или во время паузы.</p>
             </div>
-            <div class="snake-canvas-wrap" id="snakeCanvasWrap">
-                <canvas id="snakeCanvas" width="400" height="400" aria-label="Игровое поле змейки"></canvas>
-                <div class="snake-overlay" id="snakeOverlay" role="status">Нажмите «Старт» или стрелку</div>
-            </div>
-            <div class="snake-dpad" id="snakeDpad">
-                <span class="snake-dpad-spacer" aria-hidden="true"></span>
-                <button type="button" class="snake-dir-btn" id="snakeBtnUp" aria-label="Вверх">↑</button>
-                <span class="snake-dpad-spacer" aria-hidden="true"></span>
-                <button type="button" class="snake-dir-btn" id="snakeBtnLeft" aria-label="Влево">←</button>
-                <span class="snake-dpad-spacer" aria-hidden="true"></span>
-                <button type="button" class="snake-dir-btn" id="snakeBtnRight" aria-label="Вправо">→</button>
-                <span class="snake-dpad-spacer" aria-hidden="true"></span>
-                <button type="button" class="snake-dir-btn" id="snakeBtnDown" aria-label="Вниз">↓</button>
-                <span class="snake-dpad-spacer" aria-hidden="true"></span>
-            </div>
-            <div class="snake-actions">
-                <button type="button" class="snake-action-btn" id="snakeBtnStart">Старт</button>
-                <button type="button" class="snake-action-btn secondary" id="snakeBtnPause" disabled>Пауза</button>
-            </div>
-            <p class="snake-hint">Управление — четыре кнопки. Собирайте фишки FixariVan. Скорость можно сменить до старта или во время паузы.</p>
         </section>
 
         <!-- Recent Documents -->
         <div class="recent-section">
             <h2 class="section-title">
                 <span>📄</span>
-                <span>Последние документы (SQLite)</span>
+                <span>Последние 5 документов (SQLite)</span>
             </h2>
             <div id="recentDocuments" class="document-list">
                 <div class="loading">
@@ -2142,6 +2175,9 @@
             ? window.FixariVan.ui.humanizeApiError(e)
             : ((e && e.message) || String(e));
 
+        /** Сколько документов показывать свёрнуто на дашборде */
+        const DASHBOARD_RECENT_DOCS_LIMIT = 5;
+
         const dashboardState = {
             statsLoading: false,
             lastStats: null,
@@ -2204,8 +2240,34 @@
             }
         }
 
+        function setupSnakeToggle() {
+            const btn = document.getElementById('snakeToggleBtn');
+            const panel = document.getElementById('snakePanel');
+            if (!btn || !panel) return;
+            btn.addEventListener('click', () => {
+                const isHidden = panel.hasAttribute('hidden');
+                if (isHidden) {
+                    panel.removeAttribute('hidden');
+                    btn.setAttribute('aria-expanded', 'true');
+                    btn.textContent = 'Скрыть змейку';
+                    requestAnimationFrame(() => {
+                        window.dispatchEvent(new Event('resize'));
+                    });
+                } else {
+                    const pauseBtn = document.getElementById('snakeBtnPause');
+                    if (pauseBtn && !pauseBtn.disabled) {
+                        pauseBtn.click();
+                    }
+                    panel.setAttribute('hidden', '');
+                    btn.setAttribute('aria-expanded', 'false');
+                    btn.textContent = '🐍 Показать змейку';
+                }
+            });
+        }
+
         function initializeDashboard() {
             bindRefreshButton();
+            setupSnakeToggle();
             setupNotificationHandlers();
             loadStatistics(true);
             dashScheduleSecondaryLoad();
@@ -2599,7 +2661,7 @@
         function renderRecentDocumentsList(docList) {
             const container = document.getElementById('recentDocuments');
             if (!container) return;
-            const limit = 12;
+            const limit = DASHBOARD_RECENT_DOCS_LIMIT;
             const expanded = dashboardState.recentDocumentsExpanded === true;
             const visibleDocs = expanded ? docList : docList.slice(0, limit);
             const typeLabelFallback = { order: 'Акт', receipt: 'Квитанция', invoice: 'Счёт', report: 'Отчёт' };
@@ -2734,7 +2796,7 @@
 
                 if (result.success && docList.length) {
                     dashboardState.allRecentDocuments = docList;
-                    dashboardState.recentDocuments = docList.slice(0, 12);
+                    dashboardState.recentDocuments = docList.slice(0, DASHBOARD_RECENT_DOCS_LIMIT);
                     renderRecentDocumentsList(docList);
                 } else {
                     dashboardState.recentDocuments = [];
@@ -3122,30 +3184,44 @@
                 });
             }
 
-            function ensureNote() {
+            /** Только загрузка существующей привязки из localStorage — без создания пустых строк в БД */
+            function loadExistingQuickNote() {
                 noteId = localStorage.getItem(LS_KEY) || '';
-                if (noteId) {
-                    return loadNote(noteId).then(function (note) {
-                        ta.value = note.body || '';
-                    }).catch(function () {
-                        noteId = '';
-                        localStorage.removeItem(LS_KEY);
-                        return ensureNote();
-                    });
+                if (!noteId) {
+                    return Promise.resolve();
                 }
-                return api('POST', { action: 'save', body: '', title: '📌 Быстрый блок (дашборд)' }).then(function (j) {
-                    var p = parseJsonPayload(j);
-                    noteId = p.noteId || '';
-                    if (!noteId) throw new Error('Нет note_id');
-                    localStorage.setItem(LS_KEY, noteId);
-                    ta.value = '';
+                return loadNote(noteId).then(function (note) {
+                    ta.value = note.body || '';
+                }).catch(function () {
+                    noteId = '';
+                    localStorage.removeItem(LS_KEY);
                 });
             }
 
             function saveNow() {
-                if (loading || !noteId) return Promise.resolve();
+                if (loading) return Promise.resolve();
+                var text = ta.value;
+                var trimmed = String(text).trim();
+
+                if (!noteId) {
+                    if (!trimmed) {
+                        setStatus('ok', '');
+                        return Promise.resolve();
+                    }
+                    setStatus('ok', 'Сохранение…');
+                    return api('POST', { action: 'save', body: text, title: '📌 Быстрый блок (дашборд)' }).then(function (j) {
+                        var p = parseJsonPayload(j);
+                        noteId = p.noteId || '';
+                        if (!noteId) throw new Error('Нет note_id');
+                        localStorage.setItem(LS_KEY, noteId);
+                        setStatus('ok', 'Сохранено');
+                    }).catch(function (e) {
+                        setStatus('err', e.message || 'Ошибка');
+                    });
+                }
+
                 setStatus('ok', 'Сохранение…');
-                return api('POST', { action: 'save', note_id: noteId, body: ta.value }).then(function () {
+                return api('POST', { action: 'save', note_id: noteId, body: text }).then(function () {
                     setStatus('ok', 'Сохранено');
                 }).catch(function (e) {
                     setStatus('err', e.message || 'Ошибка');
@@ -3154,6 +3230,7 @@
 
             function scheduleSave() {
                 if (loading) return;
+                if (!noteId && !String(ta.value).trim()) return;
                 clearTimeout(saveTimer);
                 setStatus('dirty', 'Изменения…');
                 saveTimer = setTimeout(function () {
@@ -3165,15 +3242,16 @@
             ta.addEventListener('keydown', function (e) {
                 if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                     e.preventDefault();
+                    if (!noteId && !String(ta.value).trim()) return;
                     clearTimeout(saveTimer);
                     saveNow();
                 }
             });
 
             setStatus('ok', 'Загрузка…');
-            ensureNote().then(function () {
+            loadExistingQuickNote().then(function () {
                 loading = false;
-                setStatus('ok', 'Сохранено');
+                setStatus('ok', noteId ? 'Сохранено' : '');
             }).catch(function (e) {
                 loading = false;
                 setStatus('err', e.message || 'Не удалось загрузить');

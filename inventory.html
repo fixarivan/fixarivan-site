@@ -123,6 +123,54 @@
             body::before {
                 animation: none;
                 opacity: 0.48;
+                will-change: auto;
+            }
+
+            /*
+             * Скролл / compositing: backdrop-filter на карточках + sticky header дают просадку FPS (как на дашборде).
+             * Сплошной фон вместо blur; без entrance-анимаций на десятках .item-card.
+             */
+            .header,
+            .page-header,
+            .stat-card,
+            .controls,
+            .item-card {
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
+            .header {
+                background: rgba(45, 27, 78, 0.98);
+            }
+            .page-header,
+            .stat-card,
+            .controls,
+            .item-card {
+                background: rgba(42, 24, 72, 0.94);
+            }
+            .modal {
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                background: rgba(0, 0, 0, 0.92);
+            }
+            .page-header,
+            .stat-card,
+            .controls,
+            .item-card {
+                animation: none;
+            }
+            .stat-icon,
+            .item-icon,
+            .stat-card:hover .stat-icon,
+            .item-card:hover .item-icon {
+                filter: none;
+            }
+
+            .modal-content {
+                padding: 24px;
+            }
+
+            .item-actions {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -950,16 +998,6 @@
             opacity: 0.5;
         }
 
-        @media (max-width: 768px) {
-            /* Сетка склада и шапка страницы — см. mobile_fixes.css (.inventory-page) */
-            .modal-content {
-                padding: 24px;
-            }
-
-            .item-actions {
-                grid-template-columns: 1fr;
-            }
-        }
     </style>
     <link rel="stylesheet" href="mobile_fixes.css">
 </head>
