@@ -5,13 +5,18 @@ on:
     branches:
       - main
 
+# До перехода раннера на Node 24 по умолчанию (июнь 2026): убираем предупреждения
+# про deprecated Node 20 для JS-actions — см. https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check commit message for [deploy]
         id: check_commit
