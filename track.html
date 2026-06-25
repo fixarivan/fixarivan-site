@@ -102,8 +102,8 @@
     </style>
     <link rel="stylesheet" href="css/fixarivan-theme.css">
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625saas">
-    <link rel="stylesheet" href="css/track-modern.css?v=20250625stock">
-    <script src="js/track_ui.js?v=20250625multi"></script>
+    <link rel="stylesheet" href="css/track-modern.css?v=20250625polish">
+    <script src="js/track_ui.js?v=20250625polish"></script>
 </head>
 <body class="fv-page track-page">
     <div class="top">
@@ -120,20 +120,24 @@
 
     <div class="layout">
         <aside class="card track-sidebar">
-            <div class="search-row" style="grid-template-columns: 1fr auto;">
-                <input id="qGlobal" placeholder="Поиск: имя, телефон, устройство, проблема, номер заказа">
-                <button id="btnSearch" class="primary">Найти</button>
-            </div>
-            <div class="quick-filters">
-                <button id="fAll" class="active">Все</button>
-                <button id="fActive">Активные</button>
-                <button id="fWait">Ожидание</button>
-                <button id="fReady">К выдаче</button>
-                <button id="fTransit">В пути</button>
-                <button id="fDone">Завершённые</button>
-            </div>
-            <div class="track-help" id="trackFilterHelp">
-                <button type="button" class="track-help-toggle" aria-expanded="false">ⓘ Фильтры</button>
+            <details class="track-sidebar-tools" id="trackSidebarTools">
+                <summary class="track-sidebar-tools-summary">Поиск и фильтры</summary>
+                <div class="track-sidebar-tools-body">
+                    <div class="search-row" style="grid-template-columns: 1fr auto;">
+                        <input id="qGlobal" placeholder="Поиск: имя, телефон, устройство, проблема, номер заказа">
+                        <button id="btnSearch" class="primary">Найти</button>
+                    </div>
+                    <div class="quick-filters">
+                        <button id="fAll" class="active">Все</button>
+                        <button id="fActive">Активные</button>
+                        <button id="fWait">Ожидание</button>
+                        <button id="fReady">К выдаче</button>
+                        <button id="fTransit">В пути</button>
+                        <button id="fDone">Завершённые</button>
+                    </div>
+                </div>
+            </details>
+            <div class="track-help track-help--hidden" id="trackFilterHelp" hidden>
                 <div class="track-help-panel" id="trackFilterLegend"></div>
             </div>
             <div class="stats">
@@ -942,19 +946,29 @@
             </article>`;
         }
 
-        function trackStatusStepperHtml(o) {
+        function trackStatusStepperHtml(o, opts) {
+            const compact = !!(opts && opts.compact);
             const pub = pubStatusNorm(o) || 'in_progress';
-            const steps = [
-                { id: 'accepted', label: 'Принят', icon: '✓' },
-                { id: 'diagnosis', label: 'Диагностика', icon: '🔍' },
-                { id: 'parts', label: 'Запчасти', icon: '📦' },
-                { id: 'repair', label: 'Ремонт', icon: '🔧' },
-                { id: 'ready', label: 'Готово', icon: '✓' },
+            const steps = compact ? [
+                { id: 'accepted', label: 'Прин', title: 'Принят', icon: '✓' },
+                { id: 'diagnosis', label: 'Диаг', title: 'Диагностика', icon: '🔍' },
+                { id: 'parts', label: 'Запч', title: 'Запчасти', icon: '📦' },
+                { id: 'repair', label: 'Рем', title: 'Ремонт', icon: '🔧' },
+                { id: 'ready', label: 'Гот', title: 'Готово', icon: '✓' },
+            ] : [
+                { id: 'accepted', label: 'Принят', title: 'Принят', icon: '✓' },
+                { id: 'diagnosis', label: 'Диагностика', title: 'Диагностика', icon: '🔍' },
+                { id: 'parts', label: 'Запчасти', title: 'Запчасти', icon: '📦' },
+                { id: 'repair', label: 'Ремонт', title: 'Ремонт', icon: '🔧' },
+                { id: 'ready', label: 'Готово', title: 'Готово', icon: '✓' },
             ];
+            const stepperCls = compact ? 'track-status-stepper track-status-stepper--compact' : 'track-status-stepper';
+            const renderStep = (s, cls) => {
+                const t = esc(s.title || s.label);
+                return `<div class="track-step ${cls}" title="${t}"><span class="track-step-icon" aria-hidden="true">${s.icon}</span><span class="track-step-label">${esc(s.label)}</span></div>`;
+            };
             if (isTrackClosed(o)) {
-                return `<div class="track-status-stepper">${steps.map((s) =>
-                    `<div class="track-step is-done"><span class="track-step-icon" aria-hidden="true">${s.icon}</span><span class="track-step-label">${esc(s.label)}</span></div>`
-                ).join('')}</div>`;
+                return `<div class="${stepperCls}">${steps.map((s) => renderStep(s, 'is-done')).join('')}</div>`;
             }
             let activeIdx = 1;
             if (isPartsWait(o)) activeIdx = 2;
@@ -962,9 +976,9 @@
             else if (pub === 'cancelled') activeIdx = -1;
             else if (pub === 'in_progress' || pub === 'waiting_parts') activeIdx = 3;
             else if (pub === 'delivered') activeIdx = 4;
-            return `<div class="track-status-stepper">${steps.map((s, i) => {
+            return `<div class="${stepperCls}">${steps.map((s, i) => {
                 const cls = activeIdx < 0 ? 'is-muted' : (i < activeIdx ? 'is-done' : (i === activeIdx ? 'is-active' : ''));
-                return `<div class="track-step ${cls}"><span class="track-step-icon" aria-hidden="true">${s.icon}</span><span class="track-step-label">${esc(s.label)}</span></div>`;
+                return renderStep(s, cls);
             }).join('')}</div>`;
         }
 
@@ -1033,8 +1047,8 @@
                     <div class="track-rail-widget">
                         <div class="track-rail-label">Статус заказа</div>
                         <div class="track-rail-badges">${trackOrderBadgeHtml(o)}${isPartsWait(o) ? ' <span class="badge wait badge-lg">' + esc(T.waitBadge) + '</span>' : ''}</div>
-                        ${trackStatusStepperHtml(o)}
-                        <div class="track-rail-muted track-rail-date">${esc(T.expectedDateLbl)}: ${esc(expDateRu || '—')}</div>
+                        ${trackStatusStepperHtml(o, { compact: true })}
+                        <div class="track-rail-muted track-rail-date" title="${esc(T.expectedDateLbl)}">Дата: ${esc(expDateRu || '—')}</div>
                     </div>
                     <div class="track-rail-widget">
                         <div class="track-rail-label">Финансы · все заказы</div>
@@ -1193,16 +1207,20 @@
                             </div>
                             ${portalLangSelectHtml(orderDocId, o.language)}
                         </div>
-                        ${trackHelpPanelHtml(T.expectedDateHint)}
                     `) +
-                    trackSectionHtml('communication', '💬', 'Связь с клиентом', 'Комментарий для портала', `
-                        <div class="track-comment-col">
-                            <label class="track-field-label">${esc(T.publicLbl)}</label>
-                            <textarea class="track-internal track-public-comment" data-doc="${esc(orderDocId)}" placeholder="${esc(T.publicPh)}">${esc(pc)}</textarea>
+                    trackSectionHtml('comments', '💬', 'Комментарии', 'Клиент и мастер', `
+                        <div class="track-comment-grid">
+                            <div class="track-comment-col">
+                                <label class="track-field-label">${esc(T.publicLbl)}</label>
+                                <textarea class="track-internal track-public-comment" data-doc="${esc(orderDocId)}" placeholder="${esc(T.publicPh)}" rows="3">${esc(pc)}</textarea>
+                            </div>
+                            <div class="track-comment-col">
+                                <label class="track-field-label">${esc(T.internalLbl)}</label>
+                                <textarea class="track-internal track-internal-comment" data-doc="${esc(orderDocId)}" placeholder="${esc(T.internalPh)}" rows="3">${esc(ic)}</textarea>
+                            </div>
                         </div>
                     `) +
                     trackSectionHtml('pricing', '💰', 'Стоимость', 'Работа и итог', `
-                        ${trackHelpPanelHtml(T.workCostHint)}
                         ${trackPricingSummaryInnerHtml()}
                         <div class="track-work-wrap${showWorkCost ? '' : ' is-hidden'}" data-order-doc-id="${esc(orderDocId)}">
                             <div class="track-work-head"><div class="track-work-title">${esc(T.workCostLbl)}</div></div>
@@ -1212,10 +1230,8 @@
                         </div>
                     `) +
                     trackSectionHtml('parts', '🔧', 'Запчасти', 'Позиции заказа и склад', `
-                        ${trackHelpPanelHtml(T.orderLinesHint + ' ' + T.orderLinesSupplyHint)}
                         <div class="order-lines-box" data-order-doc-id="${esc(orderDocId)}" data-order-id="${esc(o.order_id || '')}">
                             <div class="title">${esc(T.orderLinesTitle)}</div>
-                            <div class="muted order-lines-stock-hint">${esc(T.orderLinesHint)}</div>
                             <div class="order-lines-table-wrap">
                                 <table class="order-lines-table">
                                     <thead><tr>
@@ -1251,12 +1267,6 @@
                             </div>
                         </div>
                         <div class="track-doc-list">${docCardsHtml || '<div class="track-rail-muted">—</div>'}</div>
-                    `) +
-                    trackSectionHtml('internal', '📝', 'Внутренние заметки', 'Только для мастера', `
-                        <div class="track-comment-col">
-                            <label class="track-field-label">${esc(T.internalLbl)}</label>
-                            <textarea class="track-internal track-internal-comment" data-doc="${esc(orderDocId)}" placeholder="${esc(T.internalPh)}">${esc(ic)}</textarea>
-                        </div>
                     `)
                 ) : `<div class="muted" style="margin:8px 0;">${esc(T.noOrderDoc)}</div>`;
                 return `
@@ -2198,8 +2208,22 @@
         document.getElementById('fTransit').addEventListener('click', () => setMode('transit'));
         document.getElementById('fDone').addEventListener('click', () => setMode('done'));
 
+        function initTrackSidebarToolsCollapse() {
+            const tools = document.getElementById('trackSidebarTools');
+            if (!tools) return;
+            const mq = window.matchMedia('(max-width: 768px)');
+            const sync = () => {
+                if (mq.matches) tools.removeAttribute('open');
+                else tools.setAttribute('open', '');
+            };
+            sync();
+            if (typeof mq.addEventListener === 'function') mq.addEventListener('change', sync);
+            else if (typeof mq.addListener === 'function') mq.addListener(sync);
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             initTrackStockPickerUi();
+            initTrackSidebarToolsCollapse();
             applyTrackStaticI18n();
             loadPrefs();
             try {

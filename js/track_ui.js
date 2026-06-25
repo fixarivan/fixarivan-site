@@ -8,20 +8,18 @@
     const SECTION_KEY = 'fixarivan_track_sections_v1';
     const SECTION_DEFAULTS_DESKTOP = {
         info: true,
-        communication: true,
+        comments: true,
         pricing: true,
         parts: true,
         documents: false,
-        internal: false,
     };
 
     const SECTION_DEFAULTS_MOBILE = {
         info: true,
-        communication: false,
+        comments: true,
         pricing: false,
         parts: true,
         documents: false,
-        internal: false,
     };
 
     function isTrackMobileUi() {
@@ -38,7 +36,12 @@
             const raw = localStorage.getItem(SECTION_KEY);
             if (!raw) return { ...defaults };
             const p = JSON.parse(raw);
-            return (p && typeof p === 'object') ? { ...defaults, ...p } : { ...defaults };
+            if (!p || typeof p !== 'object') return { ...defaults };
+            if (p.comments === undefined) {
+                if (p.communication === false && p.internal === false) p.comments = false;
+                else if (p.communication === true || p.internal === true) p.comments = true;
+            }
+            return { ...defaults, ...p };
         } catch (_) {
             return { ...defaults };
         }
