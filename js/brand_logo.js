@@ -4,6 +4,15 @@
 (function () {
     'use strict';
 
+    function hideDefaultBrand(host) {
+        host.querySelectorAll('.fv-brand-default').forEach(function (el) {
+            el.classList.add('is-hidden');
+            el.setAttribute('aria-hidden', 'true');
+            el.setAttribute('hidden', '');
+            el.style.setProperty('display', 'none', 'important');
+        });
+    }
+
     function applyBrandLogo(logoUrl) {
         if (!logoUrl) return;
         var url = String(logoUrl).replace(/^\.\//, '');
@@ -16,15 +25,36 @@
         document.querySelectorAll('[data-fv-brand-logo]').forEach(function (host) {
             var custom = host.querySelector('.fv-brand-logo-custom');
             if (!custom) return;
+
+            var slot = host.querySelector('.fv-brand-logo-slot');
+            if (slot) {
+                slot.classList.add('fv-brand-logo-slot--custom');
+            }
+
+            hideDefaultBrand(host);
+            host.classList.add('has-custom-brand-logo');
+
+            custom.onload = function () {
+                hideDefaultBrand(host);
+            };
+            custom.onerror = function () {
+                host.classList.remove('has-custom-brand-logo');
+                if (slot) slot.classList.remove('fv-brand-logo-slot--custom');
+                host.querySelectorAll('.fv-brand-default').forEach(function (el) {
+                    el.classList.remove('is-hidden');
+                    el.removeAttribute('aria-hidden');
+                    el.removeAttribute('hidden');
+                    el.style.removeProperty('display');
+                });
+                custom.classList.add('is-hidden');
+                custom.setAttribute('hidden', '');
+            };
+
             custom.src = url;
             custom.removeAttribute('hidden');
             custom.classList.remove('is-hidden');
-            host.classList.add('has-custom-brand-logo');
-            host.querySelectorAll('.fv-brand-default').forEach(function (el) {
-                el.classList.add('is-hidden');
-                el.setAttribute('aria-hidden', 'true');
-            });
             custom.removeAttribute('aria-hidden');
+            custom.style.removeProperty('display');
         });
     }
 

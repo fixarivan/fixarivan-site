@@ -241,11 +241,21 @@ body.fv-inventory .fv-site-logo .fv-brand-subtitle {
 .fv-brand-default.is-hidden,
 .fv-brand-logo-custom.is-hidden,
 .fv-brand-logo-custom[hidden],
-[data-fv-brand-logo].has-custom-brand-logo .fv-brand-default {
+[data-fv-brand-logo].has-custom-brand-logo .fv-brand-default,
+.fv-brand-logo-slot:has(.fv-brand-logo-custom:not(.is-hidden):not([hidden])) .fv-brand-default,
+.fv-brand-logo-slot.fv-brand-logo-slot--custom .fv-brand-default {
     display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    pointer-events: none !important;
 }
 
-[data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-custom {
+[data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-custom,
+.fv-brand-logo-slot:has(.fv-brand-logo-custom:not(.is-hidden):not([hidden])) .fv-brand-logo-custom {
     display: block !important;
     visibility: visible;
     width: auto;
@@ -254,26 +264,36 @@ body.fv-inventory .fv-site-logo .fv-brand-subtitle {
     object-position: center;
 }
 
-body.fv-dashboard [data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-slot {
+body.fv-dashboard [data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-slot,
+body.fv-dashboard .fv-brand-logo-slot:has(.fv-brand-logo-custom:not(.is-hidden):not([hidden])),
+body.fv-dashboard .fv-brand-logo-slot.fv-brand-logo-slot--custom {
     width: min(100%, 300px);
-    height: 72px;
-    max-height: 72px;
+    height: auto;
+    min-height: 0;
+    max-height: 96px;
+    overflow: hidden;
 }
 
-body.fv-dashboard [data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-custom {
+body.fv-dashboard [data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-custom,
+body.fv-dashboard .fv-brand-logo-slot:has(.fv-brand-logo-custom:not(.is-hidden):not([hidden])) .fv-brand-logo-custom {
     max-width: 100%;
-    max-height: 72px;
+    max-height: 96px;
 }
 
-body.fv-inventory [data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-slot--header {
+body.fv-inventory [data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-slot--header,
+body.fv-inventory .fv-brand-logo-slot--header:has(.fv-brand-logo-custom:not(.is-hidden):not([hidden])),
+body.fv-inventory .fv-brand-logo-slot--header.fv-brand-logo-slot--custom {
     width: min(220px, 42vw);
-    height: 48px;
-    max-height: 48px;
+    height: auto;
+    min-height: 0;
+    max-height: 56px;
+    overflow: hidden;
 }
 
-body.fv-inventory [data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-custom {
+body.fv-inventory [data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-custom,
+body.fv-inventory .fv-brand-logo-slot--header:has(.fv-brand-logo-custom:not(.is-hidden):not([hidden])) .fv-brand-logo-custom {
     max-width: 100%;
-    max-height: 48px;
+    max-height: 56px;
 }
 
 @media (max-width: 480px) {
