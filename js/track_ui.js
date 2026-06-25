@@ -6,7 +6,7 @@
     'use strict';
 
     const SECTION_KEY = 'fixarivan_track_sections_v1';
-    const SECTION_DEFAULTS = {
+    const SECTION_DEFAULTS_DESKTOP = {
         info: true,
         communication: true,
         pricing: true,
@@ -15,14 +15,32 @@
         internal: false,
     };
 
+    const SECTION_DEFAULTS_MOBILE = {
+        info: true,
+        communication: false,
+        pricing: false,
+        parts: true,
+        documents: false,
+        internal: false,
+    };
+
+    function isTrackMobileUi() {
+        return typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+    }
+
+    function sectionDefaultsForViewport() {
+        return isTrackMobileUi() ? { ...SECTION_DEFAULTS_MOBILE } : { ...SECTION_DEFAULTS_DESKTOP };
+    }
+
     function loadSectionPrefs() {
+        const defaults = sectionDefaultsForViewport();
         try {
             const raw = localStorage.getItem(SECTION_KEY);
-            if (!raw) return { ...SECTION_DEFAULTS };
+            if (!raw) return { ...defaults };
             const p = JSON.parse(raw);
-            return (p && typeof p === 'object') ? { ...SECTION_DEFAULTS, ...p } : { ...SECTION_DEFAULTS };
+            return (p && typeof p === 'object') ? { ...defaults, ...p } : { ...defaults };
         } catch (_) {
-            return { ...SECTION_DEFAULTS };
+            return { ...defaults };
         }
     }
 
@@ -99,15 +117,16 @@
 
     function timelineEventLabel(d, T) {
         const type = String(d.type || '').toLowerCase();
+        const st = String(d.status || '').toLowerCase();
         if (type === 'order') return 'Заказ создан';
-        if (type === 'receipt') return 'Квитанция';
+        if (type === 'receipt') return st === 'paid' ? 'Оплата получена' : 'Квитанция';
         if (type === 'invoice') {
-            const st = String(d.status || '').toLowerCase();
-            if (st === 'issued' || st === 'paid') return 'Счёт отправлен';
-            return 'Счёт';
+            if (st === 'paid') return 'Счёт оплачен';
+            if (st === 'issued') return 'Счёт отправлен';
+            return 'Счёт создан';
         }
-        if (type === 'report') return 'Отчёт';
-        return T.typeDoc || 'Документ';
+        if (type === 'report') return 'Отчёт создан';
+        return T.typeDoc || 'Событие';
     }
 
     function buildTimelineItems(docs, T) {
@@ -178,12 +197,26 @@
 
     function updatePricingSummary(root, orderDocId) {
         if (!orderDocId) return;
-        const box = root.querySelector('.order-lines-box[data-order-doc-id="' + orderDocId.replace(/"/g, '\\"') + '"]');
-        if (!box) return;
-        const card = box.closest('.order-card');
-        if (!card) return;
-        const p = calcPricingFromBox(box);
-        card.querySelectorAll(`[data-pricing-field]`).forEach((el) => {
+        const scope = root || document;
+        const q = orderDocId.replace(/"/g, '\\"');
+        const box = scope.querySelector('.order-lines-box[data-order-doc-id="' + q + '"]');
+        let p = { labour: 0, partsSale: 0, discount: 0, total: 0, profit: 0, margin: 0 };
+        if (box) {
+            p = calcPricingFromBox(box);
+            applyPricingToContainer(box.closest('.order-card'), p);
+        } else {
+            const workInp = scope.querySelector('.track-public-estimated-cost[data-doc="' + q + '"]');
+            if (workInp) {
+                p.labour = parseDecimal(workInp.value);
+                p.total = p.labour;
+            }
+        }
+        applyPricingToContainer(scope.querySelector('.track-rail-finance[data-order-doc-id="' + q + '"]'), p);
+    }
+
+    function applyPricingToContainer(container, p) {
+        if (!container) return;
+        container.querySelectorAll('[data-pricing-field]').forEach((el) => {
             const field = el.getAttribute('data-pricing-field');
             if (field === 'labour') el.textContent = formatEuro(p.labour);
             else if (field === 'parts') el.textContent = formatEuro(p.partsSale);
@@ -192,7 +225,7 @@
             else if (field === 'profit') el.textContent = formatEuro(p.profit);
             else if (field === 'margin') el.textContent = p.margin.toFixed(1).replace('.', ',') + ' %';
         });
-        const summaryTotal = card.querySelector('[data-summary-total]');
+        const summaryTotal = container.querySelector('[data-summary-total]');
         if (summaryTotal) summaryTotal.textContent = formatEuro(p.total);
     }
 

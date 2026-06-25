@@ -303,6 +303,17 @@
         flex-wrap: wrap;
         min-width: 0;
         max-width: 100%;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .track-page .top h1 {
+        font-size: 1.12rem;
+        line-height: 1.2;
+    }
+
+    .track-page .top a {
+        font-size: 0.82rem;
     }
 
     .track-page .layout {
@@ -313,10 +324,14 @@
     .track-page .card {
         min-width: 0;
         max-width: 100%;
+        padding: 10px 12px;
+        border-radius: 12px;
     }
 
     .track-page .search-row {
         min-width: 0;
+        gap: 6px;
+        margin-bottom: 8px;
     }
 
     .track-page .list {
@@ -330,8 +345,41 @@
     }
 
     body.track-page {
-        padding-left: max(12px, env(safe-area-inset-left, 0px));
-        padding-right: max(12px, env(safe-area-inset-right, 0px));
+        padding: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+    }
+
+    .track-page input,
+    .track-page select,
+    .track-page textarea,
+    .track-page .track-select,
+    .track-page .track-expected-date {
+        font-size: 16px !important;
+    }
+
+    .track-page button,
+    .track-page .primary {
+        min-height: 40px;
+        box-sizing: border-box;
+    }
+
+    .track-page .doc-actions button {
+        min-height: 40px;
+        padding: 8px 12px;
+    }
+
+    .track-page .track-comment-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .track-page .track-field-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .track-page .track-select,
+    .track-page .track-expected-date {
+        max-width: none;
+        width: 100%;
     }
 }
 
@@ -345,6 +393,10 @@
         width: 100%;
         box-sizing: border-box;
     }
+
+    .track-page .track-top-hint {
+        display: none;
+    }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -353,22 +405,28 @@
 @media (max-width: 768px) {
     .dashboard-page .container {
         max-width: 100%;
-        padding-left: max(16px, env(safe-area-inset-left, 0px));
-        padding-right: max(16px, env(safe-area-inset-right, 0px));
+        padding: 12px 10px max(24px, env(safe-area-inset-bottom, 16px));
         box-sizing: border-box;
     }
 
     .dashboard-page .header {
         max-width: 100%;
         box-sizing: border-box;
+        padding-top: 28px;
+        padding-bottom: 10px;
+        margin-bottom: 14px;
     }
 
     .dashboard-page .logo-wordmark-row {
-        gap: 0.45rem;
+        gap: 0.35rem;
     }
 
     .dashboard-page .logo-space-van .fv-brand-mark-img {
-        width: clamp(2.15rem, 9vw, 2.85rem);
+        width: clamp(1.9rem, 8vw, 2.45rem);
+    }
+
+    .dashboard-page .logo-tagline {
+        display: none;
     }
 
     .dashboard-page .nav-grid {
@@ -379,12 +437,207 @@
     .dashboard-page .metrics-section {
         max-width: 100%;
         box-sizing: border-box;
+        padding: 12px 10px;
+        margin-bottom: 12px;
+        border-radius: 14px;
     }
 
-    /* Последние документы: колонка, главная кнопка на всю ширину */
+    .dashboard-page .metrics-header {
+        margin-bottom: 10px;
+    }
+
+    .dashboard-page .metrics-title {
+        font-size: 1rem;
+    }
+
+    .dashboard-page .metrics-meta {
+        font-size: 0.74rem;
+        line-height: 1.3;
+    }
+
+    .dashboard-page .metrics-actions {
+        width: 100%;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .dashboard-page .metrics-refresh {
+        padding: 8px 12px;
+        font-size: 0.82rem;
+    }
+
+    /* Компактные KPI */
+    .dashboard-page .dash-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .dashboard-page .dash-kpi-card {
+        min-height: 0;
+        padding: 10px;
+        border-radius: 12px;
+        gap: 4px;
+    }
+
+    .dashboard-page .dash-kpi-value {
+        font-size: 1.35rem;
+    }
+
+    .dashboard-page .dash-kpi-title {
+        font-size: 0.72rem;
+    }
+
+    .dashboard-page .dash-kpi-hint,
+    .dashboard-page .dash-kpi-trend {
+        display: none;
+    }
+
+    .dashboard-page .dash-period-filter {
+        gap: 6px;
+        margin-bottom: 10px;
+    }
+
+    .dashboard-page .dash-period-btn,
+    .dashboard-page .dash-chart-range-btn,
+    .dashboard-page .dash-period-apply {
+        padding: 6px 10px;
+        font-size: 0.76rem;
+    }
+
+    .dashboard-page .dash-period-custom {
+        width: 100%;
+    }
+
+    /* Графики и второй блок аналитики — только десктоп */
+    .dashboard-page .dash-analytics-grid {
+        display: none;
+    }
+
+    /* Финансы: оставляем KPI, убираем лишний текст */
+    .dashboard-page #dashFinancialSection .metrics-meta {
+        display: none;
+    }
+
+    /* Склад: компактнее заголовок */
+    .dashboard-page #inventoryMetricsSection .metrics-header {
+        margin-bottom: 8px;
+    }
+
+    /* События: одна колонка, без «ближайших 7 дней» */
+    .dashboard-page .dash-calendar-section {
+        margin-bottom: 10px;
+        padding: 12px 10px;
+    }
+
+    .dashboard-page .dash-calendar-head {
+        margin-bottom: 8px;
+    }
+
+    .dashboard-page .dash-calendar-head h2 {
+        font-size: 1rem;
+    }
+
+    .dashboard-page .dash-calendar-cols {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .dashboard-page .dash-cal-col {
+        min-height: 0;
+        padding: 10px;
+    }
+
+    .dashboard-page .dash-cal-col.upcoming {
+        display: none;
+    }
+
+    .dashboard-page .dash-cal-col h3 {
+        margin-bottom: 6px;
+        font-size: 0.84rem;
+    }
+
+    .dashboard-page .db-status-wrap {
+        margin-bottom: 8px;
+    }
+
+    .dashboard-page .db-status-pill {
+        padding: 8px 14px;
+        font-size: 0.82rem;
+    }
+
+    /* Навигация: 2 колонки, без описаний */
+    .dashboard-page .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 14px;
+        margin-top: 0;
+    }
+
+    .dashboard-page .dashboard-card {
+        padding: 10px;
+        min-height: 0;
+        border-radius: 12px;
+    }
+
+    .dashboard-page .dashboard-card:hover {
+        transform: none;
+    }
+
+    .dashboard-page .dashboard-card .nav-card-icon {
+        width: 32px;
+        height: 32px;
+        margin: 0 auto 6px;
+        font-size: 1.2rem;
+        line-height: 32px;
+    }
+
+    .dashboard-page .dashboard-card .nav-card-title {
+        font-size: 0.82rem;
+        font-weight: 700;
+        line-height: 1.2;
+        -webkit-line-clamp: 2;
+    }
+
+    .dashboard-page .nav-card-desc {
+        display: none;
+    }
+
+    /* Заметки и змейка */
+    .dashboard-page .dash-quick-notes {
+        padding: 12px 10px;
+        margin-bottom: 12px;
+    }
+
+    .dashboard-page .dash-quick-notes-hint,
+    .dashboard-page .snake-section {
+        display: none;
+    }
+
+    .dashboard-page .dash-quick-notes-body {
+        min-height: 72px;
+    }
+
+    .dashboard-page .dash-quick-notes-title {
+        font-size: 1rem;
+    }
+
+    /* Последние документы */
+    .dashboard-page .recent-section {
+        padding: 12px 10px;
+        margin-bottom: 16px;
+    }
+
+    .dashboard-page .section-title {
+        font-size: 1.05rem;
+        margin-bottom: 10px;
+    }
+
     .dashboard-page .document-item--dash {
         flex-direction: column;
         align-items: stretch;
+        padding: 12px 10px;
+        gap: 10px;
     }
 
     .dashboard-page .document-item--dash .document-item-actions--dash {
@@ -404,7 +657,55 @@
     .dashboard-page .document-item--dash .doc-more-menu {
         left: 0;
         right: auto;
-        min-width: min(100vw - 48px, 280px);
+        min-width: min(100vw - 32px, 280px);
+    }
+
+    .dashboard-page .document-details p {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .dashboard-page .snake-section {
+        padding-left: max(10px, env(safe-area-inset-left, 0px));
+        padding-right: max(10px, env(safe-area-inset-right, 0px));
+    }
+
+    .dashboard-page .snake-canvas-wrap {
+        max-height: min(50vh, 320px);
+    }
+
+    .dashboard-page .snake-speed-select {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-page .dash-kpi-grid {
+        gap: 6px;
+    }
+
+    .dashboard-page .dash-kpi-value {
+        font-size: 1.2rem;
+    }
+
+    .dashboard-page .dashboard-grid {
+        gap: 8px;
+    }
+
+    .dashboard-page .dashboard-card .nav-card-title {
+        font-size: 0.78rem;
+    }
+
+    .dashboard-page .notification-icon {
+        font-size: 26px;
+        padding: 6px;
+    }
+
+    .dashboard-page .header-logout-btn {
+        padding: 6px 8px;
+        font-size: 0.72rem;
     }
 }
 
@@ -624,79 +925,4 @@
     }
 }
 
-/* -------------------------------------------------------------------------- */
-/* Track: iOS input zoom, safe area, компактный верхний блок без гориз. скролла */
-/* -------------------------------------------------------------------------- */
-@media (max-width: 768px) {
-    body.track-page {
-        overflow-x: hidden;
-        padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
-        padding-left: max(10px, env(safe-area-inset-left, 0px));
-        padding-right: max(10px, env(safe-area-inset-right, 0px));
-    }
-
-    .track-page .top {
-        min-width: 0;
-        align-items: flex-start;
-    }
-
-    .track-page .top h1 {
-        min-width: 0;
-        flex: 1 1 auto;
-    }
-
-    .track-page input,
-    .track-page select,
-    .track-page textarea,
-    .track-page .track-select,
-    .track-page .track-expected-date {
-        font-size: 16px !important;
-    }
-
-    .track-page button,
-    .track-page .primary {
-        min-height: 40px;
-        box-sizing: border-box;
-    }
-
-    .track-page .doc-actions button {
-        min-height: 40px;
-        padding: 8px 12px;
-    }
-}
-
-@media (max-width: 480px) {
-    .track-page .track-top-hint .track-help-toggle {
-        display: none;
-    }
-
-    .track-page .track-sticky-summary {
-        padding: 12px;
-    }
-
-    .track-page .track-client-inner {
-        padding: 10px 12px;
-    }
-}
-
-/* -------------------------------------------------------------------------- */
-/* Dashboard: нижний safe area (кнопки / контент не упираются в home indicator) */
-/* -------------------------------------------------------------------------- */
-@media (max-width: 768px) {
-    .dashboard-page .container {
-        padding-bottom: max(28px, env(safe-area-inset-bottom, 20px));
-    }
-
-    .dashboard-page .snake-section {
-        padding-left: max(12px, env(safe-area-inset-left, 0px));
-        padding-right: max(12px, env(safe-area-inset-right, 0px));
-    }
-
-    .dashboard-page .snake-canvas-wrap {
-        max-height: min(65vh, 400px);
-    }
-
-    .dashboard-page .snake-speed-select {
-        font-size: 16px;
-    }
-}
+/* Track: iOS input zoom, safe area — доп. правила в блоке Track выше */

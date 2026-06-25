@@ -70,6 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'iban' => (string)($_POST['iban'] ?? ''),
                 'bic' => (string)($_POST['bic'] ?? ''),
                 'bank_name' => (string)($_POST['bank_name'] ?? ''),
+                'technician_first_name' => (string)($_POST['technician_first_name'] ?? ''),
+                'technician_last_name' => (string)($_POST['technician_last_name'] ?? ''),
                 'company_logo' => $logoPath,
             ]);
             $message = 'Реквизиты компании обновлены.';
@@ -314,6 +316,13 @@ $companyProfile = fixarivan_company_profile_load();
 
                 <label for="bank_name">Название банка</label>
                 <input type="text" id="bank_name" name="bank_name" value="<?= htmlspecialchars($companyProfile['bank_name'] ?? '') ?>">
+
+                <label for="technician_last_name">Фамилия мастера</label>
+                <input type="text" id="technician_last_name" name="technician_last_name" value="<?= htmlspecialchars($companyProfile['technician_last_name'] ?? '') ?>" autocomplete="off">
+
+                <label for="technician_first_name">Имя мастера</label>
+                <input type="text" id="technician_first_name" name="technician_first_name" value="<?= htmlspecialchars($companyProfile['technician_first_name'] ?? '') ?>" autocomplete="off">
+                <p class="hint">Используется в Track, квитанциях и отчётах автоматически (без выбора мастера в заказе).</p>
 
                 <button type="submit">Сохранить реквизиты</button>
             </form>

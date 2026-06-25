@@ -23,6 +23,8 @@ function fixarivan_company_profile_defaults(): array {
         'company_logo' => '',
         /** Ссылка на отзыв Google (клиентский портал, завершённые заказы). Пусто — блок скрыт. */
         'google_review_url' => 'https://share.google/saZoUi8tRidx6Y7kc',
+        'technician_first_name' => 'Viacheslav',
+        'technician_last_name' => 'Sergeev',
     ];
 }
 

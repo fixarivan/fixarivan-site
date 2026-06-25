@@ -101,8 +101,8 @@
         }
     </style>
     <link rel="stylesheet" href="css/fixarivan-theme.css">
-    <link rel="stylesheet" href="mobile_fixes.css">
-    <link rel="stylesheet" href="css/track-modern.css?v=20250625">
+    <link rel="stylesheet" href="mobile_fixes.css?v=20250625m">
+    <link rel="stylesheet" href="css/track-modern.css?v=20250625w">
     <script src="js/track_ui.js"></script>
 </head>
 <body class="fv-page track-page">
@@ -119,7 +119,7 @@
     </div>
 
     <div class="layout">
-        <aside class="card">
+        <aside class="card track-sidebar">
             <div class="search-row" style="grid-template-columns: 1fr auto;">
                 <input id="qGlobal" placeholder="Поиск: имя, телефон, устройство, проблема, номер заказа">
                 <button id="btnSearch" class="primary">Найти</button>
@@ -144,7 +144,7 @@
             <div id="clientsList" class="list"><div class="muted">Загрузка…</div></div>
         </aside>
 
-        <main class="card">
+        <main class="card track-workspace-main">
             <div class="track-client-header">
                 <div class="track-client-header-main">
                     <h2 id="clientTitle">Карточка клиента</h2>
@@ -154,11 +154,16 @@
             <div id="clientQuickActions" class="track-action-groups" style="display:none; margin-bottom:16px;"></div>
             <div id="ordersTree"><div class="muted">—</div></div>
         </main>
+
+        <aside class="card track-workspace-rail" id="trackWorkspaceRail" aria-label="Сводка заказа">
+            <div class="track-rail-empty muted">Выберите клиента слева</div>
+        </aside>
     </div>
 
     <script>
         const TRACK_PREF_KEY = 'fixarivan_track_filters_v3';
         const state = { docs: [], groups: [], activeKey: '', mode: 'all' };
+        let trackCompanyProfile = {};
         const orderDocDetailFetch = new Map();
         const internalCommentTimers = new Map();
         const publicCommentTimers = new Map();
@@ -889,23 +894,118 @@
             </div>`;
         }
 
-        function trackTimelineItemHtml(d, T) {
+        function trackTechnicianName() {
+            const fn = String(trackCompanyProfile.technician_first_name || '').trim();
+            const ln = String(trackCompanyProfile.technician_last_name || '').trim();
+            if (ln && fn) return ln + ' ' + fn;
+            return ln || fn || '—';
+        }
+
+        async function loadTrackCompanyProfile() {
+            try {
+                const res = await fetch('./api/company_profile.php', { credentials: 'same-origin', cache: 'no-store' });
+                const json = await res.json();
+                if (json && json.profile && typeof json.profile === 'object') {
+                    trackCompanyProfile = json.profile;
+                }
+            } catch (_) {}
+        }
+
+        function trackDocCardHtml(d, T) {
+            const type = String(d.type || '').toLowerCase();
             const label = window.TrackUi ? TrackUi.timelineEventLabel(d, T) : typeLabel(d.type);
-            return `<li class="track-timeline-item">
-                <span class="track-timeline-dot" aria-hidden="true"></span>
-                <div class="track-timeline-head">
-                    <span class="track-timeline-title">${esc(label)} · ${typeLabel(d.type)} ${esc(d.display_id || d.document_id || '')}</span>
-                    <span class="track-timeline-date">${esc((window.TrackUi ? TrackUi.formatDateShort(d.date_created) : String(d.date_created || '—')))}</span>
+            return `<article class="track-doc-card">
+                <div class="track-doc-card-icon" aria-hidden="true">${type === 'invoice' ? '📄' : type === 'receipt' ? '🧾' : type === 'report' ? '📱' : '📝'}</div>
+                <div class="track-doc-card-body">
+                    <div class="track-doc-card-title">${esc(typeLabel(d.type))} ${esc(d.display_id || d.document_id || '')}</div>
+                    <div class="track-doc-card-meta">${esc(label)} · ${esc((window.TrackUi ? TrackUi.formatDateShort(d.date_created) : String(d.date_created || '—')))}</div>
+                    <div class="track-doc-card-status">${esc(d.status || '—')}</div>
+                    ${formatPaymentMiniLine(d)}
+                    ${type === 'invoice' ? invoiceStatusSelectHtml(d.document_id, d.status) : ''}
                 </div>
-                <div class="track-timeline-meta">${esc(d.status || '—')}</div>
-                ${formatPaymentMiniLine(d)}
-                ${String(d.type || '').toLowerCase() === 'invoice' ? invoiceStatusSelectHtml(d.document_id, d.status) : ''}
-                <div class="doc-actions">
-                    <button onclick="viewDoc('${esc(d.document_id)}','${esc(d.type)}')">👁️ ${esc(T.view)}</button>
-                    <button onclick="editDoc('${esc(d.document_id)}','${esc(d.type)}')">✏️ ${esc(T.edit)}</button>
-                    ${String(d.type || '').toLowerCase() === 'report' ? '' : `<button onclick="pdfDoc('${esc(d.document_id)}','${esc(d.type)}', this)">📄 ${esc(T.pdf)}</button>`}
+                <div class="track-doc-card-actions doc-actions">
+                    <button type="button" onclick="viewDoc('${esc(d.document_id)}','${esc(d.type)}')">${esc(T.view)}</button>
+                    <button type="button" onclick="editDoc('${esc(d.document_id)}','${esc(d.type)}')">${esc(T.edit)}</button>
+                    ${type === 'report' ? '' : `<button type="button" onclick="pdfDoc('${esc(d.document_id)}','${esc(d.type)}', this)">${esc(T.pdf)}</button>`}
                 </div>
-            </li>`;
+            </article>`;
+        }
+
+        function trackRailTimelineHtml(docs, T) {
+            const items = window.TrackUi ? TrackUi.buildTimelineItems(docs, T) : (docs || []);
+            if (!items.length) return '<div class="track-rail-muted">—</div>';
+            return `<ul class="track-rail-timeline">${items.map((d) => {
+                const label = window.TrackUi ? TrackUi.timelineEventLabel(d, T) : typeLabel(d.type);
+                return `<li class="track-rail-timeline-item">
+                    <span class="track-rail-timeline-dot" aria-hidden="true"></span>
+                    <div class="track-rail-timeline-body">
+                        <div class="track-rail-timeline-title">${esc(label)}</div>
+                        <div class="track-rail-timeline-meta">${esc(typeLabel(d.type))} · ${esc((window.TrackUi ? TrackUi.formatDateShort(d.date_created) : String(d.date_created || '—')))}</div>
+                    </div>
+                </li>`;
+            }).join('')}</ul>`;
+        }
+
+        function renderWorkspaceRail(g, o, T) {
+            const rail = document.getElementById('trackWorkspaceRail');
+            if (!rail) return;
+            if (!g || !o) {
+                rail.innerHTML = '<div class="track-rail-empty muted">' + esc(T.clientPick) + '</div>';
+                return;
+            }
+            const orderDoc = o.documents.find((d) => d.type === 'order');
+            const invDoc = o.documents.find((d) => String(d.type || '').toLowerCase() === 'invoice');
+            const orderDocId = orderDoc ? String(orderDoc.document_id || '') : '';
+            const portalUrl = String(o.portal_url || (orderDoc && orderDoc.portal_url) || (invDoc && invDoc.portal_url) || '');
+            const clientTok = String(o.client_token || (orderDoc && orderDoc.client_token) || (invDoc && invDoc.client_token) || '');
+            const portalDocId = orderDocId || (invDoc ? String(invDoc.document_id || '') : '');
+            const expDateRu = window.TrackUi ? TrackUi.formatDateShort(o.public_expected_date) : String(o.public_expected_date || '—');
+            const waOrderHtml = trackWhatsappPhoneOk(g.client_phone || '')
+                ? `<a href="${escAttr(trackWhatsappUrl(g.client_phone || '', trackBuildWhatsappOrderMessage(g, o)))}" class="track-wa" target="_blank" rel="noopener noreferrer">${esc(T.waOrder)}</a>`
+                : `<span class="track-wa is-disabled">${esc(T.waOrder)}</span>`;
+            const phone = String(g.client_phone || '').trim();
+            const callHtml = phone ? `<a href="tel:${escAttr(phone)}" class="is-secondary">📞 Звонок</a>` : '';
+            const base = state.groups.find((x) => x.key === g.key);
+            const allO = base && Array.isArray(base.orders) ? base.orders : g.orders;
+            const nAct = allO.filter((x) => isPublicActive(x)).length;
+            rail.innerHTML = `
+                <div class="track-rail-panel">
+                    <div class="track-rail-section">
+                        <div class="track-rail-label">Клиент</div>
+                        <div class="track-rail-client-name">${esc(g.client_name)}</div>
+                        <div class="track-rail-muted">${esc(g.client_phone || '—')}</div>
+                        <div class="track-rail-stats">${esc(T.ordersLbl)}: ${esc(String(allO.length))} · ${esc(T.fActive)}: ${nAct}</div>
+                    </div>
+                    <div class="track-rail-section">
+                        <div class="track-rail-label">Быстрые действия</div>
+                        <div class="track-action-row track-rail-actions">
+                            ${callHtml}
+                            ${waOrderHtml}
+                            <button type="button" class="primary portal-open" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalOpen)}</button>
+                            <button type="button" class="portal-copy is-secondary" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalCopy)}</button>
+                        </div>
+                    </div>
+                    <div class="track-rail-section">
+                        <div class="track-rail-label">Статус заказа</div>
+                        <div class="track-rail-badges">${trackOrderBadgeHtml(o)}${isPartsWait(o) ? ' <span class="badge wait badge-lg">' + esc(T.waitBadge) + '</span>' : ''}</div>
+                        <div class="track-rail-muted" style="margin-top:8px;">${esc(T.expectedDateLbl)}: ${esc(expDateRu || '—')}</div>
+                    </div>
+                    <div class="track-rail-section">
+                        <div class="track-rail-label">Финансы</div>
+                        <div class="track-rail-finance" data-order-doc-id="${esc(orderDocId)}">
+                            <div class="track-rail-finance-row"><span>Работа</span><span data-pricing-field="labour">—</span></div>
+                            <div class="track-rail-finance-row"><span>Запчасти</span><span data-pricing-field="parts">—</span></div>
+                            <div class="track-rail-finance-row is-total"><span>Итого</span><span data-pricing-field="total" data-summary-total>—</span></div>
+                            <div class="track-rail-finance-row is-internal"><span>Прибыль</span><span data-pricing-field="profit">—</span></div>
+                            <div class="track-rail-finance-row is-internal"><span>Маржа</span><span data-pricing-field="margin">—</span></div>
+                        </div>
+                    </div>
+                    <div class="track-rail-section">
+                        <div class="track-rail-label">История</div>
+                        ${trackRailTimelineHtml(o.documents, T)}
+                    </div>
+                </div>`;
+            bindPortalButtons(rail);
         }
 
         function renderSidebar(){
@@ -930,12 +1030,13 @@
                 const initials = window.TrackUi ? TrackUi.clientInitials(g.client_name) : '?';
                 const lastAct = window.TrackUi ? TrackUi.lastActivityFromGroup(base || g) : '';
                 const activeO = window.TrackUi ? TrackUi.activeOrderForClient(base || g) : null;
-                let statusPill = '';
+                let statusLine = '';
                 if (activeO && isPublicActive(activeO)) {
-                    if (isPartsWait(activeO)) statusPill = `<span class="track-client-stat-pill is-wait">${esc(T.waitBadge)}</span>`;
-                    else if (pubStatusNorm(activeO) === 'done') statusPill = `<span class="track-client-stat-pill is-active">${esc(T.readyBadge)}</span>`;
-                    else statusPill = `<span class="track-client-stat-pill is-active">${esc(T.activeBadge)}</span>`;
+                    if (isPartsWait(activeO)) statusLine = T.waitBadge;
+                    else if (pubStatusNorm(activeO) === 'done') statusLine = T.readyBadge;
+                    else statusLine = T.activeBadge;
                 }
+                const lastLabel = lastAct ? (window.TrackUi ? TrackUi.formatDateShort(lastAct) : lastAct) : '';
                 return `
                 <div class="client-item${g.key===state.activeKey?' active':''}" data-key="${esc(g.key)}" title="${escAttr(tip)}">
                     <div class="track-client-inner">
@@ -943,14 +1044,10 @@
                         <div class="track-client-body">
                             <div class="track-client-head">
                                 <strong>${esc(g.client_name)}</strong>
-                                ${statusPill}
+                                ${statusLine ? `<span class="track-client-status">${esc(statusLine)}</span>` : ''}
                             </div>
                             <div class="track-client-phone">${esc(g.client_phone || '—')}</div>
-                            <div class="track-client-stats">
-                                <span class="track-client-stat-pill">${esc(statsLine)}</span>
-                                ${nAct ? `<span class="track-client-stat-pill is-active">${esc(T.fActive)}: ${nAct}</span>` : ''}
-                                ${lastAct ? `<span class="track-client-stat-pill">${esc((window.TrackUi ? TrackUi.formatDateShort(lastAct) : lastAct))}</span>` : ''}
-                            </div>
+                            <div class="track-client-meta">${esc(statsLine)}${nAct ? ` · ${esc(T.fActive)} ${nAct}` : ''}${lastLabel ? ` · ${esc(lastLabel)}` : ''}</div>
                         </div>
                     </div>
                 </div>`;
@@ -970,6 +1067,7 @@
                 document.getElementById('clientMeta').textContent = T.clientPick;
                 if (quickBar) { quickBar.style.display = 'none'; quickBar.innerHTML = ''; }
                 tree.innerHTML = '<div class="muted">—</div>';
+                renderWorkspaceRail(null, null, T);
                 return;
             }
             document.getElementById('clientTitle').textContent = g.client_name;
@@ -1022,9 +1120,10 @@
                 const waOrderHtml = trackWhatsappPhoneOk(g.client_phone || '')
                     ? `<a href="${escAttr(trackWhatsappUrl(g.client_phone || '', trackBuildWhatsappOrderMessage(g, o)))}" class="track-wa" target="_blank" rel="noopener noreferrer" title="${escAttr(T.waOrderHint)}">${esc(T.waOrder)}</a>`
                     : `<span class="track-wa is-disabled" title="${escAttr(T.waNoPhoneHint)}">${esc(T.waOrder)}</span>`;
-                const timelineHtml = (window.TrackUi ? TrackUi.buildTimelineItems(o.documents, T) : o.documents).map((d) => trackTimelineItemHtml(d, T)).join('');
+                const docCardsHtml = (window.TrackUi ? TrackUi.buildTimelineItems(o.documents, T) : o.documents).map((d) => trackDocCardHtml(d, T)).join('');
+                const techName = trackTechnicianName();
                 const orderBody = orderDocId ? (
-                    trackSectionHtml('info', '📋', 'Информация о заказе', 'Статус, запчасти, срок', `
+                    trackSectionHtml('info', '📋', 'Информация о заказе', 'Статус и сроки', `
                         <div class="track-field-row"><span class="track-field-label">${esc(T.stClient)}</span>${publicStatusSelectHtml(orderDocId, pub)}</div>
                         <div class="track-field-row"><span class="track-field-label">${esc(T.partsStatusChip)}</span><span class="badge ${partsStatusBadgeClass(pst)}">${esc(trackPartsStatusRu(pst))}</span></div>
                         <div class="track-field-row track-expected-wrap">
@@ -1041,7 +1140,7 @@
                             <textarea class="track-internal track-public-comment" data-doc="${esc(orderDocId)}" placeholder="${esc(T.publicPh)}">${esc(pc)}</textarea>
                         </div>
                     `) +
-                    trackSectionHtml('pricing', '💶', 'Стоимость', 'Работа, запчасти, итог', `
+                    trackSectionHtml('pricing', '💰', 'Стоимость', 'Работа и итог', `
                         ${trackHelpPanelHtml(T.workCostHint)}
                         ${trackPricingSummaryInnerHtml()}
                         <div class="track-work-wrap${showWorkCost ? '' : ' is-hidden'}" data-order-doc-id="${esc(orderDocId)}">
@@ -1077,10 +1176,10 @@
                             <div class="muted" style="display:none;">${esc(T.orderLinesSupplyHint)}</div>
                         </div>
                     `) +
-                    trackSectionHtml('documents', '📄', 'Документы', 'Создание, портал, история', `
+                    trackSectionHtml('documents', '📄', 'Документы', 'Создание и управление', `
                         <div class="track-action-groups">
                             <div class="track-action-group">
-                                <div class="track-action-group-label">Документы</div>
+                                <div class="track-action-group-label">Создать</div>
                                 <div class="track-action-row track-quick">
                                     <a href="${esc(recUrl)}">➕ ${esc(T.rec)}</a>
                                     <a href="${esc(invUrl)}">➕ ${esc(T.inv)}</a>
@@ -1088,20 +1187,8 @@
                                     <a href="${esc(repPc)}">➕ ${esc(T.repPc)}</a>
                                 </div>
                             </div>
-                            <div class="track-action-group">
-                                <div class="track-action-group-label">Портал</div>
-                                <div class="track-action-row doc-actions">
-                                    <button type="button" class="primary portal-open" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalOpen)}</button>
-                                    <button type="button" class="portal-copy is-secondary" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalCopy)}</button>
-                                </div>
-                            </div>
-                            <div class="track-action-group">
-                                <div class="track-action-group-label">Связь</div>
-                                <div class="track-action-row">${waOrderHtml}</div>
-                            </div>
                         </div>
-                        <ul class="track-timeline docs">${timelineHtml || '<li class="muted">—</li>'}</ul>
-                        <div class="track-future-slot">Скоро: просмотр портала клиентом, оценка, таймер ремонта</div>
+                        <div class="track-doc-cards">${docCardsHtml || '<div class="track-rail-muted">—</div>'}</div>
                     `) +
                     trackSectionHtml('internal', '📝', 'Внутренние заметки', 'Только для мастера', `
                         <div class="track-comment-col">
@@ -1111,71 +1198,43 @@
                     `)
                 ) : `<div class="muted" style="margin:8px 0;">${esc(T.noOrderDoc)}</div>`;
                 return `
-                <div class="order-card ${orderClass(o)}">
-                    <div class="track-order-shell">
-                        <div class="track-order-body">
-                            <header class="track-order-header">
-                                <div class="track-order-header-main">
-                                    <div class="track-order-id">${esc(o.order_id || '—')}</div>
-                                    <h3 class="track-order-device order-display-title" data-order-doc-id="${esc(orderDocId)}">${esc(resolveTrackCardTitle(o))}</h3>
-                                    <div class="track-order-subtitle order-display-meta" data-order-doc-id="${esc(orderDocId)}">${esc(o.problem_description || resolveTrackCardMeta(o, T))}</div>
-                                    <div class="track-order-kv">
-                                        <span><strong>Создан</strong> ${esc(window.TrackUi ? TrackUi.formatDateShort(createdAt) : createdAt || '—')}</span>
-                                        <span><strong>Обновлён</strong> ${esc(window.TrackUi ? TrackUi.formatDateShort(updatedAt) : updatedAt || '—')}</span>
-                                        ${o.device_model ? `<span><strong>Модель</strong> ${esc(o.device_model)}</span>` : ''}
-                                        <span><strong>Мастер</strong> —</span>
-                                    </div>
-                                </div>
-                                <div class="track-order-badges">
-                                    ${isOrderIssue(o) ? '<span title="Ожидание запчасти, срок истёк">⚠️</span>' : ''}
-                                    ${trackOrderBadgeHtml(o)}
-                                    ${isPartsWait(o) ? '<span class="badge wait">' + esc(T.waitBadge) + '</span>' : ''}
-                                </div>
-                            </header>
-                            ${orderBody}
-                        </div>
-                        <aside class="track-sticky-summary" data-order-doc-id="${esc(orderDocId)}">
-                            <div class="track-summary-title">Сводка</div>
-                            <div class="track-summary-block">
-                                <div class="track-summary-block-label">Статус</div>
-                                <div class="track-summary-block-value">${trackOrderBadgeHtml(o)}${isPartsWait(o) ? ' <span class="badge wait">' + esc(T.waitBadge) + '</span>' : ''}</div>
-                            </div>
-                            <div class="track-summary-block">
-                                <div class="track-summary-block-label">Ожидаемая дата</div>
-                                <div class="track-summary-block-value">${esc(expDateRu || '—')}</div>
-                            </div>
-                            <div class="track-summary-block">
-                                <div class="track-summary-block-label">Итого</div>
-                                <div class="track-summary-block-value is-price" data-summary-total>—</div>
-                            </div>
-                            <div class="track-summary-block">
-                                <div class="track-summary-block-label">К оплате</div>
-                                <div class="track-summary-block-value" data-summary-balance>—</div>
-                            </div>
-                            <div class="track-summary-block">
-                                <div class="track-summary-block-label">Документов</div>
-                                <div class="track-summary-block-value">${esc(String((o.documents || []).length))}</div>
-                            </div>
-                            <div class="track-summary-divider"></div>
-                            <div class="track-summary-actions track-action-groups">
-                                <div class="track-action-group">
-                                    <div class="track-action-group-label">Быстрые действия</div>
-                                    <div class="track-action-row">
-                                        <button type="button" class="primary portal-open" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalOpen)}</button>
-                                        <button type="button" class="portal-copy is-secondary" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalCopy)}</button>
-                                        ${waOrderHtml}
-                                    </div>
+                <div class="order-card ${orderClass(o)}" data-order-doc-id="${esc(orderDocId)}">
+                    <div class="track-order-body">
+                        <header class="track-order-header">
+                            <div class="track-order-header-main">
+                                <div class="track-order-id">${esc(o.order_id || '—')}</div>
+                                <h3 class="track-order-device order-display-title" data-order-doc-id="${esc(orderDocId)}">${esc(resolveTrackCardTitle(o))}</h3>
+                                <div class="track-order-subtitle order-display-meta" data-order-doc-id="${esc(orderDocId)}">${esc(o.problem_description || resolveTrackCardMeta(o, T))}</div>
+                                <div class="track-order-kv">
+                                    <span><strong>Создан</strong> ${esc(window.TrackUi ? TrackUi.formatDateShort(createdAt) : createdAt || '—')}</span>
+                                    <span><strong>Обновлён</strong> ${esc(window.TrackUi ? TrackUi.formatDateShort(updatedAt) : updatedAt || '—')}</span>
+                                    ${o.device_model ? `<span><strong>Модель</strong> ${esc(o.device_model)}</span>` : ''}
+                                    <span><strong>Мастер</strong> ${esc(techName)}</span>
                                 </div>
                             </div>
-                        </aside>
+                            <div class="track-order-badges">
+                                ${isOrderIssue(o) ? '<span class="track-order-alert" title="Ожидание запчасти, срок истёк">⚠️</span>' : ''}
+                                ${trackOrderBadgeHtml(o).replace(/class="badge/g, 'class="badge badge-lg')}
+                                ${isPartsWait(o) ? '<span class="badge wait badge-lg">' + esc(T.waitBadge) + '</span>' : ''}
+                            </div>
+                        </header>
+                        ${orderBody}
                     </div>
                 </div>
             `;}).join('');
+            renderWorkspaceRail(g, g.orders[0] || null, T);
             hydrateTrackOrderBlocks(tree);
             bindPortalButtons(tree);
             bindTrackOrderControls(tree);
             bindOrderLinesControls(tree);
-            if (window.TrackUi) TrackUi.init(tree);
+            const rail = document.getElementById('trackWorkspaceRail');
+            if (window.TrackUi) {
+                TrackUi.init(tree);
+                if (rail) TrackUi.init(rail);
+                tree.querySelectorAll('.order-lines-box[data-order-doc-id]').forEach((box) => {
+                    TrackUi.updatePricingSummary(document, box.getAttribute('data-order-doc-id') || '');
+                });
+            }
         }
 
         function bindTrackOrderControls(root) {
@@ -1866,12 +1925,14 @@
                 }
             } catch (_) {}
             setMode(state.mode);
-            if (window.TrackUi) {
-                TrackUi.init(document.querySelector('.top'));
-                TrackUi.init(document.querySelector('aside.card'));
-            }
-            loadAll().catch((e) => {
-                document.getElementById('clientsList').innerHTML = '<div class="muted">Ошибка загрузки: ' + esc(fvErr(e)) + '</div>';
+            loadTrackCompanyProfile().finally(() => {
+                if (window.TrackUi) {
+                    TrackUi.init(document.querySelector('.top'));
+                    TrackUi.init(document.querySelector('.track-sidebar'));
+                }
+                loadAll().catch((e) => {
+                    document.getElementById('clientsList').innerHTML = '<div class="muted">Ошибка загрузки: ' + esc(fvErr(e)) + '</div>';
+                });
             });
         });
     </script>
