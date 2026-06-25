@@ -386,13 +386,9 @@
         renderOrderKpis(stats);
         renderInventoryKpis(stats.inventory || {});
         renderFinancialBlock(stats.financial || {});
-        renderInventoryAnalytics(stats.inventory_analytics || {});
-        renderIntegrityPanel(stats.integrity, stats.cache, stats.generated_at);
         if (global.Chart) {
             renderOrdersChart(stats.orders_chart);
             renderStatusDonut(stats.status_distribution);
-            renderFinanceChart((stats.financial || {}).series);
-            renderInventoryMovementChart(((stats.inventory_analytics || {}).movement));
         }
     }
 

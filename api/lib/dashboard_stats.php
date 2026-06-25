@@ -314,7 +314,7 @@ function fixarivan_dashboard_status_distribution(array $rows, ?string $start = n
 /**
  * @return array<string,mixed>
  */
-function fixarivan_dashboard_financial_summary(PDO $pdo, array $period, array $previousPeriod): array
+function fixarivan_dashboard_financial_summary(PDO $pdo, array $period, array $previousPeriod, bool $includeSeries = false): array
 {
     if (($period['start'] ?? '') === '' || ($period['end'] ?? '') === '') {
         $tz = fixarivan_finance_tz();
@@ -356,7 +356,7 @@ function fixarivan_dashboard_financial_summary(PDO $pdo, array $period, array $p
             'revenue' => fixarivan_dashboard_trend($revenue, $prevRevenue),
             'profit' => fixarivan_dashboard_trend($profit, $prevProfit),
         ],
-        'series' => fixarivan_dashboard_finance_series($pdo, $start, $end),
+        'series' => $includeSeries ? fixarivan_dashboard_finance_series($pdo, $start, $end) : null,
     ];
 }
 
@@ -674,8 +674,8 @@ function fixarivan_dashboard_build_stats(PDO $pdo, array $get): array
     $receipts = (int)$pdo->query('SELECT COUNT(*) FROM receipts')->fetchColumn();
     $reports = (int)$pdo->query('SELECT COUNT(*) FROM mobile_reports')->fetchColumn();
 
-    $inventoryAnalytics = fixarivan_dashboard_inventory_analytics($pdo, $period, $chartRange);
-    $inventory = $inventoryAnalytics['snapshot'];
+    $inventory = sqliteInventoryAggregateStats($pdo);
+    $inventory['out_of_stock'] = max(0, (int)$inventory['total'] - (int)$inventory['in_stock']);
 
     $result = [
         'pending' => (int)$periodCounts['waiting'],
@@ -697,8 +697,6 @@ function fixarivan_dashboard_build_stats(PDO $pdo, array $get): array
         'orders_chart' => fixarivan_dashboard_order_series($orderRows, $chartRange),
         'status_distribution' => fixarivan_dashboard_status_distribution($orderRows, $periodStart, $periodEnd),
         'financial' => fixarivan_dashboard_financial_summary($pdo, $period, $previousPeriod),
-        'inventory_analytics' => $inventoryAnalytics,
-        'integrity' => fixarivan_dashboard_integrity($pdo, $snapshot, $inventory),
         'cache' => [
             'status' => 'live',
             'source' => 'sqlite',
