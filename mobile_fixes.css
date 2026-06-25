@@ -324,9 +324,12 @@
     .track-page .card {
         min-width: 0;
         max-width: 100%;
-        padding: 0;
-        border: none;
-        border-radius: 0;
+        padding: 14px 16px;
+        border-radius: 14px;
+    }
+
+    .track-client-inner {
+        padding: 10px;
     }
 
     .track-page .search-row {

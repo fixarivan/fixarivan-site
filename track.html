@@ -102,7 +102,7 @@
     </style>
     <link rel="stylesheet" href="css/fixarivan-theme.css">
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625saas">
-    <link rel="stylesheet" href="css/track-modern.css?v=20250625saas">
+    <link rel="stylesheet" href="css/track-modern.css?v=20250625ideal">
     <script src="js/track_ui.js"></script>
 </head>
 <body class="fv-page track-page">
@@ -928,6 +928,26 @@
             </article>`;
         }
 
+        function trackStatusStepperHtml(o) {
+            const pub = pubStatusNorm(o) || 'in_progress';
+            const steps = [
+                { id: 'accepted', label: 'Принят', icon: '✓' },
+                { id: 'diagnosis', label: 'Диагностика', icon: '🔍' },
+                { id: 'parts', label: 'Запчасти', icon: '📦' },
+                { id: 'repair', label: 'Ремонт', icon: '🔧' },
+                { id: 'ready', label: 'Готово', icon: '✓' },
+            ];
+            let activeIdx = 1;
+            if (isPartsWait(o)) activeIdx = 2;
+            else if (pub === 'done' || pub === 'in_transit') activeIdx = 4;
+            else if (pub === 'cancelled') activeIdx = -1;
+            else if (pub === 'in_progress') activeIdx = 3;
+            return `<div class="track-status-stepper">${steps.map((s, i) => {
+                const cls = activeIdx < 0 ? 'is-muted' : (i < activeIdx ? 'is-done' : (i === activeIdx ? 'is-active' : ''));
+                return `<div class="track-step ${cls}"><span class="track-step-icon" aria-hidden="true">${s.icon}</span><span class="track-step-label">${esc(s.label)}</span></div>`;
+            }).join('')}</div>`;
+        }
+
         function trackRailTimelineHtml(docs, T) {
             const items = window.TrackUi ? TrackUi.buildTimelineItems(docs, T) : (docs || []);
             if (!items.length) return '<div class="track-rail-muted">—</div>';
@@ -957,47 +977,57 @@
             const clientTok = String(o.client_token || (orderDoc && orderDoc.client_token) || (invDoc && invDoc.client_token) || '');
             const portalDocId = orderDocId || (invDoc ? String(invDoc.document_id || '') : '');
             const expDateRu = window.TrackUi ? TrackUi.formatDateShort(o.public_expected_date) : String(o.public_expected_date || '—');
-            const callHtml = phone ? `<a href="tel:${escAttr(phone)}" class="btn-ghost">Звонок</a>` : '';
-            const waRailHtml = trackWhatsappPhoneOk(g.client_phone || '')
-                ? `<a href="${escAttr(trackWhatsappUrl(g.client_phone || '', trackBuildWhatsappOrderMessage(g, o)))}" class="track-wa btn-secondary" target="_blank" rel="noopener noreferrer">${esc(T.waOrder)}</a>`
-                : `<span class="track-wa is-disabled btn-secondary">${esc(T.waOrder)}</span>`;
+            const phone = String(g.client_phone || '').trim();
+            const email = String(g.client_email || '').trim();
+            const callHtml = phone ? `<a href="tel:${escAttr(phone)}" class="track-icon-btn" title="Звонок">📞</a>` : '';
+            const waRailHtml = trackWhatsappPhoneOk(phone)
+                ? `<a href="${escAttr(trackWhatsappUrl(phone, trackBuildWhatsappOrderMessage(g, o)))}" class="track-icon-btn track-icon-wa" target="_blank" rel="noopener noreferrer" title="${escAttr(T.waOrder)}">💬</a>`
+                : `<span class="track-icon-btn is-disabled" title="${escAttr(T.waNoPhoneHint)}">💬</span>`;
+            const mailHtml = email ? `<a href="mailto:${escAttr(email)}" class="track-icon-btn" title="Email">✉</a>` : '';
             const base = state.groups.find((x) => x.key === g.key);
             const allO = base && Array.isArray(base.orders) ? base.orders : g.orders;
             const nAct = allO.filter((x) => isPublicActive(x)).length;
+            const nDocs = allO.reduce((a, x) => a + (Array.isArray(x.documents) ? x.documents.length : 0), 0);
             rail.innerHTML = `
                 <div class="track-rail-panel">
-                    <div class="track-rail-section">
-                        <div class="track-rail-label">Клиент</div>
+                    <div class="track-rail-widget">
+                        <div class="track-rail-label">Карточка клиента</div>
                         <div class="track-rail-client-name">${esc(g.client_name)}</div>
-                        <div class="track-rail-muted">${esc(g.client_phone || '—')}</div>
-                        <div class="track-rail-stats">${esc(T.ordersLbl)}: ${esc(String(allO.length))} · ${esc(T.fActive)}: ${nAct}</div>
+                        <div class="track-rail-muted">${esc(phone || '—')}</div>
+                        <div class="track-rail-stats">${esc(T.ordersLbl)}: ${esc(String(allO.length))} · ${esc(T.sDocs)}: ${esc(String(nDocs))}</div>
+                        <div class="track-rail-stats">${esc(T.fActive)}: ${esc(String(nAct))}</div>
                     </div>
-                    <div class="track-rail-section">
+                    <div class="track-rail-widget">
                         <div class="track-rail-label">Быстрые действия</div>
-                        <div class="track-action-row track-rail-actions">
+                        <div class="track-rail-icon-actions">
                             ${callHtml}
                             ${waRailHtml}
+                            ${mailHtml}
+                            <button type="button" class="track-icon-btn portal-open" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}" title="${esc(T.portalOpen)}">🔗</button>
+                        </div>
+                        <div class="track-action-row track-rail-actions">
                             <button type="button" class="primary portal-open" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalOpen)}</button>
-                            <button type="button" class="btn-ghost portal-copy" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalCopy)}</button>
+                            <button type="button" class="btn-secondary portal-copy" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalCopy)}</button>
                         </div>
                     </div>
-                    <div class="track-rail-section">
+                    <div class="track-rail-widget">
                         <div class="track-rail-label">Статус заказа</div>
                         <div class="track-rail-badges">${trackOrderBadgeHtml(o)}${isPartsWait(o) ? ' <span class="badge wait badge-lg">' + esc(T.waitBadge) + '</span>' : ''}</div>
-                        <div class="track-rail-muted" style="margin-top:8px;">${esc(T.expectedDateLbl)}: ${esc(expDateRu || '—')}</div>
+                        ${trackStatusStepperHtml(o)}
+                        <div class="track-rail-muted track-rail-date">${esc(T.expectedDateLbl)}: ${esc(expDateRu || '—')}</div>
                     </div>
-                    <div class="track-rail-section">
+                    <div class="track-rail-widget">
                         <div class="track-rail-label">Финансы</div>
                         <div class="track-rail-finance" data-order-doc-id="${esc(orderDocId)}">
                             <div class="track-rail-finance-row"><span>Работа</span><span data-pricing-field="labour">—</span></div>
                             <div class="track-rail-finance-row"><span>Запчасти</span><span data-pricing-field="parts">—</span></div>
-                            <div class="track-rail-finance-row is-total"><span>Итого</span><span data-pricing-field="total" data-summary-total>—</span></div>
+                            <div class="track-rail-finance-row is-total"><span>Итого к оплате</span><span data-pricing-field="total" data-summary-total>—</span></div>
                             <div class="track-rail-finance-row is-internal"><span>Прибыль</span><span data-pricing-field="profit">—</span></div>
                             <div class="track-rail-finance-row is-internal"><span>Маржа</span><span data-pricing-field="margin">—</span></div>
                         </div>
                     </div>
-                    <div class="track-rail-section">
-                        <div class="track-rail-label">История</div>
+                    <div class="track-rail-widget">
+                        <div class="track-rail-label">История событий</div>
                         ${trackRailTimelineHtml(o.documents, T)}
                     </div>
                 </div>`;
@@ -1035,12 +1065,16 @@
                 const lastLabel = lastAct ? (window.TrackUi ? TrackUi.formatDateShort(lastAct) : lastAct) : '';
                 return `
                 <div class="client-item${g.key===state.activeKey?' active':''}" data-key="${esc(g.key)}" title="${escAttr(tip)}">
-                    <div class="track-client-row">
-                        <div class="track-client-row-main">
-                            <div class="track-client-name">${esc(g.client_name)}</div>
-                            <div class="track-client-sub">${esc(g.client_phone || '—')} · ${esc(statsLine)}${lastLabel ? ` · ${esc(lastLabel)}` : ''}</div>
+                    <div class="track-client-inner">
+                        <div class="track-client-avatar" aria-hidden="true">${esc(initials)}</div>
+                        <div class="track-client-body">
+                            <div class="track-client-head">
+                                <strong>${esc(g.client_name)}</strong>
+                                ${statusLine ? `<span class="track-chip">${esc(statusLine)}</span>` : ''}
+                            </div>
+                            <div class="track-client-sub">${esc(g.client_phone || '—')}</div>
+                            <div class="track-client-meta">${esc(statsLine)}${lastLabel ? ` · ${esc(lastLabel)}` : ''}</div>
                         </div>
-                        ${statusLine ? `<span class="track-chip">${esc(statusLine)}</span>` : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -1078,8 +1112,8 @@
                 quickBar.style.display = 'flex';
                 quickBar.innerHTML = `<div class="track-action-row track-quick-bar">
                         <a href="order_new.html${qstr ? '?' + qstr : ''}" class="primary">${esc(T.clientQuickNewOrder)}</a>
-                        <a href="inventory.html" class="btn-ghost">${esc(T.clientQuickStock)}</a>
-                        ${waClientHtml.replace('track-wa', 'track-wa btn-secondary')}
+                        <a href="inventory.html" class="btn-secondary">${esc(T.clientQuickStock)}</a>
+                        ${waClientHtml}
                     </div>`;
             }
             tree.innerHTML = '<div class="track-workspace-canvas">' + g.orders.map((o) => {
