@@ -102,7 +102,7 @@
     </style>
     <link rel="stylesheet" href="css/fixarivan-theme.css">
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625saas">
-    <link rel="stylesheet" href="css/track-modern.css?v=20250625multi">
+    <link rel="stylesheet" href="css/track-modern.css?v=20250625stock">
     <script src="js/track_ui.js?v=20250625multi"></script>
 </head>
 <body class="fv-page track-page">
@@ -160,6 +160,18 @@
         </aside>
     </div>
 
+    <div id="trackStockPickerBackdrop" class="track-stock-picker-backdrop" hidden>
+        <div class="track-stock-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="trackStockPickerTitle">
+            <div class="track-stock-picker-head">
+                <h2 id="trackStockPickerTitle">Выбор со склада</h2>
+                <button type="button" class="track-stock-picker-x" id="trackStockPickerClose" title="Закрыть" aria-label="Закрыть">×</button>
+            </div>
+            <p class="track-stock-picker-hint">Поиск по названию и артикулу. Без запроса — короткий список позиций с остатком. Строка заказа заполнится автоматически, галочка «Со склада» — списание при выдаче.</p>
+            <input type="search" id="trackStockPickerSearch" class="track-stock-picker-search" placeholder="Поиск по складу…" autocomplete="off">
+            <div id="trackStockPickerList" class="track-stock-picker-list"></div>
+        </div>
+    </div>
+
     <script>
         const TRACK_PREF_KEY = 'fixarivan_track_filters_v3';
         const state = { docs: [], groups: [], activeKey: '', activeOrderDocId: '', mode: 'all' };
@@ -206,18 +218,20 @@
             problemNone: 'Проблема не указана',
             view: 'Просмотр', edit: 'Редактировать', pdf: 'PDF',
             orderLinesTitle: '📋 Позиции заказа',
-            orderLinesHint: 'Наименование, количество, закуп / продажа €, артикул (SKU). По совпадению SKU с каталогом склада подставляются название и цены (после ухода с поля артикула или при сохранении). При сохранении SKU сопоставляется с карточкой склада. Галочка «Со склада» — списать с остатка, если SKU найден и хватает количества.',
+            orderLinesHint: 'Поле SKU: клик по пустому — каталог склада с поиском; ввод — подсказки по артикулу. «Со склада» — списать при выдаче. «Сразу» — списать при сохранении; без SKU создаст карточку на складе автоматически.',
+            orderLinesColFromStock: 'Со склада',
             orderLinesSupplyHint: 'После «Сохранить позиции» синхронизируются строки склада заказа, заявка на закуп (текст) и каталог под заказ. Напоминание в календаре (AUTO_SUPPLY) создаётся, если у заказа задана ожидаемая дата (поле даты в заказе / портале).',
             orderLinesColName: 'Наименование',
             orderLinesColQty: 'Кол-во',
             orderLinesColPur: 'Закуп €',
             orderLinesColSale: 'Продажа €',
             orderLinesColSku: 'Артикул',
-            orderLinesSkuPlaceholder: 'SKU — подсказка из склада',
+            orderLinesSkuPlaceholder: 'SKU — клик: каталог склада',
+            orderLinesSkuTitle: 'Клик по пустому полю — список склада; ввод — поиск по артикулу',
             orderLinesSkuStock: 'На складе',
             orderLinesSkuNotFound: 'Нет совпадения в каталоге склада',
             orderLinesSkuTypeMore: 'Введите ещё символы для поиска',
-            orderLinesColDed: 'Со склада',
+            orderLinesColDed: 'Сразу',
             orderLinesAdd: 'Добавить строку',
             orderLinesSave: 'Сохранить позиции',
             orderLinesSaving: 'Сохранение…',
@@ -1210,7 +1224,8 @@
                                         <th>${esc(T.orderLinesColPur)}</th>
                                         <th>${esc(T.orderLinesColSale)}</th>
                                         <th>${esc(T.orderLinesColSku)}</th>
-                                        <th>${esc(T.orderLinesColDed)}</th>
+                                        <th title="Списать при выдаче заказа">${esc(T.orderLinesColFromStock)}</th>
+                                        <th title="Списать при сохранении; без SKU — создать карточку на складе">${esc(T.orderLinesColDed)}</th>
                                         <th></th>
                                     </tr></thead>
                                     <tbody class="order-lines-tbody"></tbody>
@@ -1572,6 +1587,7 @@
                     status: String(ln.status || '').trim(),
                     line_id: lineId,
                     fromStockDone: fromDone,
+                    from_stock: fromDone ? false : !!(ln.from_stock || ln.fromStock),
                     deductFromStock: fromDone ? false : !!(ln.deductFromStock ?? ln.deduct_from_stock),
                 };
             });
@@ -1588,19 +1604,24 @@
             const invId = row.inventory_item_id != null && row.inventory_item_id !== '' ? String(row.inventory_item_id) : '';
             const st = esc(String(row.status || '').trim());
             const lineIdAttr = esc(String(row.line_id || row.lineId || '').trim());
+            const fromStockChecked = fromDone || !!(row.from_stock || row.fromStock) && !row.deductFromStock;
+            const fromDed = fromDone ? ' checked disabled' : (fromStockChecked ? ' checked' : '');
             const ded = fromDone ? ' checked disabled' : (row.deductFromStock ? ' checked' : '');
-            const dedTitle = fromDone ? 'Уже списано со склада' : 'Списать со склада при сохранении';
+            const dedTitle = fromDone ? 'Уже списано со склада' : 'Списать со склада при сохранении (создаст карточку, если нет в каталоге)';
+            const fromTitle = fromDone ? 'Уже списано со склада' : 'Брать со склада, списать при выдаче заказа';
             const skuPh = esc(T.orderLinesSkuPlaceholder || 'SKU');
+            const skuTitle = esc(T.orderLinesSkuTitle || '');
             return `<tr data-from-stock="${fromDone ? '1' : ''}" data-inv-id="${esc(invId)}" data-line-status="${st}" data-line-id="${lineIdAttr}">
                 <td><input type="text" class="ol-name" value="${name}" placeholder="Наименование"></td>
                 <td><input type="number" class="ol-qty" min="0.01" step="any" value="${esc(qty)}"></td>
                 <td><input type="number" class="ol-purchase" min="0" step="any" value="${esc(pur)}"></td>
                 <td><input type="number" class="ol-sale" min="0" step="any" value="${esc(sale)}"></td>
                 <td class="ol-sku-cell">
-                    <input type="text" class="ol-sku" value="${sku}" placeholder="${skuPh}" autocomplete="off" spellcheck="false"${fromDone ? ' readonly' : ''}>
+                    <input type="text" class="ol-sku" value="${sku}" placeholder="${skuPh}" title="${skuTitle}" autocomplete="off" spellcheck="false"${fromDone ? ' readonly' : ''}>
                     <div class="ol-sku-hint muted" aria-live="polite"></div>
                     <div class="ol-sku-dd" role="listbox"></div>
                 </td>
+                <td style="text-align:center;"><input type="checkbox" class="ol-from-stock" title="${esc(fromTitle)}"${fromDed}></td>
                 <td style="text-align:center;"><input type="checkbox" class="ol-deduct" title="${esc(dedTitle)}"${ded}></td>
                 <td><button type="button" class="track-order-line-del" title="Удалить">✕</button></td>
             </tr>`;
@@ -1673,6 +1694,149 @@
             if (dd) {
                 dd.classList.remove('is-open');
                 dd.innerHTML = '';
+            }
+        }
+
+        let trackStockPickerTargetRow = null;
+        let trackStockPickerTimer = null;
+
+        function trackFmtStockMoney(n) {
+            const x = parseFloat(n);
+            if (!Number.isFinite(x)) return '—';
+            return x.toFixed(2) + '\u202f€';
+        }
+
+        function applyTrackStockPick(tr, item) {
+            if (!tr || !item) return;
+            pickSkuFromInventory(tr, item);
+            const fromCb = tr.querySelector('.ol-from-stock');
+            const dedCb = tr.querySelector('.ol-deduct');
+            if (dedCb && !dedCb.disabled) dedCb.checked = false;
+            if (fromCb && !fromCb.disabled) fromCb.checked = true;
+        }
+
+        function openTrackStockPicker(tr) {
+            trackStockPickerTargetRow = tr;
+            const bd = document.getElementById('trackStockPickerBackdrop');
+            if (!bd) return;
+            const skuInp = tr.querySelector('.ol-sku');
+            if (skuInp) skuInp.blur();
+            bd.hidden = false;
+            const inp = document.getElementById('trackStockPickerSearch');
+            if (inp) {
+                inp.value = '';
+                inp.focus();
+            }
+            loadTrackStockPickerResults('');
+        }
+
+        function closeTrackStockPicker() {
+            const bd = document.getElementById('trackStockPickerBackdrop');
+            if (bd) bd.hidden = true;
+            trackStockPickerTargetRow = null;
+        }
+
+        async function loadTrackStockPickerResults(q) {
+            const list = document.getElementById('trackStockPickerList');
+            if (!list) return;
+            list.innerHTML = '<div class="track-stock-picker-status">Загрузка…</div>';
+            try {
+                const term = String(q || '').trim();
+                let url = './api/inventory_list.php?';
+                if (term.length >= 1) {
+                    url += 'q=' + encodeURIComponent(term) + '&limit=100&sort=qty_desc';
+                } else {
+                    url += 'limit=80&sort=qty_desc&browse_hide_supply=1';
+                }
+                const res = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
+                const json = await res.json();
+                if (!json || !json.success) throw new Error(json?.message || 'Ошибка загрузки');
+                const items = Array.isArray(json.data?.items) ? json.data.items : [];
+                if (!items.length) {
+                    list.innerHTML = term.length < 1
+                        ? '<div class="track-stock-picker-status">Короткий список пуст — введите поиск по названию или артикулу.</div>'
+                        : '<div class="track-stock-picker-status">Ничего не найдено. Попробуйте другой запрос или откройте <a href="inventory.html" target="_blank" rel="noopener">склад</a>.</div>';
+                    return;
+                }
+                list.innerHTML = items.map((it) => {
+                    const payload = escAttr(JSON.stringify({
+                        id: it.id,
+                        name: it.name,
+                        sku: it.sku,
+                        default_cost: it.default_cost,
+                        sale_price: it.sale_price,
+                        quantity: it.quantity,
+                    }));
+                    const name = esc(String(it.name || '—'));
+                    const sku = esc(String(it.sku || '—'));
+                    const qty = esc(String(it.quantity != null ? it.quantity : 0));
+                    const cost = esc(trackFmtStockMoney(it.default_cost));
+                    const sale = esc(trackFmtStockMoney(it.sale_price));
+                    return `<button type="button" class="track-stock-picker-item" data-item="${payload}">
+                        <span class="tspi-name">${name}</span>
+                        <span class="tspi-meta">${sku} · ост. ${qty} · закуп ${cost} · продажа ${sale}</span>
+                    </button>`;
+                }).join('');
+                list.querySelectorAll('.track-stock-picker-item').forEach((btn) => {
+                    btn.addEventListener('click', () => {
+                        try {
+                            const raw = btn.getAttribute('data-item');
+                            if (!raw || !trackStockPickerTargetRow) return;
+                            applyTrackStockPick(trackStockPickerTargetRow, JSON.parse(raw));
+                            closeTrackStockPicker();
+                        } catch (_) {}
+                    });
+                });
+            } catch (e) {
+                list.innerHTML = '<div class="track-stock-picker-status">Ошибка: ' + esc(fvErr(e)) + '</div>';
+            }
+        }
+
+        function initTrackStockPickerUi() {
+            const bd = document.getElementById('trackStockPickerBackdrop');
+            const closeBtn = document.getElementById('trackStockPickerClose');
+            const search = document.getElementById('trackStockPickerSearch');
+            if (closeBtn) closeBtn.addEventListener('click', closeTrackStockPicker);
+            if (bd) {
+                bd.addEventListener('click', (ev) => {
+                    if (ev.target === bd) closeTrackStockPicker();
+                });
+            }
+            document.addEventListener('keydown', (ev) => {
+                if (ev.key === 'Escape' && bd && !bd.hidden) closeTrackStockPicker();
+            });
+            if (search) {
+                search.addEventListener('input', () => {
+                    if (trackStockPickerTimer) clearTimeout(trackStockPickerTimer);
+                    const v = search.value;
+                    trackStockPickerTimer = setTimeout(() => loadTrackStockPickerResults(v), 280);
+                });
+            }
+        }
+
+        function bindOrderLineRowControls(tr) {
+            const fromCb = tr.querySelector('.ol-from-stock');
+            const dedCb = tr.querySelector('.ol-deduct');
+            const skuInp = tr.querySelector('.ol-sku');
+            if (skuInp && !skuInp.readOnly) {
+                skuInp.addEventListener('mousedown', (e) => {
+                    if (e.button !== 0) return;
+                    if (String(skuInp.value || '').trim() !== '') return;
+                    e.preventDefault();
+                    openTrackStockPicker(tr);
+                });
+                skuInp.addEventListener('dblclick', (e) => {
+                    e.preventDefault();
+                    openTrackStockPicker(tr);
+                });
+            }
+            if (fromCb && dedCb) {
+                fromCb.addEventListener('change', () => {
+                    if (fromCb.checked) dedCb.checked = false;
+                });
+                dedCb.addEventListener('change', () => {
+                    if (dedCb.checked) fromCb.checked = false;
+                });
             }
         }
 
@@ -1805,6 +1969,7 @@
             if (!tbody) return;
             tbody.querySelectorAll('tr').forEach((tr) => {
                 bindSkuRow(tr);
+                bindOrderLineRowControls(tr);
                 refreshSkuHintForRow(tr).catch(() => {});
             });
         }
@@ -1848,7 +2013,9 @@
                 const purchase = parseOrderLineDecimal(tr.querySelector('.ol-purchase')?.value);
                 const sale = parseOrderLineDecimal(tr.querySelector('.ol-sale')?.value);
                 const sku = String(tr.querySelector('.ol-sku')?.value || '').trim();
+                const fromEl = tr.querySelector('.ol-from-stock');
                 const dedEl = tr.querySelector('.ol-deduct');
+                const fromStock = !!(fromEl && !fromEl.disabled && fromEl.checked);
                 const deductFromStock = !!(dedEl && !dedEl.disabled && dedEl.checked);
                 const hadFromStock = tr.getAttribute('data-from-stock') === '1';
                 const invAttr = String(tr.getAttribute('data-inv-id') || '').trim();
@@ -1861,6 +2028,8 @@
                 if (hadFromStock) {
                     line.from_stock = true;
                     if (stAttr !== '') line.status = stAttr;
+                } else if (fromStock && !deductFromStock) {
+                    line.from_stock = true;
                 }
                 out.push(line);
             }
@@ -1928,7 +2097,7 @@
                     const tbody = box && box.querySelector('.order-lines-tbody');
                     if (!tbody) return;
                     const wrap = document.createElement('div');
-                    wrap.innerHTML = '<table><tbody>' + orderLineRowHtml({ name: '', qty: 1, purchase: 0, sale: 0, sku: '', fromStockDone: false, deductFromStock: false }) + '</tbody></table>';
+                    wrap.innerHTML = '<table><tbody>' + orderLineRowHtml({ name: '', qty: 1, purchase: 0, sale: 0, sku: '', fromStockDone: false, from_stock: false, deductFromStock: false }) + '</tbody></table>';
                     const newRow = wrap.querySelector('tr');
                     if (!newRow) return;
                     tbody.appendChild(newRow);
@@ -1936,6 +2105,7 @@
                         if (tbody.querySelectorAll('tr').length > 1) newRow.remove();
                     });
                     bindSkuRow(newRow);
+                    bindOrderLineRowControls(newRow);
                     refreshSkuHintForRow(newRow).catch(() => {});
                 });
             });
@@ -2029,6 +2199,7 @@
         document.getElementById('fDone').addEventListener('click', () => setMode('done'));
 
         document.addEventListener('DOMContentLoaded', () => {
+            initTrackStockPickerUi();
             applyTrackStaticI18n();
             loadPrefs();
             try {
