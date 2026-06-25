@@ -267,17 +267,22 @@ body.fv-inventory .fv-site-logo .fv-brand-subtitle {
 body.fv-dashboard [data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-slot,
 body.fv-dashboard .fv-brand-logo-slot:has(.fv-brand-logo-custom:not(.is-hidden):not([hidden])),
 body.fv-dashboard .fv-brand-logo-slot.fv-brand-logo-slot--custom {
-    width: min(100%, 480px);
+    width: min(100%, 560px);
     height: auto;
     min-height: 0;
-    max-height: 128px;
+    max-height: 160px;
     overflow: hidden;
+    padding: 10px 18px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    box-sizing: border-box;
 }
 
 body.fv-dashboard [data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-custom,
 body.fv-dashboard .fv-brand-logo-slot:has(.fv-brand-logo-custom:not(.is-hidden):not([hidden])) .fv-brand-logo-custom {
     max-width: 100%;
-    max-height: 128px;
+    max-height: 140px;
     width: auto;
     height: auto;
     object-fit: contain;

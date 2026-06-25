@@ -263,9 +263,10 @@ $companyProfile = fixarivan_company_profile_load();
                 <input type="hidden" name="form_type" value="company">
 
                 <label for="company_logo_file">Логотип FixariVan (PNG с прозрачным фоном — рекомендуется)</label>
-                <p class="hint">Заменяет стандартный логотип на <strong>рабочем столе</strong>, в <strong>складе</strong>, а также в <strong>счетах и PDF</strong>. Горизонтальная картинка целиком (знак + название + подпись), пропорции ~ <strong>3.5:1 … 4:1</strong> (ширина больше высоты).<br>
+                <p class="hint">Заменяет стандартный логотип на <strong>рабочем столе</strong>, в <strong>складе</strong>, а также в <strong>счетах и PDF</strong>. Горизонтальная картинка целиком (знак + название + подпись), пропорции ~ <strong>3.5:1 … 4:1</strong>.<br>
+                <strong>Важно для дашборда:</strong> фон тёмный — текст в PNG должен быть <strong>светлым или ярким</strong> (белый, голубой, зелёный). Тёмно-синий текст на прозрачном фоне на сайте <strong>не виден</strong>.<br>
                 <strong>Рекомендуемый файл:</strong> PNG с прозрачным фоном, <strong>1200×320 px</strong> (допустимо 960×256 … 2400×640).<br>
-                <strong>На экране:</strong> до <strong>480×128 px</strong> (дашборд), до <strong>280×72 px</strong> (склад) — пропорции сохраняются.<br>
+                <strong>На экране:</strong> до <strong>560×140 px</strong> (дашборд), до <strong>280×72 px</strong> (склад).<br>
                 <strong>Лимиты:</strong> файл до <strong>4 МБ</strong>, изображение от <strong>240×64</strong> до <strong>2400×800 px</strong>.</p>
                 <?php
                 $brandLogoUrl = fixarivan_brand_logo_url();

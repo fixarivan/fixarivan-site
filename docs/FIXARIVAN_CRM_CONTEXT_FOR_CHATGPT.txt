@@ -1,0 +1,437 @@
+================================================================================
+FIXARIVAN CRM — ПОЛНОЕ ОПИСАНИЕ ПРОЕКТА ДЛЯ ChatGPT / AI-АССИСТЕНТОВ
+================================================================================
+Версия документа: 2026-06-25
+Язык интерфейса CRM: русский (основной), английский и финский — в документах и портале
+Часовой пояс финансов и календаря: Europe/Helsinki
+Валюта: EUR (€)
+
+Назначение файла:
+  Скопируйте этот текст в ChatGPT (или другой AI), когда нужно работать с кодом,
+  дизайном или логикой FixariVan CRM. Документ описывает production-систему,
+  которую реально использует мастерская — не учебный проект.
+
+================================================================================
+1. ЧТО ЭТО ЗА ПРОДУКТ
+================================================================================
+
+FixariVan — веб-CRM для мобильного сервиса по ремонту техники (Финляндия).
+Один мастер / одна мастерская, shared-хостинг, SQLite как единая БД.
+
+Объединяет в одном месте:
+  • Заказы на ремонт и продажу
+  • Акт приёма, квитанции, счета (invoice), диагностические отчёты (mobile/PC)
+  • Клиентскую базу
+  • Склад запчастей с движениями и привязкой к заказам
+  • Календарь событий
+  • Финансовую аналитику (кассовый метод, не полноценная бухгалтерия)
+  • Публичный клиентский портал по токену в URL
+  • PDF-документы (Dompdf)
+  • Заметки мастера
+
+Production URL: https://fixarivan.space/
+GitHub: fixarivan/fixarivan-site (ветка main)
+
+================================================================================
+2. ТЕХНОЛОГИИ
+================================================================================
+
+Сервер:
+  • PHP 8.x
+  • PDO SQLite (файл storage/fixarivan.sqlite)
+  • PHP-сессии для админки (cookie_path=/, SameSite=Lax, HttpOnly)
+  • Dompdf для PDF (api/dompdf/)
+
+Клиент:
+  • HTML + CSS + vanilla JavaScript (fetch API)
+  • Без React/Vue — монолитные .html страницы + inline/отдельные .js
+  • Chart.js 4.4 (CDN) — графики на дашборде и складе
+  • Service Worker (sw.js) — кэш статики, API НЕ кэшируется
+
+Конфигурация:
+  • config.example.php → config.local.php (НЕ коммитить!)
+  • ADMIN_USERNAME / ADMIN_PASSWORD в config.local.php
+  • После смены пароля в настройках — storage/admin_auth.json (bcrypt)
+  • storage/company_profile.json — реквизиты компании, путь к логотипу
+
+Legacy (не использовать для новых фич):
+  • MySQL в config.php — устарело
+  • api/get_statistics_optimized.php — deprecated MySQL
+  • admin/dashboard.html — старая панель с hardcoded логином
+
+================================================================================
+3. АРХИТЕКТУРА ДОСТУПА
+================================================================================
+
+Три режима (подробнее: docs/ACCESS_MODEL.md):
+
+ADMIN:
+  • Вход: admin/login.php
+  • Сессия: $_SESSION['admin_logged_in'] === true
+  • Рабочий стол: index.php → readfile(dashboard_app.html)
+  • Защита страниц: auth_check.js + FIXARIVAN_REQUIRE_ADMIN_SESSION
+  • API: api/lib/require_admin_session.php
+
+TOKEN-ONLY (клиент):
+  • order_view.php, receipt_view.php, invoice_view.php, report_view.php
+  • client_portal.php — портал клиента по client_token
+  • Доступ только с валидным токеном в URL
+  • save_order_fixed.php — клиентские правки без админ-сессии (по токену)
+
+PDF:
+  • api/generate_dompdf_fixed.php
+  • Либо админ-сессия, либо clientToken в запросе (pdf_request_auth.php)
+
+ВАЖНО ДЛЯ AI:
+  • localStorage НЕ является авторизацией
+  • Не отключать require_admin_session на write-API
+  • Не удалять/не пересоздавать storage/fixarivan.sqlite без явного запроса
+
+================================================================================
+4. БАЗА ДАННЫХ SQLite
+================================================================================
+
+Файл: storage/fixarivan.sqlite
+Инициализация/миграции: api/sqlite.php → ensureSqliteSchema()
+Режим: WAL, foreign keys, busy_timeout
+
+Основные таблицы:
+
+clients          — клиенты (имя, телефон, email, …)
+orders           — заказы / акты приёма
+  • status (legacy: pending, signed, sent_to_client, …)
+  • order_status, public_status (актуальная модель Track)
+  • parts_status — статус запчастей по заказу
+  • order_lines_json — позиции заказа (запчасти, работы)
+  • client_token — для публичных ссылок
+  • date_of_acceptance, date_created, date_updated, public_completed_at
+
+receipts         — квитанции об оплате
+  • payment_status, payment_date, total_amount, order_id
+
+invoices         — счета B2B
+  • status (draft, sent, paid, cancelled, …)
+
+mobile_reports   — диагностические отчёты (mobile/PC)
+
+inventory_items  — каталог склада (sku, name, category, default_cost, sale_price, min_stock)
+inventory_balances — остаток quantity на item_id (триггер из movements)
+inventory_movements — ledger: sale, out, in, adjust… quantity_delta, ref_kind, ref_id
+
+calendar_events  — события календаря
+order_warehouse_lines — связь строк заказа со складом
+purchase_list_dismissals — очередь закупок
+notes            — быстрые заметки мастера
+portal_snake_global — таблица для мини-игры в клиентском портале
+
+Файлы вне git (на сервере, сохраняются при deploy):
+  • storage/fixarivan.sqlite
+  • storage/company_profile.json
+  • storage/admin_auth.json
+  • assets/company_logo.* — загруженный логотип
+
+================================================================================
+5. СТРУКТУРА РЕПОЗИТОРИЯ (КЛЮЧЕВЫЕ ПУТИ)
+================================================================================
+
+index.php              — gate: сессия → dashboard_app.html
+dashboard_app.html     — главный рабочий стол (статистика, навигация, заметки)
+track.html             — центр заказов: поиск, статусы, документы, WhatsApp
+order_new.html         — создание нового заказа
+inventory.html         — склад (космический UI), Chart.js, категории
+finance.html           — финансовый модуль с фильтрами периода
+clients.html           — база клиентов
+calendar.html          — календарь
+notes.html             — заметки мастера
+receipt.html           — форма квитанции
+invoice.html           — форма счёта
+master_form.html       — акт приёма (мастер)
+diagnostic_mobile.html / diagnostic_pc.html — отчёты
+client_portal.php      — клиентский портал
+
+admin/
+  login.php, logout.php, settings.php — вход и настройки (реквизиты, логотип, пароль)
+
+api/
+  sqlite.php           — подключение БД
+  lib/                 — бизнес-логика (finance_lib, order_center, document_templates, …)
+  get_fast_stats.php   — статистика дашборда (через dashboard_stats.php)
+  company_brand.php    — URL кастомного логотипа
+  save_order_fixed.php — сохранение заказа
+  save_receipt_ultimate.php, save_invoice.php — документы
+  finance.php          — финансовые API
+  inventory_list.php, inventory_movement.php — склад
+  calendar_events.php  — календарь
+  generate_dompdf_fixed.php — PDF
+
+css/fixarivan-theme.css — общий бренд, логотип, тема
+js/                    — ui_helpers.js, brand_logo.js, dashboard_analytics.js, …
+sw.js                  — service worker (CACHE_VERSION менять при деплое CSS/JS)
+
+docs/                  — PROJECT_GUIDE.md, ACCESS_MODEL.md, STATUS.md, этот файл
+
+.github/workflows/deploy.yml — CI deploy по [deploy] в commit message
+
+================================================================================
+6. ОСНОВНЫЕ МОДУЛИ И СТРАНИЦЫ
+================================================================================
+
+6.1. Рабочий стол (dashboard_app.html)
+  • KPI заказов с фильтром периода (сегодня, 7/30 дней, месяц, год, custom)
+  • Графики: динамика заказов (line), распределение статусов (donut)
+  • KPI склада: всего, в наличии, нет, маржа
+  • KPI финансов: выручка, прибыль, маржа %, средний чек
+  • Блок «События» (просроченные / сегодня / 7 дней)
+  • Последние 5 документов
+  • Быстрые заметки (создаются только при вводе текста)
+  • Змейка — скрыта за кнопкой «Показать змейку»
+  • Логотип: стандартный (SVG+текст) или загруженный PNG из настроек
+
+  API: api/get_fast_stats.php?preset=30d&chart_range=30d
+  Логика: api/lib/dashboard_stats.php
+
+  Скрыты по запросу пользователя (не показывать обратно без явной просьбы):
+    — блок «Целостность данных»
+    — график «Тренд выручки и прибыли»
+    — детальная аналитика склада (топ категории, часто/редко используемые, движение)
+
+6.2. Track (track.html) — главный операционный экран
+  • Список заказов и связанных документов
+  • Публичный статус (public_status / order_status)
+  • Статус запчастей (parts_status)
+  • Редактирование строк заказа, списание со склада
+  • WhatsApp клиенту и WhatsApp по заказу (готовые тексты по статусу)
+  • Счета, квитанции, отчёты в контексте order_id
+
+  Статусы заказа (order_center.php):
+    in_progress, waiting_parts, in_transit, done, delivered, cancelled
+  Legacy status в колонке status всё ещё встречается в старых записях
+
+6.3. Новый заказ (order_new.html)
+  • Тип: ремонт / продажа / нестандарт
+  • Позиции, публичные поля для клиента
+  • save_order_fixed.php
+
+6.4. Склад (inventory.html)
+  • SQLite — единственный источник правды
+  • Карточки позиций, категории, остатки, min_stock
+  • Движения: приход, списание (sale/out), корректировки
+  • js/inventory_sqlite_override.js — синхронизация UI с сервером
+  • localStorage fixarivan_inventory — fallback/кэш (на дашборде только при сбое API)
+
+6.5. Финансы (finance.html + api/finance.php)
+  • Период: today, 7d, month, quarter, year, custom from/to
+  • Выручка: оплаченные квитанции + оплаченные счета (по payment_date)
+  • Прибыль ≈ выручка − расход запчастей по заказам с оплатой в периоде
+  • Drilldown списки, экспорт
+  • НЕ бухгалтерия — кассовый MVP
+
+6.6. Клиенты (clients.html + api/clients.php)
+  • Справочник, поиск, история заказов
+
+6.7. Календарь (calendar.html + api/calendar_events.php)
+  • События с датами, summary для дашборда
+
+6.8. Заметки (notes.html + api/notes.php)
+  • SQLite таблица notes
+
+6.9. Клиентский портал (client_portal.php)
+  • Языки ru/en/fi
+  • Статус заказа для клиента, документы, мини-игра змейка
+
+6.10. PDF и шаблоны
+  • api/lib/document_templates.php — HTML/CSS шаблоны актов, квитанций, счетов
+  • Логотип компании из company_profile / assets/company_logo.*
+  • generate_dompdf_fixed.php
+
+================================================================================
+7. СТАТИСТИКА И РАСЧЁТЫ (ВАЖНО ДЛЯ AI)
+================================================================================
+
+Источник: api/lib/dashboard_stats.php (вызывается из get_fast_stats.php)
+
+Заказы — bucket по public_status/order_status + legacy fallback:
+  waiting      → waiting_parts + legacy pending/draft
+  in_progress  → in_progress, in_transit + legacy sent_to_client/viewed
+  completed    → done, delivered + legacy signed
+  cancelled    → cancelled
+
+Фильтр периода: date_of_acceptance ?? work_date ?? date_created
+
+total на дашборде = заказы за период (НЕ receipts+reports; total_documents — legacy поле)
+
+Склад (sqliteInventoryAggregateStats):
+  in_stock     → quantity > 0
+  out_of_stock → total − in_stock
+  low_stock    → qty > 0 AND qty <= min_stock
+  profit_potential → sum(qty * sale_price) − sum(qty * default_cost)
+
+Финансы на дашборде — через fixarivan_finance_overview() (finance_lib.php)
+
+НЕ смешивать:
+  • KPI заказов (текущая модель Track)
+  • deprecated get_statistics_optimized.php (MySQL statuses)
+
+================================================================================
+8. БРЕНДИНГ И ЛОГОТИП
+================================================================================
+
+Настройки: admin/settings.php → «Реквизиты компании» → company_logo_file
+Хранение: assets/company_logo.{png|jpg|webp|svg…} + путь в company_profile.json
+API: api/company_brand.php → logo_url с cache-bust ?v=mtime
+
+Отображение:
+  • dashboard_app.html, inventory.html — js/brand_logo.js
+  • CSS grid-слот: .fv-brand-logo-slot — custom заменяет default
+  • Класс has-custom-brand-logo + :has() селекторы в fixarivan-theme.css
+
+Рекомендации загрузки (актуально):
+  • PNG прозрачный, горизонтальный, ~1200×320 px (пропорция 3.5:1…4:1)
+  • Лимит файла: 4 МБ
+  • Пиксели: 240×64 … 2400×800
+  • На экране: до 480×128 px (дашборд), 280×72 px (склад)
+  • object-fit: contain — пропорции сохраняются
+
+Валидация: fixarivan_company_logo_validate_upload() в company_profile.php
+
+================================================================================
+9. WHATSAPP (Track)
+================================================================================
+
+track.html:
+  • «WhatsApp клиенту» в quick bar
+  • «WhatsApp по заказу» на карточке заказа
+  • Тексты формируются по parts_status / public_status
+  • Функция trackBuildWhatsappOrderMessage()
+
+================================================================================
+10. ДЕПЛОЙ И GIT
+================================================================================
+
+Репозиторий: github.com/fixarivan/fixarivan-site
+Ветка: main
+
+Production deploy ТОЛЬКО если в commit message есть [deploy]:
+  git commit -m "Описание изменений [deploy]"
+  git push origin main
+
+GitHub Actions (.github/workflows/deploy.yml):
+  • SSH на fixawcab@162.0.217.157:21098
+  • git pull в /home/fixawcab/fixarivan-site
+  • deploy.sh → синхронизация в /home/fixawcab/public_html/fixarivan.space
+  • Проверка .deploy_revision == git SHA
+
+deploy.sh НЕ перезаписывает:
+  • storage/
+  • assets/company_logo.*
+  • config.local.php
+
+После изменений CSS/JS — bump sw.js CACHE_VERSION и ?v= на link/script при необходимости
+
+Локально gh CLI может быть не установлен — деплой через git push достаточен
+
+================================================================================
+11. ПРАВИЛА ДЛЯ AI ПРИ РАБОТЕ С ЭТИМ ПРОЕКТОМ
+================================================================================
+
+ОБЯЗАТЕЛЬНО:
+  ✓ Минимальный diff — не рефакторить несвязанное
+  ✓ Не менять routing, auth, схему БД без явного запроса
+  ✓ Не DELETE/DROP/truncate production данных
+  ✓ Не коммитить config.local.php, .env, секреты
+  ✓ Коммит только по явной просьбе пользователя
+  ✓ Deploy: [deploy] в message
+  ✓ PHP API для админки: require_admin_session.php
+  ✓ Новые таблицы/колонки — через ensureSqliteSchema в sqlite.php
+  ✓ Сохранять обратную совместимость API-полей где возможно
+
+НЕ ДЕЛАТЬ без запроса:
+  ✗ Переписывать на React/фреймворк
+  ✗ Миграция MySQL → SQLite (уже SQLite)
+  ✗ Web Push уведомления (пользователь просил «пока не трогать»)
+  ✗ Возвращать скрытые блоки дашборда (integrity, finance chart, inventory detail)
+  ✗ force push main
+
+СТИЛЬ UI:
+  • Тёмная «космическая» тема, rgba карточки, fixarivan-theme.css
+  • Дашборд: dashboard_app.html + mobile_fixes.css
+  • Язык UI: русский
+
+ТЕСТИРОВАНИЕ:
+  • api/health.php — PHP extensions, storage writable
+  • api/db_status.php — подключение SQLite (нужна сессия)
+
+================================================================================
+12. КЛЮЧЕВЫЕ API ENDPOINTS (краткий справочник)
+================================================================================
+
+Каталог: GET api/index.php
+
+Статистика:
+  GET api/get_fast_stats.php?preset=30d&chart_range=30d
+  GET api/get_inventory_stats.php
+
+Заказы и документы:
+  POST api/save_order_fixed.php
+  PATCH api/order_track_patch.php
+  GET api/get_all_documents.php
+  GET api/get_recent_documents.php
+  GET api/get_document.php
+  POST api/delete_document_safe_fixed.php
+
+Склад:
+  GET api/inventory_list.php
+  POST api/inventory_movement.php
+
+Финансы:
+  GET api/finance.php?action=overview&from=…&to=…
+
+Компания / бренд:
+  GET api/company_brand.php
+  POST admin/settings.php (form company + logo upload)
+
+PDF:
+  POST api/generate_dompdf_fixed.php
+
+Система:
+  GET api/health.php
+  GET api/db_status.php (admin session)
+  GET api/admin_session_status.php
+
+================================================================================
+13. НЕДАВНИЕ ИЗМЕНЕНИЯ (контекст на 2025–2026)
+================================================================================
+
+• WhatsApp в Track — сообщения клиенту и по заказу
+• Оптимизация скролла дашборда/склада (убран backdrop-filter, solid cards)
+• Dashboard UX: 5 последних документов, змейка за toggle, заметки без пустых строк
+• CI: checkout@v6, Node24 для Actions
+• Кастомный логотип через settings → dashboard/inventory/PDF
+• Исправление дублирования логотипа (grid + :has() + force hide default)
+• Увеличение размера логотипа на экране (480×128), лимит 4 МБ
+• Статистика: dashboard_stats.php, фильтры периода, графики Chart.js,
+  исправлены расчёты статусов заказов (public_status вместо только legacy status)
+• Скрыты технические блоки дашборда по запросу пользователя
+
+================================================================================
+14. ИЗВЕСТНЫЕ ОГРАНИЧЕНИЯ
+================================================================================
+
+• SQLite на shared hosting — редкие блокировки при параллельной записи
+• finance.html — кассовый учёт, не GAAP/IFRS
+• localStorage складa может расходиться с SQLite — дашборд предпочитает API
+• admin/dashboard.html, get_statistics_optimized.php — legacy, не использовать
+• SVG логотип — без проверки пикселей при upload
+• Service Worker может кэшировать старые CSS — нужен CACHE_VERSION bump + Ctrl+F5
+
+================================================================================
+15. КОНТАКТЫ ПРОЕКТА (технические)
+================================================================================
+
+Сайт: https://fixarivan.space/
+Репозиторий: https://github.com/fixarivan/fixarivan-site
+Документация в репо: docs/PROJECT_GUIDE.md, docs/ACCESS_MODEL.md, docs/STATUS.md
+
+================================================================================
+КОНЕЦ ДОКУМЕНТА — можно дополнять при крупных изменениях архитектуры
+================================================================================
