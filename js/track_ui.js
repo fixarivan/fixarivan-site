@@ -55,6 +55,14 @@
         return (parts[0][0] + parts[1][0]).toUpperCase();
     }
 
+    /** Stable hue 0–7 from client key/name (UI only). */
+    function clientAvatarHue(seed) {
+        let h = 5381;
+        const s = String(seed || '?');
+        for (let i = 0; i < s.length; i++) h = ((h << 5) + h) ^ s.charCodeAt(i);
+        return Math.abs(h) % 8;
+    }
+
     function formatDateShort(raw) {
         const s = String(raw || '').trim();
         if (!s) return '—';
@@ -199,19 +207,24 @@
         if (!orderDocId) return;
         const scope = root || document;
         const q = orderDocId.replace(/"/g, '\\"');
-        const box = scope.querySelector('.order-lines-box[data-order-doc-id="' + q + '"]');
+        const box = scope.querySelector('.order-lines-box[data-order-doc-id="' + q + '"]')
+            || document.querySelector('.order-lines-box[data-order-doc-id="' + q + '"]');
         let p = { labour: 0, partsSale: 0, discount: 0, total: 0, profit: 0, margin: 0 };
         if (box) {
             p = calcPricingFromBox(box);
             applyPricingToContainer(box.closest('.order-card'), p);
         } else {
-            const workInp = scope.querySelector('.track-public-estimated-cost[data-doc="' + q + '"]');
+            const workInp = scope.querySelector('.track-public-estimated-cost[data-doc="' + q + '"]')
+                || document.querySelector('.track-public-estimated-cost[data-doc="' + q + '"]');
             if (workInp) {
                 p.labour = parseDecimal(workInp.value);
                 p.total = p.labour;
+                p.profit = p.labour;
+                p.margin = p.total > 0 ? 100 : 0;
             }
         }
-        applyPricingToContainer(scope.querySelector('.track-rail-finance[data-order-doc-id="' + q + '"]'), p);
+        /* Rail lives outside .order-card / #ordersTree — always query document */
+        applyPricingToContainer(document.querySelector('.track-rail-finance[data-order-doc-id="' + q + '"]'), p);
     }
 
     function applyPricingToContainer(container, p) {
@@ -260,6 +273,7 @@
         init,
         updatePricingSummary,
         clientInitials,
+        clientAvatarHue,
         formatDateShort,
         lastActivityFromGroup,
         activeOrderForClient,

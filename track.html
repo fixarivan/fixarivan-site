@@ -102,8 +102,8 @@
     </style>
     <link rel="stylesheet" href="css/fixarivan-theme.css">
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625saas">
-    <link rel="stylesheet" href="css/track-modern.css?v=20250625ideal">
-    <script src="js/track_ui.js"></script>
+    <link rel="stylesheet" href="css/track-modern.css?v=20250625compact">
+    <script src="js/track_ui.js?v=20250625fix"></script>
 </head>
 <body class="fv-page track-page">
     <div class="top">
@@ -937,11 +937,17 @@
                 { id: 'repair', label: 'Ремонт', icon: '🔧' },
                 { id: 'ready', label: 'Готово', icon: '✓' },
             ];
+            if (isTrackClosed(o)) {
+                return `<div class="track-status-stepper">${steps.map((s) =>
+                    `<div class="track-step is-done"><span class="track-step-icon" aria-hidden="true">${s.icon}</span><span class="track-step-label">${esc(s.label)}</span></div>`
+                ).join('')}</div>`;
+            }
             let activeIdx = 1;
             if (isPartsWait(o)) activeIdx = 2;
             else if (pub === 'done' || pub === 'in_transit') activeIdx = 4;
             else if (pub === 'cancelled') activeIdx = -1;
-            else if (pub === 'in_progress') activeIdx = 3;
+            else if (pub === 'in_progress' || pub === 'waiting_parts') activeIdx = 3;
+            else if (pub === 'delivered') activeIdx = 4;
             return `<div class="track-status-stepper">${steps.map((s, i) => {
                 const cls = activeIdx < 0 ? 'is-muted' : (i < activeIdx ? 'is-done' : (i === activeIdx ? 'is-active' : ''));
                 return `<div class="track-step ${cls}"><span class="track-step-icon" aria-hidden="true">${s.icon}</span><span class="track-step-label">${esc(s.label)}</span></div>`;
@@ -1054,6 +1060,7 @@
                     ? T.sidebarClientTotal.replace('{n}', String(allO.length))
                     : T.sidebarClientSubset.replace('{a}', String(g.orders.length)).replace('{b}', String(allO.length));
                 const initials = window.TrackUi ? TrackUi.clientInitials(g.client_name) : '?';
+                const avatarHue = window.TrackUi ? TrackUi.clientAvatarHue(g.key || g.client_name) : 0;
                 const lastAct = window.TrackUi ? TrackUi.lastActivityFromGroup(base || g) : '';
                 const activeO = window.TrackUi ? TrackUi.activeOrderForClient(base || g) : null;
                 let statusLine = '';
@@ -1066,7 +1073,7 @@
                 return `
                 <div class="client-item${g.key===state.activeKey?' active':''}" data-key="${esc(g.key)}" title="${escAttr(tip)}">
                     <div class="track-client-inner">
-                        <div class="track-client-avatar" aria-hidden="true">${esc(initials)}</div>
+                        <div class="track-client-avatar track-avatar-h${avatarHue}" aria-hidden="true">${esc(initials)}</div>
                         <div class="track-client-body">
                             <div class="track-client-head">
                                 <strong>${esc(g.client_name)}</strong>
@@ -1082,7 +1089,7 @@
             if (!state.activeKey && groups.length){ state.activeKey = groups[0].key; renderSidebar(); renderDetails(); }
         }
 
-        function renderDetails(){
+        async function renderDetails(){
             const T = trackT();
             const groups = filterGroups();
             const g = groups.find((x) => x.key === state.activeKey);
@@ -1243,7 +1250,7 @@
                 </div>
             `;}).join('') + '</div>';
             renderWorkspaceRail(g, g.orders[0] || null, T);
-            hydrateTrackOrderBlocks(tree);
+            await hydrateTrackOrderBlocks(tree);
             bindPortalButtons(tree);
             bindTrackOrderControls(tree);
             bindOrderLinesControls(tree);
@@ -1254,6 +1261,10 @@
                 tree.querySelectorAll('.order-lines-box[data-order-doc-id]').forEach((box) => {
                     TrackUi.updatePricingSummary(document, box.getAttribute('data-order-doc-id') || '');
                 });
+                const firstO = g.orders[0];
+                const firstDoc = firstO && firstO.documents ? firstO.documents.find((d) => d.type === 'order') : null;
+                const firstDocId = firstDoc ? String(firstDoc.document_id || '') : '';
+                if (firstDocId) TrackUi.updatePricingSummary(document, firstDocId);
             }
         }
 
@@ -1806,7 +1817,7 @@
                     if (!tbody) return;
                     fillOrderLinesTbody(tbody, parseOrderLinesFromDoc(doc));
                 });
-                if (window.TrackUi) TrackUi.updatePricingSummary(root, orderDocId);
+                if (window.TrackUi) TrackUi.updatePricingSummary(document, orderDocId);
                 root.querySelectorAll('.order-display-title').forEach((el) => {
                     if (String(el.getAttribute('data-order-doc-id') || '') !== orderDocId) return;
                     el.textContent = resolveTrackCardTitle(doc);
