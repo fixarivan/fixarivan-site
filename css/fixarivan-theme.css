@@ -272,10 +272,9 @@ body.fv-dashboard .fv-brand-logo-slot.fv-brand-logo-slot--custom {
     min-height: 0;
     max-height: 160px;
     overflow: hidden;
-    padding: 10px 18px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(148, 163, 184, 0.14);
+    padding: 0;
+    background: transparent;
+    border: none;
     box-sizing: border-box;
 }
 
