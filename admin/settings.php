@@ -27,15 +27,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $currentLogo = trim((string)(fixarivan_company_profile_load()['company_logo'] ?? ''));
             $logoPath = $currentLogo;
-            if (!empty($_FILES['company_logo_file']['tmp_name']) && is_uploaded_file((string)$_FILES['company_logo_file']['tmp_name'])) {
+            $assetsDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'assets';
+
+            if (!empty($_POST['clear_company_logo'])) {
+                $logoPath = '';
+                if (is_dir($assetsDir)) {
+                    foreach (glob($assetsDir . DIRECTORY_SEPARATOR . 'company_logo.*') ?: [] as $oldFile) {
+                        if (is_file($oldFile)) {
+                            @unlink($oldFile);
+                        }
+                    }
+                }
+            } elseif (!empty($_FILES['company_logo_file']['tmp_name']) && is_uploaded_file((string)$_FILES['company_logo_file']['tmp_name'])) {
                 $ext = strtolower((string)pathinfo((string)$_FILES['company_logo_file']['name'], PATHINFO_EXTENSION));
                 $allowed = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
                 if (!in_array($ext, $allowed, true)) {
                     throw new RuntimeException('Логотип: допустимы PNG, JPG, GIF, WEBP, SVG');
                 }
-                $assetsDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'assets';
                 if (!is_dir($assetsDir) && !mkdir($assetsDir, 0775, true) && !is_dir($assetsDir)) {
                     throw new RuntimeException('Не удалось создать каталог assets/');
+                }
+                foreach (glob($assetsDir . DIRECTORY_SEPARATOR . 'company_logo.*') ?: [] as $oldFile) {
+                    if (is_file($oldFile)) {
+                        @unlink($oldFile);
+                    }
                 }
                 $saveExt = $ext === 'jpeg' ? 'jpg' : $ext;
                 $dest = $assetsDir . DIRECTORY_SEPARATOR . 'company_logo.' . $saveExt;
@@ -57,6 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'company_logo' => $logoPath,
             ]);
             $message = 'Реквизиты компании обновлены.';
+            if (!empty($_POST['clear_company_logo'])) {
+                $message = 'Логотип удалён — на сайте снова стандартный FixariVan.';
+            } elseif (!empty($_FILES['company_logo_file']['tmp_name'])) {
+                $message = 'Логотип загружен: дашборд, склад, счета и PDF.';
+            }
             $messageType = 'ok';
         } catch (Throwable $e) {
             $message = 'Ошибка сохранения реквизитов: ' . $e->getMessage();
@@ -148,10 +168,36 @@ $companyProfile = fixarivan_company_profile_load();
             box-shadow: 0 10px 40px rgba(0,0,0,0.12);
         }
         label { display: block; font-weight: 600; margin-bottom: 6px; color: #4a5568; font-size: 0.9rem; }
-        input[type="password"], input[type="text"] {
+        input[type="password"], input[type="text"], input[type="file"] {
             width: 100%; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 10px;
             font-size: 1rem; margin-bottom: 16px;
         }
+        .logo-preview-wrap {
+            margin: 0 0 14px;
+            padding: 14px;
+            border-radius: 12px;
+            background: #0f172a;
+            text-align: center;
+        }
+        .logo-preview-wrap img {
+            max-width: 100%;
+            max-height: 96px;
+            object-fit: contain;
+        }
+        .logo-preview-label {
+            font-size: 0.78rem;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 16px;
+            font-size: 0.9rem;
+            color: #4a5568;
+        }
+        .checkbox-row input { width: auto; margin: 0; }
         button[type="submit"] {
             width: 100%; padding: 14px; border: none; border-radius: 12px;
             background: linear-gradient(45deg, #667eea, #764ba2); color: #fff;
@@ -215,10 +261,26 @@ $companyProfile = fixarivan_company_profile_load();
             <form method="post" autocomplete="off" enctype="multipart/form-data">
                 <input type="hidden" name="form_type" value="company">
 
-                <label for="company_logo_file">Логотип для счетов и PDF (PNG/JPG/SVG и др.)</label>
+                <label for="company_logo_file">Логотип FixariVan (PNG с прозрачным фоном — рекомендуется)</label>
+                <p class="hint">Заменяет стандартный логотип на <strong>рабочем столе</strong>, в <strong>складе</strong>, а также в <strong>счетах и PDF</strong>. Лучше загружать горизонтальную картинку целиком (знак + название), как на дашборде.</p>
+                <?php
+                $brandLogoUrl = fixarivan_brand_logo_url();
+                if ($brandLogoUrl !== ''):
+                ?>
+                    <div class="logo-preview-wrap">
+                        <div class="logo-preview-label">Текущий логотип</div>
+                        <img src="../<?= htmlspecialchars($brandLogoUrl) ?>" alt="Текущий логотип">
+                    </div>
+                    <label class="checkbox-row">
+                        <input type="checkbox" name="clear_company_logo" value="1">
+                        <span>Удалить загруженный логотип (вернуть стандартный)</span>
+                    </label>
+                <?php endif; ?>
                 <input type="file" id="company_logo_file" name="company_logo_file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
-                <?php if (!empty($companyProfile['company_logo'])): ?>
-                    <p class="hint">Текущий файл: <code><?= htmlspecialchars((string)$companyProfile['company_logo']) ?></code> — загрузите новый, чтобы заменить.</p>
+                <?php if ($brandLogoUrl !== ''): ?>
+                    <p class="hint">Файл: <code><?= htmlspecialchars((string)$companyProfile['company_logo']) ?></code> — выберите новый PNG, чтобы заменить.</p>
+                <?php else: ?>
+                    <p class="hint">Пока используется встроенный логотип (знак + текст FixariVan).</p>
                 <?php endif; ?>
 
                 <label for="company_name">Название компании</label>

@@ -988,14 +988,15 @@
 </head>
 <body class="inventory-page fv-inventory">
     <div class="header">
-        <a href="index.php" class="logo fv-site-logo">
-            <span class="fv-brand-mark-wrap" aria-hidden="true">
+        <a href="index.php" class="logo fv-site-logo" data-fv-brand-logo>
+            <span class="fv-brand-mark-wrap fv-brand-default" aria-hidden="true">
                 <img class="fv-brand-mark-img" src="assets/icons/logo-mark.svg" alt="" width="44" height="44" decoding="async"/>
             </span>
-            <span class="fv-brand-text">
+            <span class="fv-brand-text fv-brand-default">
                 <span class="logo-wordmark fv-brand-wordmark">FixariVan</span>
                 <span class="fv-brand-subtitle">Космический склад</span>
             </span>
+            <img class="fv-brand-logo-custom is-hidden" src="" alt="FixariVan" width="240" height="52" decoding="async" hidden>
         </a>
         <div class="nav-links">
             <a href="index.php" class="nav-link">🏠 Главная</a>
@@ -2711,6 +2712,7 @@
         // Auto popup disabled by request: low stock is visible in widgets/filters only.
     </script>
     <script src="js/inventory_sqlite_override.js"></script>
+    <script src="js/brand_logo.js"></script>
 </body>
 </html>
 

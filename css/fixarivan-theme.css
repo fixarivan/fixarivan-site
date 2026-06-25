@@ -210,6 +210,42 @@ body.fv-inventory .fv-site-logo .fv-brand-subtitle {
     line-height: 1.2;
 }
 
+/* Загруженный логотип из настроек (PNG на прозрачном фоне) */
+.fv-brand-default.is-hidden,
+.fv-brand-logo-custom.is-hidden,
+.fv-brand-logo-custom[hidden] {
+    display: none !important;
+}
+
+body.fv-dashboard .logo.has-custom-brand-logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+body.fv-dashboard .logo.has-custom-brand-logo .fv-brand-logo-custom {
+    display: block;
+    max-width: min(100%, 340px);
+    max-height: 80px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    margin: 0 auto;
+}
+
+body.fv-inventory .fv-site-logo.has-custom-brand-logo {
+    align-items: center;
+}
+
+body.fv-inventory .fv-site-logo.has-custom-brand-logo .fv-brand-logo-custom {
+    display: block;
+    max-width: min(52vw, 240px);
+    max-height: 52px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
 @media (max-width: 480px) {
     body.fv-inventory .fv-site-logo {
         gap: 10px;

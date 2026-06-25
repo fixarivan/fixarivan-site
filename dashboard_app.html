@@ -1738,14 +1738,15 @@
                 <div class="notification-list" id="notificationList"></div>
                 <div class="notification-empty" id="notificationEmpty">Пока новых уведомлений нет</div>
             </div>
-            <div class="logo logo--wordmark">
-                <div class="logo-wordmark-row">
+            <div class="logo logo--wordmark" data-fv-brand-logo>
+                <div class="logo-wordmark-row fv-brand-default">
                     <div class="logo-space-van" aria-hidden="true" title="FixariVan">
                         <img class="fv-brand-mark-img" src="assets/icons/logo-mark.svg" alt="" width="52" height="52" decoding="async" fetchpriority="high"/>
                     </div>
                     <span class="logo-wordmark fv-brand-wordmark" lang="en">FixariVan</span>
                 </div>
-                <p class="logo-tagline">Mobile Repair &amp; Tech Service</p>
+                <p class="logo-tagline fv-brand-default">Mobile Repair &amp; Tech Service</p>
+                <img class="fv-brand-logo-custom is-hidden" src="" alt="FixariVan" width="320" height="80" decoding="async" hidden>
             </div>
         </div>
 
@@ -3011,6 +3012,7 @@
         });
     </script>
     <script src="js/dashboard_snake.js"></script>
+    <script src="js/brand_logo.js"></script>
     <script>
         (function dashQuickNotes() {
             var LS_KEY = 'fv_dashboard_quick_note_id';

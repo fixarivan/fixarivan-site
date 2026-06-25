@@ -80,3 +80,35 @@ function fixarivan_company_profile_save(array $input): array {
 
     return $saved;
 }
+
+/** Корень сайта (каталог с index.php). */
+function fixarivan_company_site_root(): string {
+    return dirname(__DIR__, 2);
+}
+
+/**
+ * Относительный путь к загруженному логотипу, если файл на диске есть.
+ */
+function fixarivan_brand_logo_rel_path(): string {
+    $rel = trim((string)(fixarivan_company_profile_load()['company_logo'] ?? ''));
+    if ($rel === '') {
+        return '';
+    }
+    $rel = ltrim(str_replace('\\', '/', $rel), '/');
+    if (str_contains($rel, '..')) {
+        return '';
+    }
+    $abs = fixarivan_company_site_root() . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
+    return is_readable($abs) ? $rel : '';
+}
+
+/** URL для <img> с cache-bust по mtime. */
+function fixarivan_brand_logo_url(): string {
+    $rel = fixarivan_brand_logo_rel_path();
+    if ($rel === '') {
+        return '';
+    }
+    $abs = fixarivan_company_site_root() . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
+    $v = @filemtime($abs);
+    return $rel . ($v ? ('?v=' . $v) : '');
+}
