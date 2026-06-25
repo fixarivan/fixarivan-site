@@ -324,8 +324,9 @@
     .track-page .card {
         min-width: 0;
         max-width: 100%;
-        padding: 10px 12px;
-        border-radius: 12px;
+        padding: 0;
+        border: none;
+        border-radius: 0;
     }
 
     .track-page .search-row {
@@ -362,9 +363,14 @@
         box-sizing: border-box;
     }
 
-    .track-page .doc-actions button {
+    .track-page .doc-actions button,
+    .track-page .track-doc-row-actions button {
         min-height: 40px;
         padding: 8px 12px;
+    }
+
+    .track-client-row {
+        padding: 12px 8px;
     }
 
     .track-page .track-comment-grid {
