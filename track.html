@@ -102,8 +102,8 @@
     </style>
     <link rel="stylesheet" href="css/fixarivan-theme.css">
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625saas">
-    <link rel="stylesheet" href="css/track-modern.css?v=20250625compact">
-    <script src="js/track_ui.js?v=20250625fix"></script>
+    <link rel="stylesheet" href="css/track-modern.css?v=20250625multi">
+    <script src="js/track_ui.js?v=20250625multi"></script>
 </head>
 <body class="fv-page track-page">
     <div class="top">
@@ -162,7 +162,7 @@
 
     <script>
         const TRACK_PREF_KEY = 'fixarivan_track_filters_v3';
-        const state = { docs: [], groups: [], activeKey: '', mode: 'all' };
+        const state = { docs: [], groups: [], activeKey: '', activeOrderDocId: '', mode: 'all' };
         let trackCompanyProfile = {};
         const orderDocDetailFetch = new Map();
         const internalCommentTimers = new Map();
@@ -612,8 +612,8 @@
             const optsHtml = opts.map((opt) =>
                 `<option value="${esc(opt.v)}"${cur === opt.v ? ' selected' : ''}>${esc(opt.label)}</option>`
             ).join('');
-            return `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
-                <span class="muted" style="font-size:.85rem;">Язык портала для клиента:</span>
+            return `<div class="track-field-cell track-field-cell--span2">
+                <span class="track-field-label">Язык портала</span>
                 <select class="track-select track-portal-lang" data-doc="${esc(orderDocId)}" aria-label="Язык портала">${optsHtml}</select>
             </div>`;
         }
@@ -1023,8 +1023,8 @@
                         <div class="track-rail-muted track-rail-date">${esc(T.expectedDateLbl)}: ${esc(expDateRu || '—')}</div>
                     </div>
                     <div class="track-rail-widget">
-                        <div class="track-rail-label">Финансы</div>
-                        <div class="track-rail-finance" data-order-doc-id="${esc(orderDocId)}">
+                        <div class="track-rail-label">Финансы · все заказы</div>
+                        <div class="track-rail-finance" data-client-scope="all">
                             <div class="track-rail-finance-row"><span>Работа</span><span data-pricing-field="labour">—</span></div>
                             <div class="track-rail-finance-row"><span>Запчасти</span><span data-pricing-field="parts">—</span></div>
                             <div class="track-rail-finance-row is-total"><span>Итого к оплате</span><span data-pricing-field="total" data-summary-total>—</span></div>
@@ -1085,45 +1085,55 @@
                     </div>
                 </div>`;
             }).join('');
-            box.querySelectorAll('.client-item').forEach((el) => el.addEventListener('click', () => { state.activeKey = el.getAttribute('data-key') || ''; renderSidebar(); renderDetails(); }));
+            box.querySelectorAll('.client-item').forEach((el) => el.addEventListener('click', () => {
+                const key = el.getAttribute('data-key') || '';
+                if (key !== state.activeKey) state.activeOrderDocId = '';
+                state.activeKey = key;
+                renderSidebar();
+                renderDetails();
+            }));
             if (!state.activeKey && groups.length){ state.activeKey = groups[0].key; renderSidebar(); renderDetails(); }
         }
 
-        async function renderDetails(){
-            const T = trackT();
-            const groups = filterGroups();
-            const g = groups.find((x) => x.key === state.activeKey);
-            const tree = document.getElementById('ordersTree');
-            const quickBar = document.getElementById('clientQuickActions');
-            if (!g){
-                document.getElementById('clientTitle').textContent = T.clientTitle;
-                document.getElementById('clientMeta').textContent = T.clientPick;
-                if (quickBar) { quickBar.style.display = 'none'; quickBar.innerHTML = ''; }
-                tree.innerHTML = '<div class="muted">—</div>';
-                renderWorkspaceRail(null, null, T);
-                return;
+        function orderDocIdFromOrder(o) {
+            const d = (o && o.documents) ? o.documents.find((x) => x.type === 'order') : null;
+            return d ? String(d.document_id || '') : '';
+        }
+
+        function pickPrimaryOrder(g) {
+            if (state.activeOrderDocId) {
+                const hit = g.orders.find((o) => orderDocIdFromOrder(o) === state.activeOrderDocId);
+                if (hit) return hit;
             }
-            document.getElementById('clientTitle').textContent = g.client_name;
-            document.getElementById('clientMeta').textContent = `${g.client_phone || '—'} • ${g.client_email || '—'} • ${T.sOrders}: ${g.orders.length}`;
-            if (quickBar) {
-                const qs = new URLSearchParams();
-                if (g.client_name) qs.set('client_name', g.client_name);
-                if (g.client_phone) qs.set('client_phone', g.client_phone);
-                if (g.client_email) qs.set('client_email', g.client_email);
-                const qstr = qs.toString();
-                const waPhone = g.client_phone || '';
-                const waClientUrl = trackWhatsappUrl(waPhone, trackBuildWhatsappClientHello(g));
-                const waClientHtml = trackWhatsappPhoneOk(waPhone)
-                    ? `<a href="${escAttr(waClientUrl)}" class="track-wa" target="_blank" rel="noopener noreferrer" title="${escAttr(T.waClientHint)}">${esc(T.waClient)}</a>`
-                    : `<span class="track-wa is-disabled" title="${escAttr(T.waNoPhoneHint)}">${esc(T.waClient)}</span>`;
-                quickBar.style.display = 'flex';
-                quickBar.innerHTML = `<div class="track-action-row track-quick-bar">
-                        <a href="order_new.html${qstr ? '?' + qstr : ''}" class="primary">${esc(T.clientQuickNewOrder)}</a>
-                        <a href="inventory.html" class="btn-secondary">${esc(T.clientQuickStock)}</a>
-                        ${waClientHtml}
+            return g.orders.find((o) => isPublicActive(o)) || g.orders[0];
+        }
+
+        function clientOrderDocIds(g) {
+            return (g.orders || []).map((o) => orderDocIdFromOrder(o)).filter(Boolean);
+        }
+
+        function buildOtherOrdersHtml(others, T) {
+            if (!others.length) return '';
+            return `<details class="track-other-orders">
+                <summary class="track-other-orders-summary">
+                    <span class="track-other-orders-title">Другие заказы (${others.length})</span>
+                    <span class="track-other-orders-caret" aria-hidden="true">▼</span>
+                </summary>
+                <div class="track-other-orders-list">${others.map((o) => {
+                    const id = orderDocIdFromOrder(o);
+                    return `<div class="track-other-order-item">
+                        <div class="track-other-order-main">
+                            <div class="track-other-order-title">${esc(resolveTrackCardTitle(o))}</div>
+                            <div class="track-other-order-meta">${esc(o.order_id || '—')}</div>
+                            <div class="track-other-order-badges">${trackOrderBadgeHtml(o)}${isPartsWait(o) ? ' <span class="badge wait">' + esc(T.waitBadge) + '</span>' : ''}</div>
+                        </div>
+                        <button type="button" class="btn-secondary track-order-switch" data-order-doc-id="${esc(id)}">Открыть</button>
                     </div>`;
-            }
-            tree.innerHTML = '<div class="track-workspace-canvas">' + g.orders.map((o) => {
+                }).join('')}</div>
+            </details>`;
+        }
+
+        function buildOrderCardHtml(o, g, T) {
                 const orderDoc = o.documents.find((d) => d.type === 'order');
                 const invDoc = o.documents.find((d) => String(d.type || '').toLowerCase() === 'invoice');
                 const orderDocId = orderDoc ? String(orderDoc.document_id || '') : '';
@@ -1151,15 +1161,25 @@
                 const techName = trackTechnicianName();
                 const orderBody = orderDocId ? (
                     trackSectionHtml('info', '📋', 'Информация о заказе', 'Статус и сроки', `
-                        <div class="track-field-row"><span class="track-field-label">${esc(T.stClient)}</span>${publicStatusSelectHtml(orderDocId, pub)}</div>
-                        <div class="track-field-row"><span class="track-field-label">${esc(T.partsStatusChip)}</span><span class="badge ${partsStatusBadgeClass(pst)}">${esc(trackPartsStatusRu(pst))}</span></div>
-                        <div class="track-field-row track-expected-wrap">
-                            <span class="track-field-label">${esc(T.expectedDateLbl)}</span>
-                            <input type="date" class="track-expected-date" data-doc="${esc(orderDocId)}" value="${esc(toDateInputValue(o.public_expected_date))}" title="${esc(T.expectedDateHint)}" aria-label="${esc(T.expectedDateLbl)}">
-                            <button type="button" class="track-expected-clear is-secondary" data-doc="${esc(orderDocId)}">${esc(T.expectedDateClear)}</button>
+                        <div class="track-info-grid">
+                            <div class="track-field-cell">
+                                <span class="track-field-label">${esc(T.stClient)}</span>
+                                ${publicStatusSelectHtml(orderDocId, pub)}
+                            </div>
+                            <div class="track-field-cell">
+                                <span class="track-field-label">${esc(T.partsStatusChip)}</span>
+                                <span class="badge ${partsStatusBadgeClass(pst)}">${esc(trackPartsStatusRu(pst))}</span>
+                            </div>
+                            <div class="track-field-cell track-field-cell--span2 track-expected-wrap">
+                                <span class="track-field-label">${esc(T.expectedDateLbl)}</span>
+                                <div class="track-expected-row">
+                                    <input type="date" class="track-expected-date" data-doc="${esc(orderDocId)}" value="${esc(toDateInputValue(o.public_expected_date))}" title="${esc(T.expectedDateHint)}" aria-label="${esc(T.expectedDateLbl)}">
+                                    <button type="button" class="track-expected-clear is-secondary" data-doc="${esc(orderDocId)}">${esc(T.expectedDateClear)}</button>
+                                </div>
+                            </div>
+                            ${portalLangSelectHtml(orderDocId, o.language)}
                         </div>
                         ${trackHelpPanelHtml(T.expectedDateHint)}
-                        ${portalLangSelectHtml(orderDocId, o.language)}
                     `) +
                     trackSectionHtml('communication', '💬', 'Связь с клиентом', 'Комментарий для портала', `
                         <div class="track-comment-col">
@@ -1248,9 +1268,67 @@
                         ${orderBody}
                     </div>
                 </div>
-            `;}).join('') + '</div>';
-            renderWorkspaceRail(g, g.orders[0] || null, T);
-            await hydrateTrackOrderBlocks(tree);
+            `;
+        }
+
+        function bindOrderSwitch(root) {
+            root.querySelectorAll('.track-order-switch').forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    state.activeOrderDocId = btn.getAttribute('data-order-doc-id') || '';
+                    renderDetails();
+                });
+            });
+        }
+
+        async function renderDetails(){
+            const T = trackT();
+            const groups = filterGroups();
+            const g = groups.find((x) => x.key === state.activeKey);
+            const tree = document.getElementById('ordersTree');
+            const quickBar = document.getElementById('clientQuickActions');
+            if (!g){
+                window.__trackClientDocIds = [];
+                if (window.TrackUi) TrackUi.clearPricingCache();
+                document.getElementById('clientTitle').textContent = T.clientTitle;
+                document.getElementById('clientMeta').textContent = T.clientPick;
+                if (quickBar) { quickBar.style.display = 'none'; quickBar.innerHTML = ''; }
+                tree.innerHTML = '<div class="muted">—</div>';
+                renderWorkspaceRail(null, null, T);
+                return;
+            }
+            if (window.TrackUi) TrackUi.clearPricingCache();
+            const docIds = clientOrderDocIds(g);
+            window.__trackClientDocIds = docIds;
+            const primary = pickPrimaryOrder(g);
+            const others = g.orders.filter((o) => orderDocIdFromOrder(o) !== orderDocIdFromOrder(primary));
+            document.getElementById('clientTitle').textContent = g.client_name;
+            document.getElementById('clientMeta').textContent = `${g.client_phone || '—'} • ${g.client_email || '—'} • ${T.sOrders}: ${g.orders.length}`;
+            if (quickBar) {
+                const qs = new URLSearchParams();
+                if (g.client_name) qs.set('client_name', g.client_name);
+                if (g.client_phone) qs.set('client_phone', g.client_phone);
+                if (g.client_email) qs.set('client_email', g.client_email);
+                const qstr = qs.toString();
+                const waPhone = g.client_phone || '';
+                const waClientUrl = trackWhatsappUrl(waPhone, trackBuildWhatsappClientHello(g));
+                const waClientHtml = trackWhatsappPhoneOk(waPhone)
+                    ? `<a href="${escAttr(waClientUrl)}" class="track-wa" target="_blank" rel="noopener noreferrer" title="${escAttr(T.waClientHint)}">${esc(T.waClient)}</a>`
+                    : `<span class="track-wa is-disabled" title="${escAttr(T.waNoPhoneHint)}">${esc(T.waClient)}</span>`;
+                quickBar.style.display = 'flex';
+                quickBar.innerHTML = `<div class="track-action-row track-quick-bar">
+                        <a href="order_new.html${qstr ? '?' + qstr : ''}" class="primary">${esc(T.clientQuickNewOrder)}</a>
+                        <a href="inventory.html" class="btn-secondary">${esc(T.clientQuickStock)}</a>
+                        ${waClientHtml}
+                    </div>`;
+            }
+            tree.innerHTML = '<div class="track-workspace-canvas">'
+                + buildOrderCardHtml(primary, g, T)
+                + buildOtherOrdersHtml(others, T)
+                + '</div>';
+            renderWorkspaceRail(g, primary, T);
+            await hydrateTrackOrderBlocks(tree, g);
+            bindOrderSwitch(tree);
             bindPortalButtons(tree);
             bindTrackOrderControls(tree);
             bindOrderLinesControls(tree);
@@ -1258,13 +1336,8 @@
             if (window.TrackUi) {
                 TrackUi.init(tree);
                 if (rail) TrackUi.init(rail);
-                tree.querySelectorAll('.order-lines-box[data-order-doc-id]').forEach((box) => {
-                    TrackUi.updatePricingSummary(document, box.getAttribute('data-order-doc-id') || '');
-                });
-                const firstO = g.orders[0];
-                const firstDoc = firstO && firstO.documents ? firstO.documents.find((d) => d.type === 'order') : null;
-                const firstDocId = firstDoc ? String(firstDoc.document_id || '') : '';
-                if (firstDocId) TrackUi.updatePricingSummary(document, firstDocId);
+                docIds.forEach((id) => TrackUi.updatePricingSummary(document, id, docIds));
+                TrackUi.updateClientRailFinance(docIds);
             }
         }
 
@@ -1794,12 +1867,19 @@
             return out;
         }
 
-        async function hydrateTrackOrderBlocks(root) {
+        async function hydrateTrackOrderBlocks(root, group) {
             const docIds = new Set();
+            if (group && Array.isArray(group.orders)) {
+                group.orders.forEach((o) => {
+                    const id = orderDocIdFromOrder(o);
+                    if (id) docIds.add(id);
+                });
+            }
             root.querySelectorAll('.order-lines-box[data-order-doc-id]').forEach((el) => {
                 const id = String(el.getAttribute('data-order-doc-id') || '').trim();
                 if (id) docIds.add(id);
             });
+            const clientDocIds = window.__trackClientDocIds || Array.from(docIds);
             for (const orderDocId of docIds) {
                 if (!orderDocDetailFetch.has(orderDocId)) {
                     orderDocDetailFetch.set(orderDocId, fetch(`./api/get_document.php?id=${encodeURIComponent(orderDocId)}&type=order`, {
@@ -1811,13 +1891,16 @@
             for (const orderDocId of docIds) {
                 const json = await orderDocDetailFetch.get(orderDocId);
                 const doc = json && json.success ? (json.data || {}) : {};
+                if (window.TrackUi) {
+                    TrackUi.setOrderPricingFromDoc(orderDocId, doc, parseOrderLinesFromDoc);
+                }
                 root.querySelectorAll('.order-lines-box').forEach((box) => {
                     if (String(box.getAttribute('data-order-doc-id') || '') !== orderDocId) return;
                     const tbody = box.querySelector('.order-lines-tbody');
                     if (!tbody) return;
                     fillOrderLinesTbody(tbody, parseOrderLinesFromDoc(doc));
                 });
-                if (window.TrackUi) TrackUi.updatePricingSummary(document, orderDocId);
+                if (window.TrackUi) TrackUi.updatePricingSummary(document, orderDocId, clientDocIds);
                 root.querySelectorAll('.order-display-title').forEach((el) => {
                     if (String(el.getAttribute('data-order-doc-id') || '') !== orderDocId) return;
                     el.textContent = resolveTrackCardTitle(doc);

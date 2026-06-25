@@ -972,6 +972,172 @@
     border: 1px dashed var(--track-border-subtle);
 }
 
+.track-page textarea.track-public-comment,
+.track-page textarea.track-internal-comment,
+.track-page textarea.track-internal {
+    color: #e8edf5;
+    background: rgba(0, 0, 0, 0.42);
+    caret-color: #93c5fd;
+    line-height: 1.45;
+}
+
+.track-page textarea::placeholder {
+    color: rgba(255, 255, 255, 0.38);
+}
+
+/* Info grid — 2 columns, less vertical space */
+.track-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+    align-items: end;
+}
+
+.track-info-grid .track-field-label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.72rem;
+    min-width: 0;
+}
+
+.track-field-cell--span2 {
+    grid-column: 1 / -1;
+}
+
+.track-expected-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.track-expected-row .track-expected-date {
+    flex: 1 1 160px;
+    max-width: none;
+}
+
+.track-info-grid .track-select,
+.track-info-grid .track-portal-lang {
+    width: 100%;
+    max-width: none;
+}
+
+/* Other orders — like client portal */
+.track-other-orders {
+    margin-top: 4px;
+    border: 1px solid var(--track-border-subtle);
+    border-radius: var(--track-radius);
+    background: rgba(255, 255, 255, 0.02);
+    overflow: hidden;
+}
+
+.track-other-orders-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.track-other-orders-summary::-webkit-details-marker { display: none; }
+
+.track-other-orders-title {
+    font-size: 0.8125rem;
+    font-weight: 650;
+    color: var(--track-text);
+}
+
+.track-other-orders-caret {
+    color: #93c5fd;
+    font-size: 0.75rem;
+    transition: transform 0.2s;
+}
+
+.track-other-orders[open] .track-other-orders-caret {
+    transform: rotate(180deg);
+}
+
+.track-other-orders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 10px 10px;
+}
+
+.track-other-order-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px 12px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: var(--track-radius);
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--track-border-subtle);
+}
+
+.track-other-order-title {
+    font-size: 0.8125rem;
+    font-weight: 650;
+    color: var(--track-text);
+}
+
+.track-other-order-meta {
+    font-size: 0.72rem;
+    color: var(--track-muted);
+    margin-top: 2px;
+    font-family: ui-monospace, monospace;
+}
+
+.track-other-order-badges {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.track-other-order-badges .badge {
+    font-size: 0.58rem;
+    padding: 2px 6px;
+}
+
+.track-order-switch {
+    font-size: 0.75rem;
+    min-height: 32px;
+    padding: 0 12px;
+    white-space: nowrap;
+}
+
+/* Compact order header meta */
+.track-order-kv {
+    display: none;
+}
+
+.track-order-subtitle {
+    -webkit-line-clamp: 1;
+}
+
+.track-section.track-flow {
+    padding-top: 10px;
+}
+
+.track-section.track-flow:first-of-type {
+    padding-top: 8px;
+}
+
+.track-section-toggle {
+    padding-bottom: 8px;
+}
+
+.track-section-body .track-comment-col .track-field-label {
+    margin-bottom: 5px;
+}
+
+.track-page textarea.track-internal {
+    min-height: 64px;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
     .track-page .layout {

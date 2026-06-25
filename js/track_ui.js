@@ -179,6 +179,56 @@
         });
     }
 
+    function calcPricingFromLines(labourRaw, lines) {
+        const labour = parseDecimal(labourRaw);
+        let partsSale = 0;
+        let partsCost = 0;
+        (lines || []).forEach((ln) => {
+            const name = String(ln.name || ln.title || '').trim();
+            if (!name) return;
+            const qty = Math.max(parseDecimal(ln.qty != null ? ln.qty : ln.quantity), 0) || 1;
+            partsSale += parseDecimal(ln.sale != null ? ln.sale : (ln.sale_price != null ? ln.sale_price : ln.price)) * qty;
+            partsCost += parseDecimal(ln.purchase != null ? ln.purchase : (ln.purchase_price != null ? ln.purchase_price : ln.cost)) * qty;
+        });
+        const discount = 0;
+        const total = labour + partsSale - discount;
+        const profit = labour + (partsSale - partsCost);
+        const margin = total > 0 ? (profit / total) * 100 : 0;
+        return { labour, partsSale, discount, total, profit, margin, partsCost };
+    }
+
+    const orderPricingCache = new Map();
+
+    function cacheOrderPricing(orderDocId, p) {
+        if (orderDocId) orderPricingCache.set(String(orderDocId), p);
+    }
+
+    function setOrderPricingFromDoc(orderDocId, doc, parseLinesFn) {
+        const lines = typeof parseLinesFn === 'function' ? parseLinesFn(doc || {}) : [];
+        const p = calcPricingFromLines(doc && doc.public_estimated_cost, lines);
+        cacheOrderPricing(orderDocId, p);
+        return p;
+    }
+
+    function updateClientRailFinance(orderDocIds) {
+        const merged = { labour: 0, partsSale: 0, discount: 0, total: 0, profit: 0, margin: 0 };
+        (orderDocIds || []).forEach((id) => {
+            const p = orderPricingCache.get(String(id));
+            if (!p) return;
+            merged.labour += p.labour;
+            merged.partsSale += p.partsSale;
+            merged.discount += p.discount;
+            merged.profit += p.profit;
+        });
+        merged.total = merged.labour + merged.partsSale - merged.discount;
+        merged.margin = merged.total > 0 ? (merged.profit / merged.total) * 100 : 0;
+        applyPricingToContainer(document.querySelector('.track-rail-finance[data-client-scope="all"]'), merged);
+    }
+
+    function clearPricingCache() {
+        orderPricingCache.clear();
+    }
+
     function calcPricingFromBox(box) {
         const workInp = box.closest('.order-card')?.querySelector('.track-public-estimated-cost');
         const labour = workInp ? parseDecimal(workInp.value) : 0;
@@ -203,7 +253,7 @@
         return { labour, partsSale, discount, total, profit, margin, partsCost };
     }
 
-    function updatePricingSummary(root, orderDocId) {
+    function updatePricingSummary(root, orderDocId, clientDocIds) {
         if (!orderDocId) return;
         const scope = root || document;
         const q = orderDocId.replace(/"/g, '\\"');
@@ -221,10 +271,14 @@
                 p.total = p.labour;
                 p.profit = p.labour;
                 p.margin = p.total > 0 ? 100 : 0;
+            } else if (orderPricingCache.has(String(orderDocId))) {
+                p = { ...orderPricingCache.get(String(orderDocId)) };
             }
         }
-        /* Rail lives outside .order-card / #ordersTree — always query document */
-        applyPricingToContainer(document.querySelector('.track-rail-finance[data-order-doc-id="' + q + '"]'), p);
+        cacheOrderPricing(orderDocId, p);
+        if (clientDocIds && clientDocIds.length) {
+            updateClientRailFinance(clientDocIds);
+        }
     }
 
     function applyPricingToContainer(container, p) {
@@ -247,7 +301,7 @@
             if (inp.dataset.pricingBound === '1') return;
             inp.dataset.pricingBound = '1';
             const docId = inp.getAttribute('data-doc') || '';
-            const handler = () => updatePricingSummary(root, docId);
+            const handler = () => updatePricingSummary(root, docId, window.__trackClientDocIds || null);
             inp.addEventListener('input', handler);
             inp.addEventListener('change', handler);
         });
@@ -255,7 +309,7 @@
             if (tbody.dataset.pricingBound === '1') return;
             tbody.dataset.pricingBound = '1';
             const docId = tbody.closest('.order-lines-box')?.getAttribute('data-order-doc-id') || '';
-            tbody.addEventListener('input', () => updatePricingSummary(root, docId));
+            tbody.addEventListener('input', () => updatePricingSummary(root, docId, window.__trackClientDocIds || null));
         });
     }
 
@@ -265,13 +319,18 @@
         initSections(root);
         bindPricingLive(root);
         root.querySelectorAll('.order-lines-box[data-order-doc-id]').forEach((box) => {
-            updatePricingSummary(root, box.getAttribute('data-order-doc-id') || '');
+            updatePricingSummary(root, box.getAttribute('data-order-doc-id') || '', window.__trackClientDocIds || null);
         });
     }
 
     global.TrackUi = {
         init,
         updatePricingSummary,
+        updateClientRailFinance,
+        setOrderPricingFromDoc,
+        cacheOrderPricing,
+        clearPricingCache,
+        calcPricingFromLines,
         clientInitials,
         clientAvatarHue,
         formatDateShort,
