@@ -19,10 +19,12 @@
             custom.src = url;
             custom.removeAttribute('hidden');
             custom.classList.remove('is-hidden');
+            host.classList.add('has-custom-brand-logo');
             host.querySelectorAll('.fv-brand-default').forEach(function (el) {
                 el.classList.add('is-hidden');
+                el.setAttribute('aria-hidden', 'true');
             });
-            host.classList.add('has-custom-brand-logo');
+            custom.removeAttribute('aria-hidden');
         });
     }
 

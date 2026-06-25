@@ -211,39 +211,69 @@ body.fv-inventory .fv-site-logo .fv-brand-subtitle {
 }
 
 /* Загруженный логотип из настроек (PNG на прозрачном фоне) */
+.fv-brand-logo-slot {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    max-width: 100%;
+}
+
+.fv-brand-logo-layer {
+    grid-area: 1 / 1;
+    max-width: 100%;
+}
+
+.fv-brand-default-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.fv-brand-default-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
 .fv-brand-default.is-hidden,
 .fv-brand-logo-custom.is-hidden,
-.fv-brand-logo-custom[hidden] {
+.fv-brand-logo-custom[hidden],
+[data-fv-brand-logo].has-custom-brand-logo .fv-brand-default {
     display: none !important;
 }
 
-body.fv-dashboard .logo.has-custom-brand-logo {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-body.fv-dashboard .logo.has-custom-brand-logo .fv-brand-logo-custom {
-    display: block;
-    max-width: min(100%, 340px);
-    max-height: 80px;
+[data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-custom {
+    display: block !important;
+    visibility: visible;
     width: auto;
     height: auto;
     object-fit: contain;
-    margin: 0 auto;
+    object-position: center;
 }
 
-body.fv-inventory .fv-site-logo.has-custom-brand-logo {
-    align-items: center;
+body.fv-dashboard [data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-slot {
+    width: min(100%, 300px);
+    height: 72px;
+    max-height: 72px;
 }
 
-body.fv-inventory .fv-site-logo.has-custom-brand-logo .fv-brand-logo-custom {
-    display: block;
-    max-width: min(52vw, 240px);
-    max-height: 52px;
-    width: auto;
-    height: auto;
-    object-fit: contain;
+body.fv-dashboard [data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-custom {
+    max-width: 100%;
+    max-height: 72px;
+}
+
+body.fv-inventory [data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-slot--header {
+    width: min(220px, 42vw);
+    height: 48px;
+    max-height: 48px;
+}
+
+body.fv-inventory [data-fv-brand-logo].has-custom-brand-logo .fv-brand-logo-custom {
+    max-width: 100%;
+    max-height: 48px;
 }
 
 @media (max-width: 480px) {

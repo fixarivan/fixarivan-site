@@ -112,3 +112,43 @@ function fixarivan_brand_logo_url(): string {
     $v = @filemtime($abs);
     return $rel . ($v ? ('?v=' . $v) : '');
 }
+
+/**
+ * Проверка загружаемого логотипа: размер файла и пиксели (кроме SVG).
+ *
+ * @param array<string, mixed> $file
+ */
+function fixarivan_company_logo_validate_upload(array $file): void {
+    $maxBytes = 2 * 1024 * 1024;
+    $size = (int)($file['size'] ?? 0);
+    if ($size <= 0) {
+        throw new RuntimeException('Файл логотипа пустой или не выбран');
+    }
+    if ($size > $maxBytes) {
+        throw new RuntimeException('Файл логотипа: не больше 2 МБ');
+    }
+
+    $tmp = (string)($file['tmp_name'] ?? '');
+    if ($tmp === '' || !is_uploaded_file($tmp)) {
+        throw new RuntimeException('Не удалось прочитать файл логотипа');
+    }
+
+    $ext = strtolower(pathinfo((string)($file['name'] ?? ''), PATHINFO_EXTENSION));
+    if ($ext === 'svg') {
+        return;
+    }
+
+    $info = @getimagesize($tmp);
+    if ($info === false) {
+        throw new RuntimeException('Не удалось определить размер изображения');
+    }
+
+    $width = (int)$info[0];
+    $height = (int)$info[1];
+    if ($width > 1600 || $height > 600) {
+        throw new RuntimeException('Слишком большое изображение: максимум 1600×600 px. Рекомендуем ~800×120 px, PNG.');
+    }
+    if ($width < 120 || $height < 24) {
+        throw new RuntimeException('Слишком маленькое изображение: минимум 120×24 px');
+    }
+}

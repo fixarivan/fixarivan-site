@@ -39,6 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             } elseif (!empty($_FILES['company_logo_file']['tmp_name']) && is_uploaded_file((string)$_FILES['company_logo_file']['tmp_name'])) {
+                fixarivan_company_logo_validate_upload($_FILES['company_logo_file']);
                 $ext = strtolower((string)pathinfo((string)$_FILES['company_logo_file']['name'], PATHINFO_EXTENSION));
                 $allowed = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
                 if (!in_array($ext, $allowed, true)) {
@@ -180,8 +181,8 @@ $companyProfile = fixarivan_company_profile_load();
             text-align: center;
         }
         .logo-preview-wrap img {
-            max-width: 100%;
-            max-height: 96px;
+            max-width: min(100%, 300px);
+            max-height: 72px;
             object-fit: contain;
         }
         .logo-preview-label {
@@ -262,7 +263,7 @@ $companyProfile = fixarivan_company_profile_load();
                 <input type="hidden" name="form_type" value="company">
 
                 <label for="company_logo_file">Логотип FixariVan (PNG с прозрачным фоном — рекомендуется)</label>
-                <p class="hint">Заменяет стандартный логотип на <strong>рабочем столе</strong>, в <strong>складе</strong>, а также в <strong>счетах и PDF</strong>. Лучше загружать горизонтальную картинку целиком (знак + название), как на дашборде.</p>
+                <p class="hint">Заменяет стандартный логотип на <strong>рабочем столе</strong>, в <strong>складе</strong>, а также в <strong>счетах и PDF</strong>. Горизонтальная картинка целиком (знак + название). На экране: до <strong>300×72 px</strong> (дашборд) и <strong>220×48 px</strong> (склад). Файл: до <strong>2 МБ</strong>, от <strong>120×24</strong> до <strong>1600×600 px</strong>; оптимально ~800×120 px.</p>
                 <?php
                 $brandLogoUrl = fixarivan_brand_logo_url();
                 if ($brandLogoUrl !== ''):
