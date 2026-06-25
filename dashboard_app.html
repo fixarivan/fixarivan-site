@@ -803,6 +803,138 @@
             color: #fbbf24;
         }
 
+        /* --- Analytics dashboard (KPI, charts, filters) --- */
+        .dash-period-filter {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 18px;
+            align-items: center;
+        }
+        .dash-period-btn, .dash-chart-range-btn, .dash-period-apply {
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            background: rgba(15, 23, 42, 0.55);
+            color: #e2e8f0;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .dash-period-btn.is-active, .dash-chart-range-btn.is-active {
+            background: rgba(59, 130, 246, 0.28);
+            border-color: rgba(96, 165, 250, 0.55);
+        }
+        .dash-period-custom {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .dash-period-custom input[type="date"] {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 6px 8px;
+            font-size: 0.82rem;
+        }
+        .dash-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 16px;
+        }
+        .dash-kpi-card {
+            background: rgba(0, 0, 0, 0.32);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            padding: 16px;
+            min-height: 148px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .dash-kpi-head { display: flex; align-items: center; gap: 8px; }
+        .dash-kpi-icon { font-size: 1.1rem; }
+        .dash-kpi-title { color: rgba(255,255,255,0.82); font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .dash-kpi-value { font-size: 2rem; font-weight: 800; line-height: 1.1; color: #fff; }
+        .dash-kpi-hint { color: rgba(203, 213, 225, 0.62); font-size: 0.78rem; min-height: 2.4em; }
+        .dash-kpi-trend { margin-top: auto; font-size: 0.76rem; font-weight: 600; }
+        .dash-trend--up { color: #34d399; }
+        .dash-trend--down { color: #f87171; }
+        .dash-trend--flat { color: #94a3b8; }
+        .tone-waiting .dash-kpi-value { color: #fbbf24; }
+        .tone-progress .dash-kpi-value { color: #60a5fa; }
+        .tone-done .dash-kpi-value { color: #34d399; }
+        .tone-cancel .dash-kpi-value { color: #f87171; }
+        .tone-total .dash-kpi-value { color: #a78bfa; }
+        .tone-finance .dash-kpi-value { color: #38bdf8; }
+        .dash-section-title {
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin: 0 0 14px;
+        }
+        .dash-analytics-grid {
+            display: grid;
+            grid-template-columns: 1.4fr 0.9fr;
+            gap: 18px;
+            margin-top: 18px;
+        }
+        .dash-chart-card, .dash-mini-card, .dash-integrity-card {
+            background: rgba(0, 0, 0, 0.28);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 16px;
+        }
+        .dash-chart-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .dash-chart-range-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .dash-chart-wrap { position: relative; height: 260px; }
+        .dash-chart-wrap--sm { height: 220px; }
+        .dash-mini-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            margin-top: 18px;
+        }
+        .dash-mini-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+            font-size: 0.84rem;
+            color: #e2e8f0;
+        }
+        .dash-mini-empty { color: rgba(148, 163, 184, 0.75); font-size: 0.84rem; padding: 8px 0; }
+        .dash-integrity-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+            font-size: 0.84rem;
+        }
+        .dash-integrity-row.ok span:last-child { color: #34d399; }
+        .dash-integrity-row.warn span:last-child { color: #fbbf24; }
+        .dash-integrity-meta {
+            margin-top: 12px;
+            font-size: 0.78rem;
+            color: rgba(203, 213, 225, 0.68);
+            line-height: 1.5;
+        }
+        @media (max-width: 900px) {
+            .dash-analytics-grid { grid-template-columns: 1fr; }
+        }
+
         .fixarivan-toast-container {
             position: fixed;
             right: 24px;
@@ -1686,6 +1818,7 @@
     </style>
     <link rel="stylesheet" href="css/fixarivan-theme.css">
     <link rel="stylesheet" href="mobile_fixes.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body class="fv-dashboard dashboard-page">
     <div class="stars" id="stars"></div>
@@ -1757,33 +1890,34 @@
         <section class="metrics-section" id="ordersMetrics">
             <div class="metrics-header">
                 <div>
-                    <div class="metrics-title">📋 Заказы и документы</div>
+                    <div class="metrics-title">📋 Заказы и аналитика</div>
                     <div class="metrics-meta" id="ordersMeta">Источник: SQLite • обновление не выполнялось</div>
-            </div>
+                </div>
                 <div class="metrics-actions">
                     <div class="metrics-loading" id="statsLoading" hidden>
                         <div class="spinner small"></div>
                         <span>Обновляем данные...</span>
-            </div>
+                    </div>
                     <button class="metrics-refresh" id="refreshStatsBtn">Обновить</button>
-            </div>
-            </div>
-            <div class="metrics-grid">
-                <div class="metric-card pending">
-                    <div class="metric-value" id="pendingCount">-</div>
-                    <div class="metric-label">⏳ Ожидают</div>
-        </div>
-                <div class="metric-card in-progress">
-                    <div class="metric-value" id="inProgressCount">-</div>
-                    <div class="metric-label">🔧 В работе</div>
                 </div>
-                <div class="metric-card completed">
-                    <div class="metric-value" id="completedCount">-</div>
-                    <div class="metric-label">✅ Готово</div>
+            </div>
+            <div class="dash-period-filter" id="dashPeriodFilter"></div>
+            <div class="dash-kpi-grid" id="dashOrderKpiGrid"></div>
+            <div class="dash-analytics-grid">
+                <div class="dash-chart-card">
+                    <div class="dash-chart-head">
+                        <h3 class="dash-section-title">Динамика заказов</h3>
+                        <div class="dash-chart-range-btns" id="dashChartRangeBtns">
+                            <button type="button" class="dash-chart-range-btn" data-chart-range="7d">7 дней</button>
+                            <button type="button" class="dash-chart-range-btn is-active" data-chart-range="30d">30 дней</button>
+                            <button type="button" class="dash-chart-range-btn" data-chart-range="12m">12 мес.</button>
+                        </div>
+                    </div>
+                    <div class="dash-chart-wrap"><canvas id="dashOrdersChart" aria-label="График заказов"></canvas></div>
                 </div>
-                <div class="metric-card total">
-                    <div class="metric-value" id="totalCount">-</div>
-                    <div class="metric-label">📊 Всего</div>
+                <div class="dash-chart-card">
+                    <h3 class="dash-section-title">Распределение статусов</h3>
+                    <div class="dash-chart-wrap dash-chart-wrap--sm"><canvas id="dashStatusDonut" aria-label="Диаграмма статусов"></canvas></div>
                 </div>
             </div>
         </section>
@@ -1793,30 +1927,62 @@
                 <div>
                     <div class="metrics-title">📦 Склад</div>
                     <div class="metrics-meta" id="inventoryMeta">Обновление не выполнялось</div>
-            </div>
+                </div>
                 <div class="metrics-actions">
                     <span class="metrics-badge warning" id="inventorySourceBadge" hidden>Данные из кэша</span>
-            </div>
-            </div>
-            <div class="metrics-grid inventory-grid">
-                <div class="metric-card inventory-total">
-                    <div class="metric-value" id="inventoryTotal">-</div>
-                    <div class="metric-label">📦 Всего позиций</div>
-                </div>
-                <div class="metric-card inventory-instock">
-                    <div class="metric-value" id="inventoryInStock">-</div>
-                    <div class="metric-label">✅ В наличии</div>
-                </div>
-                <div class="metric-card inventory-out">
-                    <div class="metric-value" id="inventoryOutOfStock">-</div>
-                    <div class="metric-label">❌ Нет</div>
-                </div>
-                <div class="metric-card inventory-margin">
-                    <div class="metric-value" id="inventoryMargin">-</div>
-                    <div class="metric-label">💰 Маржа (€)</div>
-                    <div class="metric-subtext" id="inventoryPurchaseToSale">- € → - €</div>
                 </div>
             </div>
+            <div class="dash-kpi-grid" id="dashInventoryKpiGrid"></div>
+            <div class="dash-mini-grid">
+                <div class="dash-mini-card">
+                    <h3 class="dash-section-title">Топ категории</h3>
+                    <div id="dashTopCategories"></div>
+                </div>
+                <div class="dash-mini-card">
+                    <h3 class="dash-section-title">Часто используемые</h3>
+                    <div id="dashMostUsedParts"></div>
+                </div>
+                <div class="dash-mini-card">
+                    <h3 class="dash-section-title">Редко используемые</h3>
+                    <div id="dashLeastUsedParts"></div>
+                </div>
+                <div class="dash-mini-card">
+                    <h3 class="dash-section-title">Низкий остаток</h3>
+                    <div id="dashLowStockItems"></div>
+                </div>
+                <div class="dash-mini-card">
+                    <h3 class="dash-section-title">Недавно добавлены</h3>
+                    <div id="dashRecentParts"></div>
+                </div>
+            </div>
+            <div class="dash-chart-card" style="margin-top:18px;">
+                <h3 class="dash-section-title">Движение склада</h3>
+                <div class="dash-chart-wrap"><canvas id="dashInventoryMovementChart" aria-label="Движение склада"></canvas></div>
+            </div>
+        </section>
+
+        <section class="metrics-section" id="dashFinancialSection">
+            <div class="metrics-header">
+                <div>
+                    <div class="metrics-title">💶 Финансы</div>
+                    <div class="metrics-meta">Выручка и прибыль за выбранный период (кассовый метод)</div>
+                </div>
+            </div>
+            <div class="dash-kpi-grid" id="dashFinancialGrid"></div>
+            <div class="dash-chart-card" style="margin-top:18px;">
+                <h3 class="dash-section-title">Тренд выручки и прибыли</h3>
+                <div class="dash-chart-wrap"><canvas id="dashFinanceChart" aria-label="Финансовый тренд"></canvas></div>
+            </div>
+        </section>
+
+        <section class="metrics-section" id="dashIntegritySection">
+            <div class="metrics-header">
+                <div>
+                    <div class="metrics-title">🛡 Целостность данных</div>
+                    <div class="metrics-meta">Диагностика расчётов и источника</div>
+                </div>
+            </div>
+            <div class="dash-integrity-card" id="dashIntegrityPanel"></div>
         </section>
 
         <section class="dash-calendar-section" id="dashboardCalendarSection">
@@ -2022,6 +2188,7 @@
         </div>
     </div>
 
+    <script src="js/dashboard_analytics.js"></script>
     <script>
         const fetchJson = (window.FixariVan && window.FixariVan.http && typeof window.FixariVan.http.fetchJson === 'function')
             ? window.FixariVan.http.fetchJson
@@ -2148,6 +2315,11 @@
             bindRefreshButton();
             setupSnakeToggle();
             setupNotificationHandlers();
+            if (window.DashboardAnalytics && typeof window.DashboardAnalytics.init === 'function') {
+                window.DashboardAnalytics.init(function () {
+                    loadStatistics(true);
+                });
+            }
             loadStatistics(true);
             dashScheduleSecondaryLoad();
             dashScheduleDbCheckIdle();
@@ -2287,7 +2459,10 @@
             setStatisticsLoading(true);
 
             try {
-                const result = await fetchJson('./api/get_fast_stats.php');
+                const statsUrl = (window.DashboardAnalytics && typeof window.DashboardAnalytics.buildStatsUrl === 'function')
+                    ? window.DashboardAnalytics.buildStatsUrl()
+                    : './api/get_fast_stats.php?preset=30d&chart_range=30d';
+                const result = await fetchJson(statsUrl);
                 if (!result.success) {
                     throw new Error(result.message || 'Не удалось загрузить статистику');
                 }
@@ -2303,13 +2478,20 @@
                     dashboardState.sqliteDegradedNotified = false;
                 }
 
-                updateOrderCards(stats);
-                updateOrdersMeta();
+                if (window.DashboardAnalytics && typeof window.DashboardAnalytics.render === 'function') {
+                    window.DashboardAnalytics.render(stats);
+                } else {
+                    updateOrderCards(stats);
+                    updateOrdersMeta();
+                }
 
                 let inventoryUpdated = false;
 
                 if (stats.inventory) {
-                    updateInventoryCards(stats.inventory, 'db');
+                    dashboardState.lastInventoryUpdate = new Date();
+                    dashboardState.inventorySource = 'db';
+                    dashboardState.cacheToastShown = false;
+                    updateInventoryMeta();
                     inventoryUpdated = true;
                 } else {
                     inventoryUpdated = await loadInventoryStatsFromApi();
@@ -2366,7 +2548,7 @@
         function getInventoryCacheMetrics() {
             const inventory = JSON.parse(localStorage.getItem('fixarivan_inventory') || '[]');
             const total = inventory.length;
-            const inStock = inventory.filter(item => (item.quantity || 0) > (item.minStock || 0)).length;
+            const inStock = inventory.filter(item => (item.quantity || 0) > 0).length;
             const lowStock = inventory.filter(item => (item.quantity || 0) > 0 && (item.quantity || 0) <= (item.minStock || 5)).length;
             const purchaseValue = inventory.reduce((sum, item) => {
                 const price = Number(item.costPrice ?? item.cost_price ?? 0);
@@ -2393,12 +2575,6 @@
         }
 
         function updateInventoryCards(data, source) {
-            const totalEl = document.getElementById('inventoryTotal');
-            const inStockEl = document.getElementById('inventoryInStock');
-            const outStockEl = document.getElementById('inventoryOutOfStock');
-            const marginEl = document.getElementById('inventoryMargin');
-            const purchaseToSaleEl = document.getElementById('inventoryPurchaseToSale');
-
             const total = Number(data?.total ?? 0);
             const inStock = Number(data?.in_stock ?? 0);
             const outOfStock = Number(
@@ -2410,22 +2586,26 @@
             const saleValue = Number(data?.sale_value ?? 0);
             const margin = Number(data?.profit_potential ?? (saleValue - purchaseValue));
 
-            if (totalEl) totalEl.textContent = total;
-            if (inStockEl) inStockEl.textContent = inStock;
-            if (outStockEl) outStockEl.textContent = outOfStock;
-            if (marginEl) {
-                marginEl.textContent = formatEuro(margin);
-            }
-            if (purchaseToSaleEl) {
-                purchaseToSaleEl.textContent = `${formatEuro(purchaseValue)} → ${formatEuro(saleValue)}`;
-            }
-
             dashboardState.lastInventoryUpdate = new Date();
             dashboardState.inventorySource = source;
             if (source === 'db') {
                 dashboardState.cacheToastShown = false;
             }
             updateInventoryMeta();
+
+            if (window.DashboardAnalytics && dashboardState.lastStats) {
+                const merged = Object.assign({}, dashboardState.lastStats, {
+                    inventory: Object.assign({}, dashboardState.lastStats.inventory || {}, {
+                        total,
+                        in_stock: inStock,
+                        out_of_stock: outOfStock,
+                        purchase_value: purchaseValue,
+                        sale_value: saleValue,
+                        profit_potential: margin
+                    })
+                });
+                window.DashboardAnalytics.render(merged);
+            }
         }
 
         function refreshNotifications() {
