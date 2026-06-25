@@ -666,8 +666,16 @@
 }
 
 @media (max-width: 480px) {
-    .track-page .track-top-hint {
+    .track-page .track-top-hint .track-help-toggle {
         display: none;
+    }
+
+    .track-page .track-sticky-summary {
+        padding: 12px;
+    }
+
+    .track-page .track-client-inner {
+        padding: 10px 12px;
     }
 }
 

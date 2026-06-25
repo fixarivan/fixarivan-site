@@ -102,12 +102,17 @@
     </style>
     <link rel="stylesheet" href="css/fixarivan-theme.css">
     <link rel="stylesheet" href="mobile_fixes.css">
+    <link rel="stylesheet" href="css/track-modern.css?v=20250625">
+    <script src="js/track_ui.js"></script>
 </head>
 <body class="fv-page track-page">
     <div class="top">
         <h1 id="trackH1" style="margin:0;">🔍 Track</h1>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <span class="muted track-top-hint" style="font-size:.82rem;max-width:420px;">Интерфейс Track на русском. Язык клиентского портала задаётся в карточке заказа (для каждого заказа отдельно).</span>
+            <div class="track-help track-top-hint">
+                <button type="button" class="track-help-toggle" aria-expanded="false">ⓘ Справка</button>
+                <div class="track-help-panel">Интерфейс Track на русском. Язык клиентского портала задаётся в карточке заказа (для каждого заказа отдельно).</div>
+            </div>
             <a href="inventory.html" id="trackNavInventory">Космический склад</a>
             <a href="dashboard_app.html">← <span id="trackNavDash">Рабочий стол</span></a>
         </div>
@@ -127,7 +132,10 @@
                 <button id="fTransit">В пути</button>
                 <button id="fDone">Завершённые</button>
             </div>
-            <p id="trackFilterLegend" class="muted" style="font-size:0.78rem;margin:0 0 8px;line-height:1.35;"></p>
+            <div class="track-help" id="trackFilterHelp">
+                <button type="button" class="track-help-toggle" aria-expanded="false">ⓘ Фильтры</button>
+                <div class="track-help-panel" id="trackFilterLegend"></div>
+            </div>
             <div class="stats">
                 <span id="sClients">Клиентов: 0</span>
                 <span id="sOrders">Заказов: 0</span>
@@ -137,9 +145,13 @@
         </aside>
 
         <main class="card">
-            <h2 id="clientTitle" style="margin:0 0 8px 0;">Карточка клиента</h2>
-            <div id="clientMeta" class="muted" style="margin-bottom:10px;">Выберите клиента слева</div>
-            <div id="clientQuickActions" class="track-quick" style="display:none; margin-bottom:12px;"></div>
+            <div class="track-client-header">
+                <div class="track-client-header-main">
+                    <h2 id="clientTitle">Карточка клиента</h2>
+                    <div id="clientMeta" class="track-client-header-meta">Выберите клиента слева</div>
+                </div>
+            </div>
+            <div id="clientQuickActions" class="track-action-groups" style="display:none; margin-bottom:16px;"></div>
             <div id="ordersTree"><div class="muted">—</div></div>
         </main>
     </div>
@@ -850,6 +862,52 @@
             return groups;
         }
 
+        function trackHelpPanelHtml(text) {
+            return `<div class="track-help"><button type="button" class="track-help-toggle" aria-expanded="false">ⓘ Справка</button><div class="track-help-panel">${esc(text)}</div></div>`;
+        }
+
+        function trackSectionHtml(sectionId, icon, title, subtitle, bodyHtml) {
+            const sub = subtitle ? `<span class="track-section-subtitle">${esc(subtitle)}</span>` : '';
+            return `<section class="track-section" data-section="${esc(sectionId)}">
+                <button type="button" class="track-section-toggle" aria-expanded="true">
+                    <span class="track-section-icon">${icon}</span>
+                    <span class="track-section-titles"><span class="track-section-title">${esc(title)}</span>${sub}</span>
+                    <span class="track-section-chevron">▼</span>
+                </button>
+                <div class="track-section-body">${bodyHtml}</div>
+            </section>`;
+        }
+
+        function trackPricingSummaryInnerHtml() {
+            return `<div class="track-pricing-summary" aria-live="polite">
+                <div class="track-pricing-row"><span>Работа</span><span class="track-pricing-val" data-pricing-field="labour">0,00 €</span></div>
+                <div class="track-pricing-row"><span>Запчасти</span><span class="track-pricing-val" data-pricing-field="parts">0,00 €</span></div>
+                <div class="track-pricing-row"><span>Скидка</span><span class="track-pricing-val" data-pricing-field="discount">0,00 €</span></div>
+                <div class="track-pricing-row is-total"><span>Итого</span><span class="track-pricing-val" data-pricing-field="total">0,00 €</span></div>
+                <div class="track-pricing-row is-internal"><span>Прибыль</span><span class="track-pricing-val" data-pricing-field="profit">0,00 €</span></div>
+                <div class="track-pricing-row is-internal"><span>Маржа</span><span class="track-pricing-val" data-pricing-field="margin">0,0 %</span></div>
+            </div>`;
+        }
+
+        function trackTimelineItemHtml(d, T) {
+            const label = window.TrackUi ? TrackUi.timelineEventLabel(d, T) : typeLabel(d.type);
+            return `<li class="track-timeline-item">
+                <span class="track-timeline-dot" aria-hidden="true"></span>
+                <div class="track-timeline-head">
+                    <span class="track-timeline-title">${esc(label)} · ${typeLabel(d.type)} ${esc(d.display_id || d.document_id || '')}</span>
+                    <span class="track-timeline-date">${esc((window.TrackUi ? TrackUi.formatDateShort(d.date_created) : String(d.date_created || '—')))}</span>
+                </div>
+                <div class="track-timeline-meta">${esc(d.status || '—')}</div>
+                ${formatPaymentMiniLine(d)}
+                ${String(d.type || '').toLowerCase() === 'invoice' ? invoiceStatusSelectHtml(d.document_id, d.status) : ''}
+                <div class="doc-actions">
+                    <button onclick="viewDoc('${esc(d.document_id)}','${esc(d.type)}')">👁️ ${esc(T.view)}</button>
+                    <button onclick="editDoc('${esc(d.document_id)}','${esc(d.type)}')">✏️ ${esc(T.edit)}</button>
+                    ${String(d.type || '').toLowerCase() === 'report' ? '' : `<button onclick="pdfDoc('${esc(d.document_id)}','${esc(d.type)}', this)">📄 ${esc(T.pdf)}</button>`}
+                </div>
+            </li>`;
+        }
+
         function renderSidebar(){
             const T = trackT();
             const box = document.getElementById('clientsList');
@@ -869,11 +927,32 @@
                 const statsLine = g.orders.length === allO.length
                     ? T.sidebarClientTotal.replace('{n}', String(allO.length))
                     : T.sidebarClientSubset.replace('{a}', String(g.orders.length)).replace('{b}', String(allO.length));
+                const initials = window.TrackUi ? TrackUi.clientInitials(g.client_name) : '?';
+                const lastAct = window.TrackUi ? TrackUi.lastActivityFromGroup(base || g) : '';
+                const activeO = window.TrackUi ? TrackUi.activeOrderForClient(base || g) : null;
+                let statusPill = '';
+                if (activeO && isPublicActive(activeO)) {
+                    if (isPartsWait(activeO)) statusPill = `<span class="track-client-stat-pill is-wait">${esc(T.waitBadge)}</span>`;
+                    else if (pubStatusNorm(activeO) === 'done') statusPill = `<span class="track-client-stat-pill is-active">${esc(T.readyBadge)}</span>`;
+                    else statusPill = `<span class="track-client-stat-pill is-active">${esc(T.activeBadge)}</span>`;
+                }
                 return `
                 <div class="client-item${g.key===state.activeKey?' active':''}" data-key="${esc(g.key)}" title="${escAttr(tip)}">
-                    <strong>${esc(g.client_name)}</strong>
-                    <div class="muted">${esc(g.client_phone || '—')} • ${esc(g.client_email || '—')}</div>
-                    <div class="muted">${esc(statsLine)}</div>
+                    <div class="track-client-inner">
+                        <div class="track-client-avatar" aria-hidden="true">${esc(initials)}</div>
+                        <div class="track-client-body">
+                            <div class="track-client-head">
+                                <strong>${esc(g.client_name)}</strong>
+                                ${statusPill}
+                            </div>
+                            <div class="track-client-phone">${esc(g.client_phone || '—')}</div>
+                            <div class="track-client-stats">
+                                <span class="track-client-stat-pill">${esc(statsLine)}</span>
+                                ${nAct ? `<span class="track-client-stat-pill is-active">${esc(T.fActive)}: ${nAct}</span>` : ''}
+                                ${lastAct ? `<span class="track-client-stat-pill">${esc((window.TrackUi ? TrackUi.formatDateShort(lastAct) : lastAct))}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
                 </div>`;
             }).join('');
             box.querySelectorAll('.client-item').forEach((el) => el.addEventListener('click', () => { state.activeKey = el.getAttribute('data-key') || ''; renderSidebar(); renderDetails(); }));
@@ -907,9 +986,17 @@
                     ? `<a href="${escAttr(waClientUrl)}" class="track-wa" target="_blank" rel="noopener noreferrer" title="${escAttr(T.waClientHint)}">${esc(T.waClient)}</a>`
                     : `<span class="track-wa is-disabled" title="${escAttr(T.waNoPhoneHint)}">${esc(T.waClient)}</span>`;
                 quickBar.style.display = 'flex';
-                quickBar.innerHTML = `<a href="order_new.html${qstr ? '?' + qstr : ''}">${esc(T.clientQuickNewOrder)}</a>` +
-                    `<a href="inventory.html">${esc(T.clientQuickStock)}</a>` +
-                    waClientHtml;
+                quickBar.innerHTML = `<div class="track-action-group">
+                    <div class="track-action-group-label">Действия</div>
+                    <div class="track-action-row">
+                        <a href="order_new.html${qstr ? '?' + qstr : ''}" class="primary">${esc(T.clientQuickNewOrder)}</a>
+                        <a href="inventory.html" class="is-secondary">${esc(T.clientQuickStock)}</a>
+                    </div>
+                </div>
+                <div class="track-action-group">
+                    <div class="track-action-group-label">Связь</div>
+                    <div class="track-action-row">${waClientHtml}</div>
+                </div>`;
             }
             tree.innerHTML = g.orders.map((o) => {
                 const orderDoc = o.documents.find((d) => d.type === 'order');
@@ -929,113 +1016,166 @@
                 const invUrl = 'invoice.html?' + qDocs;
                 const repMobile = 'diagnostic_mobile.html?' + qDocs;
                 const repPc = 'diagnostic_pc.html?' + qDocs;
-                return `
-                <div class="order-card ${orderClass(o)}">
-                    <div class="order-head">
-                        <div>
-                            <strong>${esc(T.order)}: ${esc(o.order_id || '—')}</strong>
-                            <div class="muted order-display-title" data-order-doc-id="${esc(orderDocId)}">${esc(resolveTrackCardTitle(o))}</div>
-                            <div class="muted order-display-meta" data-order-doc-id="${esc(orderDocId)}">${esc(resolveTrackCardMeta(o, T))}</div>
+                const createdAt = window.TrackUi ? TrackUi.orderCreatedDate(o) : '';
+                const updatedAt = window.TrackUi ? TrackUi.orderUpdatedDate(o) : '';
+                const expDateRu = window.TrackUi ? TrackUi.formatDateShort(o.public_expected_date) : String(o.public_expected_date || '—');
+                const waOrderHtml = trackWhatsappPhoneOk(g.client_phone || '')
+                    ? `<a href="${escAttr(trackWhatsappUrl(g.client_phone || '', trackBuildWhatsappOrderMessage(g, o)))}" class="track-wa" target="_blank" rel="noopener noreferrer" title="${escAttr(T.waOrderHint)}">${esc(T.waOrder)}</a>`
+                    : `<span class="track-wa is-disabled" title="${escAttr(T.waNoPhoneHint)}">${esc(T.waOrder)}</span>`;
+                const timelineHtml = (window.TrackUi ? TrackUi.buildTimelineItems(o.documents, T) : o.documents).map((d) => trackTimelineItemHtml(d, T)).join('');
+                const orderBody = orderDocId ? (
+                    trackSectionHtml('info', '📋', 'Информация о заказе', 'Статус, запчасти, срок', `
+                        <div class="track-field-row"><span class="track-field-label">${esc(T.stClient)}</span>${publicStatusSelectHtml(orderDocId, pub)}</div>
+                        <div class="track-field-row"><span class="track-field-label">${esc(T.partsStatusChip)}</span><span class="badge ${partsStatusBadgeClass(pst)}">${esc(trackPartsStatusRu(pst))}</span></div>
+                        <div class="track-field-row track-expected-wrap">
+                            <span class="track-field-label">${esc(T.expectedDateLbl)}</span>
+                            <input type="date" class="track-expected-date" data-doc="${esc(orderDocId)}" value="${esc(toDateInputValue(o.public_expected_date))}" title="${esc(T.expectedDateHint)}" aria-label="${esc(T.expectedDateLbl)}">
+                            <button type="button" class="track-expected-clear is-secondary" data-doc="${esc(orderDocId)}">${esc(T.expectedDateClear)}</button>
                         </div>
-                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
-                            ${isOrderIssue(o) ? '<span title="Ожидание запчасти, срок истёк">⚠️</span>' : ''}
-                            ${trackOrderBadgeHtml(o)}
-                            ${isPartsWait(o) ? '<span class="badge wait">' + esc(T.waitBadge) + '</span>' : ''}
-                        </div>
-                    </div>
-                    ${orderDocId ? `
-                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:8px 0;">
-                        <span class="muted" style="font-size:.85rem;">${esc(T.stClient)}</span>
-                        ${publicStatusSelectHtml(orderDocId, pub)}
-                    </div>
-                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:4px 0 8px 0;">
-                        <span class="muted" style="font-size:.85rem;">${esc(T.partsStatusChip)}:</span>
-                        <span class="badge ${partsStatusBadgeClass(pst)}">${esc(trackPartsStatusRu(pst))}</span>
-                    </div>
-                    <div class="track-expected-wrap" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:4px 0 10px 0;">
-                        <span class="muted" style="font-size:.85rem;">${esc(T.expectedDateLbl)}</span>
-                        <input type="date" class="track-expected-date" data-doc="${esc(orderDocId)}" value="${esc(toDateInputValue(o.public_expected_date))}" title="${esc(T.expectedDateHint)}" aria-label="${esc(T.expectedDateLbl)}">
-                        <button type="button" class="track-expected-clear" data-doc="${esc(orderDocId)}" style="font-size:.82rem;padding:6px 10px;">${esc(T.expectedDateClear)}</button>
-                    </div>
-                    ${portalLangSelectHtml(orderDocId, o.language)}
-                    <div class="track-comment-grid">
+                        ${trackHelpPanelHtml(T.expectedDateHint)}
+                        ${portalLangSelectHtml(orderDocId, o.language)}
+                    `) +
+                    trackSectionHtml('communication', '💬', 'Связь с клиентом', 'Комментарий для портала', `
                         <div class="track-comment-col">
-                            <label class="muted" style="font-size:.85rem;">${esc(T.publicLbl)}</label>
+                            <label class="track-field-label">${esc(T.publicLbl)}</label>
                             <textarea class="track-internal track-public-comment" data-doc="${esc(orderDocId)}" placeholder="${esc(T.publicPh)}">${esc(pc)}</textarea>
                         </div>
+                    `) +
+                    trackSectionHtml('pricing', '💶', 'Стоимость', 'Работа, запчасти, итог', `
+                        ${trackHelpPanelHtml(T.workCostHint)}
+                        ${trackPricingSummaryInnerHtml()}
+                        <div class="track-work-wrap${showWorkCost ? '' : ' is-hidden'}" data-order-doc-id="${esc(orderDocId)}">
+                            <div class="track-work-head"><div class="track-work-title">${esc(T.workCostLbl)}</div></div>
+                            <div class="track-work-row">
+                                <input type="number" min="0" step="0.01" inputmode="decimal" class="track-work-input track-public-estimated-cost" data-doc="${esc(orderDocId)}" placeholder="${esc(T.workCostPh)}" value="${esc(workCost)}" aria-label="${esc(T.workCostLbl)}">
+                            </div>
+                        </div>
+                    `) +
+                    trackSectionHtml('parts', '🔧', 'Запчасти', 'Позиции заказа и склад', `
+                        ${trackHelpPanelHtml(T.orderLinesHint + ' ' + T.orderLinesSupplyHint)}
+                        <div class="order-lines-box" data-order-doc-id="${esc(orderDocId)}" data-order-id="${esc(o.order_id || '')}">
+                            <div class="title">${esc(T.orderLinesTitle)}</div>
+                            <div class="muted order-lines-stock-hint">${esc(T.orderLinesHint)}</div>
+                            <div class="order-lines-table-wrap">
+                                <table class="order-lines-table">
+                                    <thead><tr>
+                                        <th>${esc(T.orderLinesColName)}</th>
+                                        <th>${esc(T.orderLinesColQty)}</th>
+                                        <th>${esc(T.orderLinesColPur)}</th>
+                                        <th>${esc(T.orderLinesColSale)}</th>
+                                        <th>${esc(T.orderLinesColSku)}</th>
+                                        <th>${esc(T.orderLinesColDed)}</th>
+                                        <th></th>
+                                    </tr></thead>
+                                    <tbody class="order-lines-tbody"></tbody>
+                                </table>
+                            </div>
+                            <div class="order-lines-actions">
+                                <button type="button" class="track-order-line-add">${esc(T.orderLinesAdd)}</button>
+                                <button type="button" class="primary track-order-lines-save">${esc(T.orderLinesSave)}</button>
+                            </div>
+                            <div class="muted" style="display:none;">${esc(T.orderLinesSupplyHint)}</div>
+                        </div>
+                    `) +
+                    trackSectionHtml('documents', '📄', 'Документы', 'Создание, портал, история', `
+                        <div class="track-action-groups">
+                            <div class="track-action-group">
+                                <div class="track-action-group-label">Документы</div>
+                                <div class="track-action-row track-quick">
+                                    <a href="${esc(recUrl)}">➕ ${esc(T.rec)}</a>
+                                    <a href="${esc(invUrl)}">➕ ${esc(T.inv)}</a>
+                                    <a href="${esc(repMobile)}">➕ ${esc(T.repMob)}</a>
+                                    <a href="${esc(repPc)}">➕ ${esc(T.repPc)}</a>
+                                </div>
+                            </div>
+                            <div class="track-action-group">
+                                <div class="track-action-group-label">Портал</div>
+                                <div class="track-action-row doc-actions">
+                                    <button type="button" class="primary portal-open" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalOpen)}</button>
+                                    <button type="button" class="portal-copy is-secondary" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalCopy)}</button>
+                                </div>
+                            </div>
+                            <div class="track-action-group">
+                                <div class="track-action-group-label">Связь</div>
+                                <div class="track-action-row">${waOrderHtml}</div>
+                            </div>
+                        </div>
+                        <ul class="track-timeline docs">${timelineHtml || '<li class="muted">—</li>'}</ul>
+                        <div class="track-future-slot">Скоро: просмотр портала клиентом, оценка, таймер ремонта</div>
+                    `) +
+                    trackSectionHtml('internal', '📝', 'Внутренние заметки', 'Только для мастера', `
                         <div class="track-comment-col">
-                            <label class="muted" style="font-size:.85rem;">${esc(T.internalLbl)}</label>
+                            <label class="track-field-label">${esc(T.internalLbl)}</label>
                             <textarea class="track-internal track-internal-comment" data-doc="${esc(orderDocId)}" placeholder="${esc(T.internalPh)}">${esc(ic)}</textarea>
                         </div>
-                    </div>
-                    <div class="track-work-wrap${showWorkCost ? '' : ' is-hidden'}" data-order-doc-id="${esc(orderDocId)}">
-                        <div class="track-work-head">
-                            <div class="track-work-title">${esc(T.workCostLbl)}</div>
-                            <div class="track-work-hint">${esc(T.workCostHint)}</div>
-                        </div>
-                        <div class="track-work-row">
-                            <input type="number" min="0" step="0.01" inputmode="decimal" class="track-work-input track-public-estimated-cost" data-doc="${esc(orderDocId)}" placeholder="${esc(T.workCostPh)}" value="${esc(workCost)}" aria-label="${esc(T.workCostLbl)}">
-                        </div>
-                    </div>
-                    <div class="order-lines-box" data-order-doc-id="${esc(orderDocId)}" data-order-id="${esc(o.order_id || '')}">
-                        <div class="title">${esc(T.orderLinesTitle)}</div>
-                        <div class="muted order-lines-stock-hint">${esc(T.orderLinesHint)}</div>
-                        <div class="order-lines-table-wrap">
-                            <table class="order-lines-table">
-                                <thead><tr>
-                                    <th>${esc(T.orderLinesColName)}</th>
-                                    <th>${esc(T.orderLinesColQty)}</th>
-                                    <th>${esc(T.orderLinesColPur)}</th>
-                                    <th>${esc(T.orderLinesColSale)}</th>
-                                    <th>${esc(T.orderLinesColSku)}</th>
-                                    <th>${esc(T.orderLinesColDed)}</th>
-                                    <th></th>
-                                </tr></thead>
-                                <tbody class="order-lines-tbody"></tbody>
-                            </table>
-                        </div>
-                        <div class="order-lines-actions">
-                            <button type="button" class="track-order-line-add">${esc(T.orderLinesAdd)}</button>
-                            <button type="button" class="primary track-order-lines-save">${esc(T.orderLinesSave)}</button>
-                        </div>
-                        <div class="muted" style="font-size:.8rem;margin-top:10px;line-height:1.4;">${esc(T.orderLinesSupplyHint)}</div>
-                    </div>
-                    ` : '<div class="muted" style="margin:8px 0;">' + esc(T.noOrderDoc) + '</div>'}
-                    <div class="track-quick">
-                        <a href="${esc(recUrl)}">➕ ${esc(T.rec)}</a>
-                        <a href="${esc(invUrl)}">➕ ${esc(T.inv)}</a>
-                        <a href="${esc(repMobile)}">➕ ${esc(T.repMob)}</a>
-                        <a href="${esc(repPc)}">➕ ${esc(T.repPc)}</a>
-                    </div>
-                    <div class="doc-actions" style="margin:8px 0;">
-                        <button type="button" class="primary portal-open" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalOpen)}</button>
-                        <button type="button" class="portal-copy" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalCopy)}</button>
-                        ${trackWhatsappPhoneOk(g.client_phone || '')
-                            ? `<a href="${escAttr(trackWhatsappUrl(g.client_phone || '', trackBuildWhatsappOrderMessage(g, o)))}" class="track-wa" target="_blank" rel="noopener noreferrer" title="${escAttr(T.waOrderHint)}">${esc(T.waOrder)}</a>`
-                            : `<span class="track-wa is-disabled" title="${escAttr(T.waNoPhoneHint)}">${esc(T.waOrder)}</span>`}
-                    </div>
-                    <div class="muted">${esc(o.problem_description || T.problemNone)}</div>
-                    <ul class="docs">
-                        ${o.documents.map((d) => `
-                            <li>
-                                <strong>${typeLabel(d.type)} ${esc(d.display_id || d.document_id || '')}</strong>
-                                <div class="muted">${esc(d.status || '—')} • ${esc(d.date_created || '')}</div>
-                                ${formatPaymentMiniLine(d)}
-                                ${String(d.type || '').toLowerCase() === 'invoice' ? invoiceStatusSelectHtml(d.document_id, d.status) : ''}
-                                <div class="doc-actions">
-                                    <button onclick="viewDoc('${esc(d.document_id)}','${esc(d.type)}')">👁️ ${esc(T.view)}</button>
-                                    <button onclick="editDoc('${esc(d.document_id)}','${esc(d.type)}')">✏️ ${esc(T.edit)}</button>
-                                    ${String(d.type || '').toLowerCase() === 'report' ? '' : `<button onclick="pdfDoc('${esc(d.document_id)}','${esc(d.type)}', this)">📄 ${esc(T.pdf)}</button>`}
+                    `)
+                ) : `<div class="muted" style="margin:8px 0;">${esc(T.noOrderDoc)}</div>`;
+                return `
+                <div class="order-card ${orderClass(o)}">
+                    <div class="track-order-shell">
+                        <div class="track-order-body">
+                            <header class="track-order-header">
+                                <div class="track-order-header-main">
+                                    <div class="track-order-id">${esc(o.order_id || '—')}</div>
+                                    <h3 class="track-order-device order-display-title" data-order-doc-id="${esc(orderDocId)}">${esc(resolveTrackCardTitle(o))}</h3>
+                                    <div class="track-order-subtitle order-display-meta" data-order-doc-id="${esc(orderDocId)}">${esc(o.problem_description || resolveTrackCardMeta(o, T))}</div>
+                                    <div class="track-order-kv">
+                                        <span><strong>Создан</strong> ${esc(window.TrackUi ? TrackUi.formatDateShort(createdAt) : createdAt || '—')}</span>
+                                        <span><strong>Обновлён</strong> ${esc(window.TrackUi ? TrackUi.formatDateShort(updatedAt) : updatedAt || '—')}</span>
+                                        ${o.device_model ? `<span><strong>Модель</strong> ${esc(o.device_model)}</span>` : ''}
+                                        <span><strong>Мастер</strong> —</span>
+                                    </div>
                                 </div>
-                            </li>
-                        `).join('')}
-                    </ul>
+                                <div class="track-order-badges">
+                                    ${isOrderIssue(o) ? '<span title="Ожидание запчасти, срок истёк">⚠️</span>' : ''}
+                                    ${trackOrderBadgeHtml(o)}
+                                    ${isPartsWait(o) ? '<span class="badge wait">' + esc(T.waitBadge) + '</span>' : ''}
+                                </div>
+                            </header>
+                            ${orderBody}
+                        </div>
+                        <aside class="track-sticky-summary" data-order-doc-id="${esc(orderDocId)}">
+                            <div class="track-summary-title">Сводка</div>
+                            <div class="track-summary-block">
+                                <div class="track-summary-block-label">Статус</div>
+                                <div class="track-summary-block-value">${trackOrderBadgeHtml(o)}${isPartsWait(o) ? ' <span class="badge wait">' + esc(T.waitBadge) + '</span>' : ''}</div>
+                            </div>
+                            <div class="track-summary-block">
+                                <div class="track-summary-block-label">Ожидаемая дата</div>
+                                <div class="track-summary-block-value">${esc(expDateRu || '—')}</div>
+                            </div>
+                            <div class="track-summary-block">
+                                <div class="track-summary-block-label">Итого</div>
+                                <div class="track-summary-block-value is-price" data-summary-total>—</div>
+                            </div>
+                            <div class="track-summary-block">
+                                <div class="track-summary-block-label">К оплате</div>
+                                <div class="track-summary-block-value" data-summary-balance>—</div>
+                            </div>
+                            <div class="track-summary-block">
+                                <div class="track-summary-block-label">Документов</div>
+                                <div class="track-summary-block-value">${esc(String((o.documents || []).length))}</div>
+                            </div>
+                            <div class="track-summary-divider"></div>
+                            <div class="track-summary-actions track-action-groups">
+                                <div class="track-action-group">
+                                    <div class="track-action-group-label">Быстрые действия</div>
+                                    <div class="track-action-row">
+                                        <button type="button" class="primary portal-open" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalOpen)}</button>
+                                        <button type="button" class="portal-copy is-secondary" data-doc="${esc(portalDocId)}" data-oid="${esc(o.order_id || '')}" data-url="${esc(portalUrl)}" data-token="${esc(clientTok)}">${esc(T.portalCopy)}</button>
+                                        ${waOrderHtml}
+                                    </div>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
                 </div>
             `;}).join('');
             hydrateTrackOrderBlocks(tree);
             bindPortalButtons(tree);
             bindTrackOrderControls(tree);
             bindOrderLinesControls(tree);
+            if (window.TrackUi) TrackUi.init(tree);
         }
 
         function bindTrackOrderControls(root) {
@@ -1587,6 +1727,7 @@
                     if (!tbody) return;
                     fillOrderLinesTbody(tbody, parseOrderLinesFromDoc(doc));
                 });
+                if (window.TrackUi) TrackUi.updatePricingSummary(root, orderDocId);
                 root.querySelectorAll('.order-display-title').forEach((el) => {
                     if (String(el.getAttribute('data-order-doc-id') || '') !== orderDocId) return;
                     el.textContent = resolveTrackCardTitle(doc);
@@ -1725,6 +1866,10 @@
                 }
             } catch (_) {}
             setMode(state.mode);
+            if (window.TrackUi) {
+                TrackUi.init(document.querySelector('.top'));
+                TrackUi.init(document.querySelector('aside.card'));
+            }
             loadAll().catch((e) => {
                 document.getElementById('clientsList').innerHTML = '<div class="muted">Ошибка загрузки: ' + esc(fvErr(e)) + '</div>';
             });
