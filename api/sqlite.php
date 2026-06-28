@@ -370,6 +370,17 @@ function ensureSqliteSchema(PDO $pdo): void {
         $pdo->exec('ALTER TABLE orders ADD COLUMN estimated_labor_cost REAL');
     }
 
+    $orderColsPrepay = $pdo->query("PRAGMA table_info('orders')")->fetchAll(PDO::FETCH_ASSOC);
+    $orderColNamesPrepay = array_map(static function ($c) {
+        return $c['name'] ?? '';
+    }, $orderColsPrepay);
+    if (!in_array('parts_prepayment_status', $orderColNamesPrepay, true)) {
+        $pdo->exec('ALTER TABLE orders ADD COLUMN parts_prepayment_status TEXT');
+    }
+    if (!in_array('parts_prepayment_amount', $orderColNamesPrepay, true)) {
+        $pdo->exec('ALTER TABLE orders ADD COLUMN parts_prepayment_amount REAL');
+    }
+
     $cols = $pdo->query("PRAGMA table_info('mobile_reports')")->fetchAll(PDO::FETCH_ASSOC);
     $mobileColNames = array_map(static function ($c) {
         return $c['name'] ?? '';

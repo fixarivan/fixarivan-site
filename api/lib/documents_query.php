@@ -89,7 +89,7 @@ function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): a
 
     if ($typeFilter === 'all' || $typeFilter === 'order') {
         $stmt = $pdo->query(
-            'SELECT document_id, order_id, client_id, client_name, client_phone, client_email, device_model, device_type, device_serial, problem_description, status, public_status, order_status, parts_status, public_expected_date, public_comment, public_estimated_cost, internal_comment, client_token, language, order_type, unique_code, order_lines_json,
+            'SELECT document_id, order_id, client_id, client_name, client_phone, client_email, device_model, device_type, device_serial, problem_description, status, public_status, order_status, parts_status, public_expected_date, public_comment, public_estimated_cost, internal_comment, client_token, language, order_type, unique_code, order_lines_json, parts_sale_total, parts_prepayment_status, parts_prepayment_amount,
                     COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS sort_date
              FROM orders
              ORDER BY sort_date DESC
@@ -130,6 +130,13 @@ function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): a
                 'public_comment' => (string)($row['public_comment'] ?? ''),
                 'public_estimated_cost' => (string)($row['public_estimated_cost'] ?? ''),
                 'internal_comment' => (string)($row['internal_comment'] ?? ''),
+                'parts_sale_total' => isset($row['parts_sale_total']) && $row['parts_sale_total'] !== null && $row['parts_sale_total'] !== ''
+                    ? (float)$row['parts_sale_total']
+                    : null,
+                'parts_prepayment_status' => fixarivan_normalize_parts_prepayment_status($row['parts_prepayment_status'] ?? null),
+                'parts_prepayment_amount' => isset($row['parts_prepayment_amount']) && $row['parts_prepayment_amount'] !== null && $row['parts_prepayment_amount'] !== ''
+                    ? (float)$row['parts_prepayment_amount']
+                    : null,
                 'order_type' => (string)($row['order_type'] ?? 'repair'),
                 'language' => $portalLang,
                 'status_label' => order_status_label_ru($pubNorm),

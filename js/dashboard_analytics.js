@@ -5,14 +5,25 @@
     'use strict';
 
     var charts = {};
-    var state = {
-        preset: '30d',
-        chartRange: '30d',
-        customFrom: '',
-        customTo: ''
-    };
+
+    function isDashMobileUi() {
+        return typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+    }
+
+    function defaultAnalyticsState() {
+        var mobile = isDashMobileUi();
+        return {
+            preset: mobile ? 'all' : '30d',
+            chartRange: mobile ? '12m' : '30d',
+            customFrom: '',
+            customTo: ''
+        };
+    }
+
+    var state = defaultAnalyticsState();
 
     var PRESETS = [
+        { id: 'all', label: 'Всё время' },
         { id: 'today', label: 'Сегодня' },
         { id: 'yesterday', label: 'Вчера' },
         { id: '7d', label: '7 дней' },
@@ -22,6 +33,13 @@
         { id: 'year', label: 'Этот год' },
         { id: 'custom', label: 'Период' }
     ];
+
+    function presetLabel(id) {
+        for (var i = 0; i < PRESETS.length; i++) {
+            if (PRESETS[i].id === id) return PRESETS[i].label;
+        }
+        return id || '—';
+    }
 
     function esc(s) {
         return String(s == null ? '' : s)
@@ -320,12 +338,27 @@
         parts.push('Источник: SQLite');
         if (cache.status) parts.push('Кэш: ' + cache.status);
         el.textContent = parts.join(' • ');
+        updatePeriodSummaryLabel(stats);
+    }
+
+    function updatePeriodSummaryLabel(stats) {
+        var el = document.getElementById('dashPeriodSummaryLabel');
+        if (!el) return;
+        if (stats && stats.period && stats.period.label) {
+            el.textContent = stats.period.label;
+            return;
+        }
+        if (state.preset === 'custom' && state.customFrom && state.customTo) {
+            el.textContent = state.customFrom + ' — ' + state.customTo;
+            return;
+        }
+        el.textContent = presetLabel(state.preset);
     }
 
     function buildStatsUrl() {
         var params = new URLSearchParams();
-        params.set('preset', state.preset || '30d');
-        params.set('chart_range', state.chartRange || '30d');
+        params.set('preset', state.preset || (isDashMobileUi() ? 'all' : '30d'));
+        params.set('chart_range', state.chartRange || (isDashMobileUi() ? '12m' : '30d'));
         if (state.preset === 'custom' && state.customFrom && state.customTo) {
             params.set('from', state.customFrom);
             params.set('to', state.customTo);
@@ -336,17 +369,30 @@
     function bindFilters(onChange) {
         var bar = document.getElementById('dashPeriodFilter');
         if (!bar) return;
-        bar.innerHTML = PRESETS.map(function (p) {
-            var active = state.preset === p.id ? ' is-active' : '';
-            return '<button type="button" class="dash-period-btn' + active + '" data-preset="' + esc(p.id) + '">' + esc(p.label) + '</button>';
-        }).join('')
+        var mobile = isDashMobileUi();
+        var openAttr = mobile ? '' : ' open';
+
+        bar.innerHTML = ''
+            + '<details class="dash-period-drawer"' + openAttr + ' id="dashPeriodDrawer">'
+            + '<summary class="dash-period-drawer-summary">'
+            + '<span class="dash-period-drawer-title">Период</span>'
+            + '<span class="dash-period-drawer-value" id="dashPeriodSummaryLabel">' + esc(presetLabel(state.preset)) + '</span>'
+            + '</summary>'
+            + '<div class="dash-period-drawer-body">'
+            + PRESETS.map(function (p) {
+                var active = state.preset === p.id ? ' is-active' : '';
+                return '<button type="button" class="dash-period-btn' + active + '" data-preset="' + esc(p.id) + '">' + esc(p.label) + '</button>';
+            }).join('')
             + '<div class="dash-period-custom" id="dashPeriodCustom" ' + (state.preset === 'custom' ? '' : 'hidden') + '>'
             + '<input type="date" id="dashPeriodFrom" value="' + esc(state.customFrom) + '">'
             + '<span>—</span>'
             + '<input type="date" id="dashPeriodTo" value="' + esc(state.customTo) + '">'
             + '<button type="button" class="dash-period-apply" id="dashPeriodApply">OK</button>'
-            + '</div>';
+            + '</div>'
+            + '</div>'
+            + '</details>';
 
+        var drawer = document.getElementById('dashPeriodDrawer');
         bar.querySelectorAll('.dash-period-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 var preset = btn.getAttribute('data-preset') || '30d';
@@ -355,7 +401,11 @@
                 if (custom) custom.hidden = preset !== 'custom';
                 bar.querySelectorAll('.dash-period-btn').forEach(function (b) { b.classList.remove('is-active'); });
                 btn.classList.add('is-active');
-                if (preset !== 'custom' && typeof onChange === 'function') onChange();
+                updatePeriodSummaryLabel();
+                if (preset !== 'custom') {
+                    if (mobile && drawer) drawer.removeAttribute('open');
+                    if (typeof onChange === 'function') onChange();
+                }
             });
         });
 
@@ -364,6 +414,8 @@
             apply.addEventListener('click', function () {
                 state.customFrom = (document.getElementById('dashPeriodFrom') || {}).value || '';
                 state.customTo = (document.getElementById('dashPeriodTo') || {}).value || '';
+                updatePeriodSummaryLabel();
+                if (mobile && drawer) drawer.removeAttribute('open');
                 if (typeof onChange === 'function') onChange();
             });
         }
@@ -371,6 +423,8 @@
         var chartBtns = document.getElementById('dashChartRangeBtns');
         if (chartBtns) {
             chartBtns.querySelectorAll('[data-chart-range]').forEach(function (btn) {
+                var range = btn.getAttribute('data-chart-range') || '30d';
+                btn.classList.toggle('is-active', range === state.chartRange);
                 btn.addEventListener('click', function () {
                     state.chartRange = btn.getAttribute('data-chart-range') || '30d';
                     chartBtns.querySelectorAll('[data-chart-range]').forEach(function (b) { b.classList.remove('is-active'); });

@@ -256,6 +256,79 @@
             margin-bottom: 50px;
         }
 
+        .recent-section.dash-docs-wrap {
+            padding: 0;
+            margin-bottom: 28px;
+            overflow: hidden;
+        }
+
+        .dash-docs-drawer-summary {
+            display: flex;
+            list-style: none;
+            cursor: pointer;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 18px;
+            min-height: 48px;
+            user-select: none;
+        }
+
+        .dash-docs-drawer-summary::-webkit-details-marker { display: none; }
+
+        .dash-docs-drawer-summary::marker { content: ''; }
+
+        .dash-docs-drawer-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex-shrink: 0;
+        }
+
+        .dash-docs-drawer-icon { font-size: 1.1rem; line-height: 1; }
+
+        .dash-docs-drawer-title {
+            font-size: 1rem;
+            font-weight: 650;
+            color: rgba(248, 250, 252, 0.95);
+        }
+
+        .dash-docs-drawer-meta {
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.55);
+            text-align: right;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1 1 auto;
+            min-width: 0;
+            margin-left: 8px;
+        }
+
+        .dash-docs-drawer-chevron {
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.45);
+            transition: transform 0.18s ease;
+        }
+
+        .dash-docs-drawer[open] .dash-docs-drawer-chevron {
+            transform: rotate(180deg);
+        }
+
+        .dash-docs-drawer[open] .dash-docs-drawer-summary {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .dash-docs-drawer-body {
+            padding: 14px 18px 18px;
+        }
+
+        .dash-docs-drawer:not([open]) .dash-docs-drawer-body {
+            display: none;
+        }
+
         .section-title {
             color: white;
             font-size: 2rem;
@@ -805,11 +878,68 @@
 
         /* --- Analytics dashboard (KPI, charts, filters) --- */
         .dash-period-filter {
+            display: block;
+            margin-bottom: 18px;
+        }
+        .dash-period-drawer {
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.35);
+            overflow: hidden;
+        }
+        .dash-period-drawer-summary {
+            display: none;
+            list-style: none;
+            cursor: pointer;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 14px;
+        }
+        .dash-period-drawer-summary::-webkit-details-marker { display: none; }
+        .dash-period-drawer-title {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .dash-period-drawer-value {
+            font-size: 0.875rem;
+            font-weight: 650;
+            color: #e2e8f0;
+        }
+        .dash-period-drawer-body {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            margin-bottom: 18px;
+            padding: 12px 14px 14px;
             align-items: center;
+        }
+        .dash-period-drawer[open] .dash-period-drawer-summary {
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+        }
+        @media (max-width: 768px) {
+            .dash-period-filter { margin-bottom: 10px; }
+            .dash-period-drawer-summary { display: flex; }
+            .dash-period-drawer:not([open]) .dash-period-drawer-body { display: none; }
+            .dash-period-drawer-body {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                padding: 10px 12px 12px;
+            }
+            .dash-period-drawer-body::-webkit-scrollbar { display: none; }
+            .dash-period-btn, .dash-chart-range-btn, .dash-period-apply {
+                flex: 0 0 auto;
+            }
+            .dash-period-custom {
+                flex: 1 0 100%;
+            }
+            #ordersMetrics .metrics-meta {
+                font-size: 0.72rem;
+            }
         }
         .dash-period-btn, .dash-chart-range-btn, .dash-period-apply {
             padding: 8px 14px;
@@ -1162,8 +1292,9 @@
             .document-actions { width: 100%; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
             .document-actions .btn { flex: 1 1 calc(50% - 8px); text-align: center; padding: 10px 12px; font-size: 0.85rem; }
             .document-actions .btn.btn-delete { flex-basis: 100%; }
-            .recent-section { padding: 14px 12px; margin-bottom: 20px; }
-            .section-title { font-size: 1.2rem; margin-bottom: 12px; gap: 8px; line-height: 1.25; }
+            .recent-section.dash-docs-wrap { padding: 0; margin-bottom: 16px; }
+            .dash-docs-drawer-summary { padding: 12px 12px; min-height: 44px; }
+            .dash-docs-drawer-body { padding: 10px 12px 14px; }
             .document-list { gap: 10px; }
             .document-icon { width: 44px; height: 44px; font-size: 1.25rem; }
             .fixarivan-toast-container { right: 16px; left: 16px; bottom: 16px; }
@@ -1215,8 +1346,8 @@
             .metrics-loading { justify-content: center; }
             .document-actions .btn { flex: 1 1 100%; }
             .document-icon { width: 40px; height: 40px; font-size: 1.1rem; }
-            .recent-section { padding: 14px 12px; margin-bottom: 22px; }
-            .section-title { font-size: 1.2rem; margin-bottom: 12px; }
+            .recent-section.dash-docs-wrap { padding: 0; margin-bottom: 18px; }
+            .dash-docs-drawer-summary { padding: 11px 10px; }
             .document-item { padding: 12px 10px; gap: 10px; }
             .document-details p { font-size: 0.78rem; }
         }
@@ -2093,17 +2224,25 @@
         </section>
 
         <!-- Recent Documents -->
-        <div class="recent-section">
-            <h2 class="section-title">
-                <span>📄</span>
-                <span>Последние 5 документов (SQLite)</span>
-            </h2>
-            <div id="recentDocuments" class="document-list">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Загрузка документов...</p>
+        <div class="recent-section dash-docs-wrap">
+            <details class="dash-docs-drawer" id="dashRecentDocsDrawer">
+                <summary class="dash-docs-drawer-summary">
+                    <span class="dash-docs-drawer-left">
+                        <span class="dash-docs-drawer-icon" aria-hidden="true">📄</span>
+                        <span class="dash-docs-drawer-title">Документы</span>
+                    </span>
+                    <span class="dash-docs-drawer-meta" id="dashRecentDocsMeta">Последние 5 · загрузка…</span>
+                    <span class="dash-docs-drawer-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <div class="dash-docs-drawer-body">
+                    <div id="recentDocuments" class="document-list">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Загрузка документов...</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </details>
         </div>
     </div>
 
@@ -2148,7 +2287,7 @@
         </div>
     </div>
 
-    <script src="js/dashboard_analytics.js"></script>
+    <script src="js/dashboard_analytics.js?v=20250625mobile"></script>
     <script>
         const fetchJson = (window.FixariVan && window.FixariVan.http && typeof window.FixariVan.http.fetchJson === 'function')
             ? window.FixariVan.http.fetchJson
@@ -2421,7 +2560,7 @@
             try {
                 const statsUrl = (window.DashboardAnalytics && typeof window.DashboardAnalytics.buildStatsUrl === 'function')
                     ? window.DashboardAnalytics.buildStatsUrl()
-                    : './api/get_fast_stats.php?preset=30d&chart_range=30d';
+                    : './api/get_fast_stats.php?preset=all&chart_range=12m';
                 const result = await fetchJson(statsUrl);
                 if (!result.success) {
                     throw new Error(result.message || 'Не удалось загрузить статистику');
@@ -2677,9 +2816,53 @@
             panel.classList.toggle('open');
         }
 
+        function dashRecentDocsWord(n) {
+            const mod10 = n % 10;
+            const mod100 = n % 100;
+            if (mod10 === 1 && mod100 !== 11) return 'документ';
+            if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'документа';
+            return 'документов';
+        }
+
+        function updateRecentDocsSummary(docList, state) {
+            const el = document.getElementById('dashRecentDocsMeta');
+            if (!el) return;
+            if (state === 'loading') {
+                el.textContent = 'Последние 5 · загрузка…';
+                return;
+            }
+            if (state === 'error') {
+                el.textContent = 'ошибка загрузки';
+                return;
+            }
+            if (state === 'empty') {
+                el.textContent = 'нет документов';
+                return;
+            }
+            if (state === 'unavailable') {
+                el.textContent = 'SQLite недоступен';
+                return;
+            }
+            const list = Array.isArray(docList) ? docList : [];
+            const n = Math.min(list.length, DASHBOARD_RECENT_DOCS_LIMIT);
+            if (!n) {
+                el.textContent = 'нет документов';
+                return;
+            }
+            const first = list[0] || {};
+            let preview = String(first.display_id || first.document_id || '').trim();
+            if (!preview) {
+                preview = String(first.primary_line || first.client_name || '').trim();
+                if (preview.length > 32) preview = preview.slice(0, 29) + '…';
+            }
+            const label = n + ' ' + dashRecentDocsWord(n);
+            el.textContent = preview ? (label + ' · ' + preview) : label;
+        }
+
         function renderRecentDocumentsList(docList) {
             const container = document.getElementById('recentDocuments');
             if (!container) return;
+            updateRecentDocsSummary(docList);
             const limit = DASHBOARD_RECENT_DOCS_LIMIT;
             const expanded = dashboardState.recentDocumentsExpanded === true;
             const visibleDocs = expanded ? docList : docList.slice(0, limit);
@@ -2791,6 +2974,7 @@
             const container = document.getElementById('recentDocuments');
             if (!container) return;
 
+            updateRecentDocsSummary([], 'loading');
             dashboardState.recentFetchInFlight = true;
             try {
                 const result = await fetchJson('./api/get_recent_documents.php');
@@ -2803,6 +2987,7 @@
                 if (sqliteUnavailable && docList.length === 0) {
                     dashboardState.recentDocuments = [];
                     dashboardState.allRecentDocuments = [];
+                    updateRecentDocsSummary([], 'unavailable');
                     container.innerHTML = `
                         <div style="text-align: center; padding: 32px; color: rgba(255, 255, 255, 0.75);">
                             <h3 style="margin-bottom: 10px;">Нет доступа к SQLite</h3>
@@ -2820,6 +3005,7 @@
                 } else {
                     dashboardState.recentDocuments = [];
                     dashboardState.allRecentDocuments = [];
+                    updateRecentDocsSummary([], 'empty');
                     container.innerHTML = `
                         <div style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.6);">
                             <h3 style="margin-bottom: 10px;">Документов пока нет</h3>
@@ -2831,6 +3017,7 @@
             } catch (error) {
                 console.error('Error loading recent documents:', error);
                 showToast('Ошибка загрузки документов: ' + humanizeErr(error), 'error');
+                updateRecentDocsSummary([], 'error');
                 container.innerHTML = `
                     <div style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.6);">
                         <h3>Нет соединения</h3>

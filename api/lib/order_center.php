@@ -57,6 +57,20 @@ function fixarivan_normalize_parts_status(?string $s): ?string {
     return in_array($t, fixarivan_allowed_parts_statuses(), true) ? $t : null;
 }
 
+/** Статус предоплаты за запчасти (Track → клиентский портал). */
+function fixarivan_allowed_parts_prepayment_statuses(): array {
+    return ['required', 'paid', 'not_required'];
+}
+
+function fixarivan_normalize_parts_prepayment_status(?string $s): ?string {
+    $t = trim((string)$s);
+    if ($t === '') {
+        return null;
+    }
+
+    return in_array($t, fixarivan_allowed_parts_prepayment_statuses(), true) ? $t : null;
+}
+
 function fixarivan_generate_order_document_id(): string {
     return 'ORD-' . date('YmdHis') . '-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
 }

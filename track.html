@@ -102,7 +102,7 @@
     </style>
     <link rel="stylesheet" href="css/fixarivan-theme.css">
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625saas">
-    <link rel="stylesheet" href="css/track-modern.css?v=20250625polish">
+    <link rel="stylesheet" href="css/track-modern.css?v=20250625mobile">
     <script src="js/track_ui.js?v=20250625polish"></script>
 </head>
 <body class="fv-page track-page">
@@ -120,21 +120,22 @@
 
     <div class="layout">
         <aside class="card track-sidebar">
-            <details class="track-sidebar-tools" id="trackSidebarTools">
-                <summary class="track-sidebar-tools-summary">Поиск и фильтры</summary>
-                <div class="track-sidebar-tools-body">
-                    <div class="search-row" style="grid-template-columns: 1fr auto;">
-                        <input id="qGlobal" placeholder="Поиск: имя, телефон, устройство, проблема, номер заказа">
-                        <button id="btnSearch" class="primary">Найти</button>
-                    </div>
-                    <div class="quick-filters">
-                        <button id="fAll" class="active">Все</button>
-                        <button id="fActive">Активные</button>
-                        <button id="fWait">Ожидание</button>
-                        <button id="fReady">К выдаче</button>
-                        <button id="fTransit">В пути</button>
-                        <button id="fDone">Завершённые</button>
-                    </div>
+            <div class="track-sidebar-search">
+                <input id="qGlobal" type="search" enterkeyhint="search" placeholder="Поиск клиента, телефон, заказ…" autocomplete="off">
+                <button id="btnSearch" class="primary" type="button">Найти</button>
+            </div>
+            <details class="track-sidebar-filters" id="trackSidebarFilters">
+                <summary class="track-sidebar-filters-summary">
+                    <span>Категории</span>
+                    <span id="trackFilterActiveLabel" class="track-sidebar-filters-active">Все</span>
+                </summary>
+                <div class="quick-filters track-filter-chips">
+                    <button id="fAll" class="active" type="button">Все</button>
+                    <button id="fActive" type="button">Активные</button>
+                    <button id="fWait" type="button">Ожидание</button>
+                    <button id="fReady" type="button">К выдаче</button>
+                    <button id="fTransit" type="button">В пути</button>
+                    <button id="fDone" type="button">Завершённые</button>
                 </div>
             </details>
             <div class="track-help track-help--hidden" id="trackFilterHelp" hidden>
@@ -149,13 +150,18 @@
         </aside>
 
         <main class="card track-workspace-main">
-            <div class="track-client-header">
-                <div class="track-client-header-main">
-                    <h2 id="clientTitle">Карточка клиента</h2>
-                    <div id="clientMeta" class="track-client-header-meta">Выберите клиента слева</div>
+            <details class="track-client-card" id="trackClientCard">
+                <summary class="track-client-card-summary">
+                    <div class="track-client-card-head">
+                        <span class="track-client-card-name" id="clientTitle">Карточка клиента</span>
+                        <span class="track-client-card-short" id="clientMetaShort">Выберите клиента слева</span>
+                    </div>
+                </summary>
+                <div class="track-client-card-body">
+                    <div id="clientMeta" class="track-client-header-meta"></div>
+                    <div id="clientQuickActions" class="track-action-groups" style="display:none;"></div>
                 </div>
-            </div>
-            <div id="clientQuickActions" class="track-action-groups" style="display:none; margin-bottom:16px;"></div>
+            </details>
             <div id="ordersTree"><div class="muted">—</div></div>
         </main>
 
@@ -184,6 +190,7 @@
         const internalCommentTimers = new Map();
         const publicCommentTimers = new Map();
         const publicEstimatedCostTimers = new Map();
+        const partsPrepaymentAmountTimers = new Map();
         let qGlobalDebounce = null;
 
         const TRACK_LANG = {
@@ -424,6 +431,78 @@
             if (c === 'waiting' || c === 'ordered' || c === 'in_transit') return 'wait';
             return '';
         }
+        function trackPartsPrepaymentStatusNorm(v) {
+            const s = String(v || '').trim().toLowerCase();
+            return ['required', 'paid', 'not_required'].includes(s) ? s : '';
+        }
+        function trackPartsPrepaymentStatusRu(code) {
+            const c = trackPartsPrepaymentStatusNorm(code);
+            if (c === 'required') return '⏳ Ждём оплату от клиента';
+            if (c === 'paid') return '✅ Предоплата получена';
+            if (c === 'not_required') return '➖ Предоплата не нужна';
+            return '— не выбрано';
+        }
+        function trackPartsPrepaymentBtnHtml(code, st) {
+            const active = st === code ? ' is-active' : '';
+            const items = {
+                required: {
+                    cls: 'track-prepay-btn--required',
+                    ico: '💳',
+                    title: 'Запросить предоплату',
+                    sub: 'Клиенту — окно с MobilePay и IBAN',
+                },
+                paid: {
+                    cls: 'track-prepay-btn--paid',
+                    ico: '✅',
+                    title: 'Оплата получена',
+                    sub: 'У клиента зелёная галочка',
+                },
+                not_required: {
+                    cls: 'track-prepay-btn--skip',
+                    ico: '➖',
+                    title: 'Без предоплаты',
+                    sub: 'Клиенту ничего не показываем',
+                },
+            };
+            const item = items[code] || items.not_required;
+            return `<button type="button" class="track-prepay-btn ${item.cls}${active}" data-status="${code}" title="${esc(item.sub)}">
+                <span class="track-prepay-btn-ico" aria-hidden="true">${item.ico}</span>
+                <span class="track-prepay-btn-text">
+                    <span class="track-prepay-btn-title">${esc(item.title)}</span>
+                    <span class="track-prepay-btn-sub">${esc(item.sub)}</span>
+                </span>
+            </button>`;
+        }
+        function trackPartsPrepaymentAmount(o) {
+            const amt = o?.parts_prepayment_amount;
+            if (amt != null && amt !== '' && Number(amt) > 0) return Number(amt);
+            const sale = o?.parts_sale_total;
+            if (sale != null && sale !== '' && Number(sale) > 0) return Number(sale);
+            return 0;
+        }
+        function trackPartsPrepaymentHtml(orderDocId, o) {
+            const st = trackPartsPrepaymentStatusNorm(o.parts_prepayment_status);
+            const amt = trackPartsPrepaymentAmount(o);
+            const amtDisplay = amt > 0 ? amt.toFixed(2) : '';
+            return `
+                <div class="track-prepay-wrap" data-doc="${esc(orderDocId)}">
+                    <div class="track-prepay-head">
+                        <span class="track-field-label">💰 Предоплата за запчасти</span>
+                        <span class="track-prepay-status">${esc(trackPartsPrepaymentStatusRu(st))}</span>
+                    </div>
+                    <div class="track-prepay-actions">
+                        ${trackPartsPrepaymentBtnHtml('required', st)}
+                        ${trackPartsPrepaymentBtnHtml('paid', st)}
+                        ${trackPartsPrepaymentBtnHtml('not_required', st)}
+                    </div>
+                    <div class="track-prepay-amount-row${st === 'required' ? '' : ' is-hidden'}">
+                        <label class="track-field-label">💶 Сумма для клиента (€)</label>
+                        <input type="number" min="0" step="0.01" inputmode="decimal" class="track-prepay-amount" value="${esc(amtDisplay)}" placeholder="0,00" aria-label="Сумма предоплаты">
+                    </div>
+                    <p class="track-prepay-hint muted">💡 «Запросить предоплату» — клиент на портале увидит сумму, MobilePay и банковские реквизиты из настроек.</p>
+                </div>
+            `;
+        }
         function normalizePortalLang(v) {
             const x = String(v || '').toLowerCase().trim();
             return (x === 'en' || x === 'fi' || x === 'ru') ? x : 'ru';
@@ -556,6 +635,24 @@
             if (fl) fl.textContent = T.filterLegend;
         }
 
+        function trackFilterLabel(mode) {
+            const T = trackT();
+            const map = {
+                all: T.fAll,
+                active: T.fActive,
+                wait: T.fWait,
+                ready: T.fReady,
+                transit: T.fTransit,
+                done: T.fDone,
+            };
+            return map[mode] || T.fAll;
+        }
+
+        function updateTrackFilterLabel() {
+            const el = document.getElementById('trackFilterActiveLabel');
+            if (el) el.textContent = trackFilterLabel(state.mode);
+        }
+
         function setMode(mode) {
             state.mode = mode;
             ['fAll','fActive','fWait','fReady','fTransit','fDone'].forEach((id) => {
@@ -568,6 +665,10 @@
             else if (mode === 'transit') document.getElementById('fTransit').classList.add('active');
             else if (mode === 'done') document.getElementById('fDone').classList.add('active');
             else document.getElementById('fAll').classList.add('active');
+            updateTrackFilterLabel();
+            if (window.matchMedia('(max-width: 768px)').matches) {
+                document.getElementById('trackSidebarFilters')?.removeAttribute('open');
+            }
             applyTrackStaticI18n();
             savePrefs();
             renderSidebar();
@@ -785,6 +886,9 @@
                         public_comment:'',
                         internal_comment:'',
                         public_estimated_cost:'',
+                        parts_prepayment_status:'',
+                        parts_prepayment_amount:null,
+                        parts_sale_total:null,
                         client_token:'',
                         portal_url:'',
                         language: 'ru',
@@ -801,6 +905,15 @@
                     if (!o.order_type) o.order_type = String(r.order_type || 'repair').trim() || 'repair';
                     if (r.public_estimated_cost != null && String(r.public_estimated_cost).trim() !== '') {
                         o.public_estimated_cost = String(r.public_estimated_cost);
+                    }
+                    if (r.parts_prepayment_status != null && String(r.parts_prepayment_status).trim() !== '') {
+                        o.parts_prepayment_status = String(r.parts_prepayment_status);
+                    }
+                    if (r.parts_prepayment_amount != null && r.parts_prepayment_amount !== '') {
+                        o.parts_prepayment_amount = Number(r.parts_prepayment_amount);
+                    }
+                    if (r.parts_sale_total != null && r.parts_sale_total !== '') {
+                        o.parts_sale_total = Number(r.parts_sale_total);
                     }
                     if (!o.problem_description) o.problem_description = r.problem_description || '';
                     if (!o.status) o.status = r.status || '';
@@ -1230,6 +1343,7 @@
                         </div>
                     `) +
                     trackSectionHtml('parts', '🔧', 'Запчасти', 'Позиции заказа и склад', `
+                        ${trackPartsPrepaymentHtml(orderDocId, o)}
                         <div class="order-lines-box" data-order-doc-id="${esc(orderDocId)}" data-order-id="${esc(o.order_id || '')}">
                             <div class="title">${esc(T.orderLinesTitle)}</div>
                             <div class="order-lines-table-wrap">
@@ -1316,7 +1430,8 @@
                 window.__trackClientDocIds = [];
                 if (window.TrackUi) TrackUi.clearPricingCache();
                 document.getElementById('clientTitle').textContent = T.clientTitle;
-                document.getElementById('clientMeta').textContent = T.clientPick;
+                document.getElementById('clientMetaShort').textContent = T.clientPick;
+                document.getElementById('clientMeta').textContent = '';
                 if (quickBar) { quickBar.style.display = 'none'; quickBar.innerHTML = ''; }
                 tree.innerHTML = '<div class="muted">—</div>';
                 renderWorkspaceRail(null, null, T);
@@ -1327,8 +1442,13 @@
             window.__trackClientDocIds = docIds;
             const primary = pickPrimaryOrder(g);
             const others = g.orders.filter((o) => orderDocIdFromOrder(o) !== orderDocIdFromOrder(primary));
+            const phoneShort = String(g.client_phone || '').trim() || '—';
             document.getElementById('clientTitle').textContent = g.client_name;
-            document.getElementById('clientMeta').textContent = `${g.client_phone || '—'} • ${g.client_email || '—'} • ${T.sOrders}: ${g.orders.length}`;
+            document.getElementById('clientMetaShort').textContent = `${phoneShort} · ${T.ordersLbl}: ${g.orders.length}`;
+            document.getElementById('clientMeta').textContent = `${g.client_phone || '—'} · ${g.client_email || '—'} · ${T.sDocs}: ${g.orders.reduce((a, o) => a + o.documents.length, 0)}`;
+            if (window.matchMedia('(max-width: 768px)').matches) {
+                document.getElementById('trackClientCard')?.removeAttribute('open');
+            }
             if (quickBar) {
                 const qs = new URLSearchParams();
                 if (g.client_name) qs.set('client_name', g.client_name);
@@ -1489,6 +1609,51 @@
                     } finally {
                         btn.disabled = false;
                     }
+                });
+            });
+            root.querySelectorAll('.track-prepay-btn').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const wrap = btn.closest('.track-prepay-wrap');
+                    const docId = wrap ? (wrap.getAttribute('data-doc') || '') : '';
+                    const status = btn.getAttribute('data-status') || '';
+                    if (!docId || !status) return;
+                    const buttons = wrap ? wrap.querySelectorAll('.track-prepay-btn') : [];
+                    buttons.forEach((b) => { b.disabled = true; });
+                    try {
+                        const payload = { partsPrepaymentStatus: status };
+                        if (status === 'required') {
+                            const amtInp = wrap ? wrap.querySelector('.track-prepay-amount') : null;
+                            payload.partsPrepaymentAmount = amtInp ? (amtInp.value || '') : '';
+                        }
+                        await patchOrderTrack(docId, payload);
+                        await loadAll();
+                    } catch (e) {
+                        alert(fvErr(e) || 'Ошибка');
+                        await loadAll();
+                    } finally {
+                        buttons.forEach((b) => { b.disabled = false; });
+                    }
+                });
+            });
+            root.querySelectorAll('.track-prepay-amount').forEach((inp) => {
+                inp.addEventListener('input', () => {
+                    const wrap = inp.closest('.track-prepay-wrap');
+                    const docId = wrap ? (wrap.getAttribute('data-doc') || '') : '';
+                    if (!docId) return;
+                    const active = wrap ? wrap.querySelector('.track-prepay-btn.is-active[data-status="required"]') : null;
+                    if (!active) return;
+                    if (partsPrepaymentAmountTimers.has(docId)) clearTimeout(partsPrepaymentAmountTimers.get(docId));
+                    const tid = setTimeout(async () => {
+                        try {
+                            await patchOrderTrack(docId, {
+                                partsPrepaymentStatus: 'required',
+                                partsPrepaymentAmount: inp.value || '',
+                            });
+                        } catch (e) {
+                            console.warn(e);
+                        }
+                    }, 500);
+                    partsPrepaymentAmountTimers.set(docId, tid);
                 });
             });
             root.querySelectorAll('.track-invoice-status').forEach((sel) => {
@@ -2208,22 +2373,28 @@
         document.getElementById('fTransit').addEventListener('click', () => setMode('transit'));
         document.getElementById('fDone').addEventListener('click', () => setMode('done'));
 
-        function initTrackSidebarToolsCollapse() {
-            const tools = document.getElementById('trackSidebarTools');
-            if (!tools) return;
+        function initTrackMobileLayout() {
+            const filters = document.getElementById('trackSidebarFilters');
+            const clientCard = document.getElementById('trackClientCard');
             const mq = window.matchMedia('(max-width: 768px)');
             const sync = () => {
-                if (mq.matches) tools.removeAttribute('open');
-                else tools.setAttribute('open', '');
+                if (mq.matches) {
+                    filters?.removeAttribute('open');
+                    clientCard?.removeAttribute('open');
+                } else {
+                    filters?.setAttribute('open', '');
+                    clientCard?.setAttribute('open', '');
+                }
             };
             sync();
             if (typeof mq.addEventListener === 'function') mq.addEventListener('change', sync);
             else if (typeof mq.addListener === 'function') mq.addListener(sync);
+            updateTrackFilterLabel();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             initTrackStockPickerUi();
-            initTrackSidebarToolsCollapse();
+            initTrackMobileLayout();
             applyTrackStaticI18n();
             loadPrefs();
             try {

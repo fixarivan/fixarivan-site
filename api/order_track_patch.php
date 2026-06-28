@@ -138,9 +138,11 @@ $hasPublicComment = array_key_exists('publicComment', $input) || array_key_exist
 $hasLanguage = array_key_exists('language', $input) || array_key_exists('portal_language', $input);
 $hasExpectedDate = array_key_exists('publicExpectedDate', $input) || array_key_exists('public_expected_date', $input);
 $hasPublicEstimatedCost = array_key_exists('publicEstimatedCost', $input) || array_key_exists('public_estimated_cost', $input);
+$hasPartsPrepaymentStatus = array_key_exists('partsPrepaymentStatus', $input) || array_key_exists('parts_prepayment_status', $input);
+$hasPartsPrepaymentAmount = array_key_exists('partsPrepaymentAmount', $input) || array_key_exists('parts_prepayment_amount', $input);
 
-if (!$hasPublic && !$hasInternal && !$hasPublicComment && !$hasLanguage && !$hasExpectedDate && !$hasPublicEstimatedCost) {
-    echo json_encode(['success' => false, 'message' => 'Укажите publicStatus, publicComment, internalComment, language, publicExpectedDate и/или publicEstimatedCost'], JSON_UNESCAPED_UNICODE);
+if (!$hasPublic && !$hasInternal && !$hasPublicComment && !$hasLanguage && !$hasExpectedDate && !$hasPublicEstimatedCost && !$hasPartsPrepaymentStatus && !$hasPartsPrepaymentAmount) {
+    echo json_encode(['success' => false, 'message' => 'Укажите publicStatus, publicComment, internalComment, language, publicExpectedDate, publicEstimatedCost, partsPrepaymentStatus и/или partsPrepaymentAmount'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -148,7 +150,8 @@ try {
     $pdo = getSqliteConnection();
     $stmt = $pdo->prepare(
         'SELECT document_id, order_id, public_status, order_status, public_comment, public_estimated_cost, estimated_labor_cost, internal_comment, language, public_expected_date,
-                supply_request, supply_urgency, device_model, client_name, priority, order_lines_json
+                supply_request, supply_urgency, device_model, client_name, priority, order_lines_json,
+                parts_sale_total, parts_prepayment_status, parts_prepayment_amount
          FROM orders WHERE document_id = :d LIMIT 1'
     );
     $stmt->execute([':d' => $documentId]);
@@ -169,6 +172,13 @@ try {
         $langVal = 'ru';
     }
     $expVal = fixarivan_normalize_public_expected_date((string)($row['public_expected_date'] ?? ''));
+    $prepayStatusVal = fixarivan_normalize_parts_prepayment_status($row['parts_prepayment_status'] ?? null);
+    $prepayAmountVal = isset($row['parts_prepayment_amount']) && $row['parts_prepayment_amount'] !== null && $row['parts_prepayment_amount'] !== ''
+        ? (float)$row['parts_prepayment_amount']
+        : 0.0;
+    $partsSaleTotalVal = isset($row['parts_sale_total']) && $row['parts_sale_total'] !== null && $row['parts_sale_total'] !== ''
+        ? (float)$row['parts_sale_total']
+        : 0.0;
 
     if ($hasPublic) {
         $rawPub = $input['publicStatus'] ?? $input['public_status'] ?? '';
@@ -192,10 +202,28 @@ try {
         $rawExp = $input['publicExpectedDate'] ?? $input['public_expected_date'] ?? '';
         $expVal = fixarivan_normalize_public_expected_date(is_string($rawExp) ? $rawExp : (string)$rawExp);
     }
+    if ($hasPartsPrepaymentStatus) {
+        $rawPrepay = $input['partsPrepaymentStatus'] ?? $input['parts_prepayment_status'] ?? '';
+        $prepayStatusVal = fixarivan_normalize_parts_prepayment_status(is_string($rawPrepay) ? $rawPrepay : null);
+    }
+    if ($hasPartsPrepaymentAmount) {
+        $rawAmt = $input['partsPrepaymentAmount'] ?? $input['parts_prepayment_amount'] ?? null;
+        if ($rawAmt === null || $rawAmt === '') {
+            $prepayAmountVal = 0.0;
+        } elseif (is_numeric($rawAmt)) {
+            $prepayAmountVal = max(0.0, (float)$rawAmt);
+        } else {
+            $prepayAmountVal = max(0.0, fixarivan_track_parse_money_string((string)$rawAmt));
+        }
+    }
+    if ($hasPartsPrepaymentStatus && $prepayStatusVal === 'required' && $prepayAmountVal <= 0.0 && $partsSaleTotalVal > 0.0) {
+        $prepayAmountVal = $partsSaleTotalVal;
+    }
 
     $upd = $pdo->prepare(
         'UPDATE orders SET public_status = :p, order_status = :p2, public_comment = :pc, internal_comment = :ic, language = :lang,
-                public_expected_date = :exp, public_estimated_cost = :pec, estimated_labor_cost = :elc, date_updated = :u WHERE document_id = :d'
+                public_expected_date = :exp, public_estimated_cost = :pec, estimated_labor_cost = :elc,
+                parts_prepayment_status = :pps, parts_prepayment_amount = :ppa, date_updated = :u WHERE document_id = :d'
     );
     $upd->execute([
         ':p' => $pubNorm,
@@ -206,6 +234,8 @@ try {
         ':exp' => $expVal,
         ':pec' => $publicEstimatedCostVal,
         ':elc' => $estimatedLaborCostVal,
+        ':pps' => $prepayStatusVal,
+        ':ppa' => $prepayAmountVal > 0.0 ? $prepayAmountVal : null,
         ':u' => $now,
         ':d' => $documentId,
     ]);
@@ -262,6 +292,8 @@ try {
         'estimated_labor_cost' => $estimatedLaborCostVal,
         'language' => $langVal,
         'public_expected_date' => $expVal,
+        'parts_prepayment_status' => $prepayStatusVal,
+        'parts_prepayment_amount' => $prepayAmountVal > 0.0 ? $prepayAmountVal : null,
         'supply_warning' => $supplyWarning,
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {

@@ -465,6 +465,19 @@ if ($googleReviewUrl !== '' && !preg_match('#^https?://#i', $googleReviewUrl)) {
 }
 $companyPhoneDigits = preg_replace('/\D+/', '', $companyPhone) ?? '';
 $whatsAppUrl = $companyPhoneDigits !== '' ? 'https://wa.me/' . $companyPhoneDigits : '';
+$prepaySt = fixarivan_normalize_parts_prepayment_status($featured['parts_prepayment_status'] ?? null);
+$prepayAmtRaw = $featured['parts_prepayment_amount'] ?? null;
+$prepayAmt = is_numeric($prepayAmtRaw) && (float)$prepayAmtRaw > 0 ? (float)$prepayAmtRaw : 0.0;
+if ($prepayAmt <= 0.0 && $linesSum > 0.0 && $prepaySt === 'required') {
+    $prepayAmt = $linesSum;
+}
+$prepayAmtDisplay = $prepayAmt > 0 ? number_format($prepayAmt, 2, ',', ' ') : '';
+$companyIban = trim((string)($companyProfile['iban'] ?? ''));
+$companyBic = trim((string)($companyProfile['bic'] ?? ''));
+$companyBank = trim((string)($companyProfile['bank_name'] ?? ''));
+$mobilePayDisplay = '+358 44 954 5263';
+$showPrepayModal = ($prepaySt === 'required');
+$showPrepayPaid = ($prepaySt === 'paid');
 $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $clientName : $companyName, 0, 1)));
 ?>
 <!DOCTYPE html>
@@ -862,6 +875,148 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
         }
 
         /* Пасхалка: змейка (модалка) */
+        .chip-parts--unknown { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.18); color: #e5e7eb; }
+        .chip-prepay--paid { background: rgba(34, 197, 94, 0.24); border-color: rgba(74, 222, 128, 0.42); color: #dcfce7; box-shadow: 0 0 12px rgba(34,197,94,0.14); }
+        .portal-prepay-paid-banner {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(74, 222, 128, 0.35);
+            background: rgba(34, 197, 94, 0.12);
+            color: #dcfce7;
+            font-size: 0.92rem;
+            font-weight: 650;
+        }
+        .portal-prepay-open-btn {
+            margin-top: 12px;
+            width: 100%;
+            min-height: 44px;
+            border-radius: 12px;
+            border: 1px solid rgba(245, 158, 11, 0.45);
+            background: rgba(245, 158, 11, 0.16);
+            color: #fef3c7;
+            font-size: 0.92rem;
+            font-weight: 650;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .portal-prepay-open-btn:hover { background: rgba(245, 158, 11, 0.24); }
+        .portal-prepay-modal[hidden] { display: none !important; }
+        .portal-prepay-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 110;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right))
+                max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+        }
+        .portal-prepay-modal__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.78);
+            backdrop-filter: blur(4px);
+        }
+        .portal-prepay-modal__panel {
+            position: relative;
+            width: 100%;
+            max-width: 420px;
+            max-height: min(92vh, 720px);
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+            background: rgba(15, 23, 42, 0.98);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            border-radius: 18px;
+            padding: 18px 18px 16px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+        }
+        .portal-prepay-modal__head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .portal-prepay-modal__head h2 {
+            margin: 0;
+            font-size: 1.15rem;
+            line-height: 1.25;
+            color: #fef3c7;
+        }
+        .portal-prepay-modal__close {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.08);
+            color: #e5e7eb;
+            font-size: 1.4rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .portal-prepay-modal__intro {
+            margin: 0 0 14px;
+            color: rgba(226, 232, 240, 0.88);
+            font-size: 0.92rem;
+            line-height: 1.45;
+        }
+        .portal-prepay-amount-block {
+            margin-bottom: 14px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.28);
+        }
+        .portal-prepay-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(254, 243, 199, 0.75);
+            margin-bottom: 4px;
+        }
+        .portal-prepay-amount {
+            font-size: 1.45rem;
+            font-weight: 750;
+            color: #fef3c7;
+        }
+        .portal-prepay-block {
+            margin-bottom: 12px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .portal-prepay-block h3 {
+            margin: 0 0 6px;
+            font-size: 0.95rem;
+            color: #e2e8f0;
+        }
+        .portal-prepay-block p {
+            margin: 0 0 8px;
+            font-size: 0.85rem;
+            color: rgba(226, 232, 240, 0.72);
+            line-height: 1.4;
+        }
+        .portal-prepay-value {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.02em;
+        }
+        .portal-prepay-bank-line {
+            font-size: 0.88rem;
+            line-height: 1.45;
+            color: rgba(226, 232, 240, 0.9);
+            margin-top: 4px;
+            word-break: break-word;
+        }
+        .portal-prepay-close-btn {
+            width: 100%;
+            margin-top: 6px;
+            min-height: 44px;
+        }
         .portal-snake-fab {
             position: fixed;
             z-index: 40;
@@ -1147,7 +1302,18 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
                         <span><?= htmlspecialchars($partsStatusMeta['label']) ?></span>
                     </span>
                 <?php } ?>
+                <?php if ($showPrepayPaid) { ?>
+                    <span class="chip chip-prepay chip-prepay--paid">
+                        <span class="chip-ico" aria-hidden="true">✅</span>
+                        <span><?= htmlspecialchars($tr['prepay_paid_chip']) ?></span>
+                    </span>
+                <?php } ?>
             </div>
+            <?php if ($showPrepayPaid) { ?>
+                <div class="portal-prepay-paid-banner" role="status">✅ <?= htmlspecialchars($tr['prepay_paid_banner']) ?></div>
+            <?php } elseif ($showPrepayModal) { ?>
+                <button type="button" class="portal-prepay-open-btn" id="portalPrepayOpenBtn"><?= htmlspecialchars($tr['prepay_open_btn']) ?></button>
+            <?php } ?>
             <?php if ($featProblem !== '' || ($orderTerminal && $publicCompletedDisplay !== '') || (!$orderTerminal && $publicExpected !== '')) { ?>
                 <div class="order-top-meta">
                     <?php if ($featProblem !== '') { ?>
@@ -1436,6 +1602,45 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
     </div>
 
     <button type="button" class="portal-snake-fab" id="portalSnakeFab" aria-label="<?= htmlspecialchars($tr['snake_fab']) ?>">🎮</button>
+    <div class="portal-prepay-modal" id="portalPrepayModal" data-auto-open="<?= $showPrepayModal ? '1' : '0' ?>" hidden>
+        <div class="portal-prepay-modal__backdrop" id="portalPrepayBackdrop"></div>
+        <div class="portal-prepay-modal__panel" role="dialog" aria-modal="true" aria-labelledby="portalPrepayTitle">
+            <div class="portal-prepay-modal__head">
+                <h2 id="portalPrepayTitle"><?= htmlspecialchars($tr['prepay_modal_title']) ?></h2>
+                <button type="button" class="portal-prepay-modal__close" id="portalPrepayClose" aria-label="<?= htmlspecialchars($tr['prepay_close']) ?>">&times;</button>
+            </div>
+            <p class="portal-prepay-modal__intro"><?= htmlspecialchars($tr['prepay_modal_intro']) ?></p>
+            <?php if ($prepayAmtDisplay !== '') { ?>
+                <div class="portal-prepay-amount-block">
+                    <div class="portal-prepay-label"><?= htmlspecialchars($tr['prepay_amount']) ?></div>
+                    <div class="portal-prepay-amount"><?= htmlspecialchars($prepayAmtDisplay) ?> €</div>
+                </div>
+            <?php } ?>
+            <div class="portal-prepay-block">
+                <h3><?= htmlspecialchars($tr['prepay_mobilepay']) ?></h3>
+                <p><?= htmlspecialchars($tr['prepay_mobilepay_hint']) ?></p>
+                <div class="portal-prepay-value"><?= htmlspecialchars($mobilePayDisplay) ?></div>
+            </div>
+            <?php if ($companyIban !== '' || $companyBank !== '' || $companyName !== '') { ?>
+                <div class="portal-prepay-block">
+                    <h3><?= htmlspecialchars($tr['prepay_bank']) ?></h3>
+                    <?php if ($companyName !== '') { ?>
+                        <div class="portal-prepay-bank-line"><strong><?= htmlspecialchars($tr['prepay_recipient']) ?>:</strong> <?= htmlspecialchars($companyName) ?></div>
+                    <?php } ?>
+                    <?php if ($companyBank !== '') { ?>
+                        <div class="portal-prepay-bank-line"><?= htmlspecialchars($companyBank) ?></div>
+                    <?php } ?>
+                    <?php if ($companyIban !== '') { ?>
+                        <div class="portal-prepay-bank-line"><strong><?= htmlspecialchars($tr['prepay_iban']) ?>:</strong> <?= htmlspecialchars($companyIban) ?></div>
+                    <?php } ?>
+                    <?php if ($companyBic !== '') { ?>
+                        <div class="portal-prepay-bank-line"><strong><?= htmlspecialchars($tr['prepay_bic']) ?>:</strong> <?= htmlspecialchars($companyBic) ?></div>
+                    <?php } ?>
+                </div>
+            <?php } ?>
+            <button type="button" class="btn portal-prepay-close-btn" id="portalPrepayCloseBtn"><?= htmlspecialchars($tr['prepay_close']) ?></button>
+        </div>
+    </div>
     <div class="portal-snake-modal" id="portalSnakeModal" hidden>
         <div class="portal-snake-modal__backdrop" id="portalSnakeBackdrop"></div>
         <div class="portal-snake-modal__panel" role="dialog" aria-modal="true" aria-labelledby="portalSnakeTitle">
@@ -1477,6 +1682,37 @@ $clientAvatarText = trim((string)mb_strtoupper(mb_substr($clientName !== '' ? $c
             </div>
         </div>
     </div>
+    <script>
+        (function () {
+            const modal = document.getElementById('portalPrepayModal');
+            if (!modal) return;
+            const openBtn = document.getElementById('portalPrepayOpenBtn');
+            const closeBtn = document.getElementById('portalPrepayClose');
+            const closeBtn2 = document.getElementById('portalPrepayCloseBtn');
+            const backdrop = document.getElementById('portalPrepayBackdrop');
+            const dismissedKey = 'fv_prepay_dismissed_' + <?= json_encode($token, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+            function openModal() {
+                modal.hidden = false;
+                document.body.style.overflow = 'hidden';
+            }
+            function closeModal(persistDismiss) {
+                modal.hidden = true;
+                document.body.style.overflow = '';
+                if (persistDismiss) {
+                    try { sessionStorage.setItem(dismissedKey, '1'); } catch (_) {}
+                }
+            }
+            if (openBtn) openBtn.addEventListener('click', openModal);
+            if (closeBtn) closeBtn.addEventListener('click', function () { closeModal(true); });
+            if (closeBtn2) closeBtn2.addEventListener('click', function () { closeModal(true); });
+            if (backdrop) backdrop.addEventListener('click', function () { closeModal(true); });
+            if (modal.getAttribute('data-auto-open') === '1') {
+                let dismissed = false;
+                try { dismissed = sessionStorage.getItem(dismissedKey) === '1'; } catch (_) {}
+                if (!dismissed) openModal();
+            }
+        })();
+    </script>
     <script>
         window.__FIXARIVAN_PORTAL_SNAKE__ = <?= json_encode([
             'token' => $token,

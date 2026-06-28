@@ -338,6 +338,16 @@
         margin-bottom: 8px;
     }
 
+    .track-sidebar-search {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+    }
+
+    .track-sidebar-filters-summary {
+        margin-bottom: 4px;
+    }
+
     .track-page .list {
         max-width: 100%;
     }
@@ -502,8 +512,16 @@
     }
 
     .dashboard-page .dash-period-filter {
+        gap: 0;
+        margin-bottom: 8px;
+    }
+
+    .dashboard-page .dash-period-drawer-summary {
+        padding: 8px 12px;
+    }
+
+    .dashboard-page .dash-period-drawer-body {
         gap: 6px;
-        margin-bottom: 10px;
     }
 
     .dashboard-page .dash-period-btn,
@@ -632,14 +650,28 @@
     }
 
     /* Последние документы */
-    .dashboard-page .recent-section {
-        padding: 12px 10px;
-        margin-bottom: 16px;
+    .dashboard-page .recent-section.dash-docs-wrap {
+        padding: 0;
+        margin-bottom: 14px;
     }
 
-    .dashboard-page .section-title {
-        font-size: 1.05rem;
-        margin-bottom: 10px;
+    .dashboard-page .dash-docs-drawer-summary {
+        padding: 12px 12px;
+        min-height: 44px;
+        gap: 8px;
+    }
+
+    .dashboard-page .dash-docs-drawer-title {
+        font-size: 0.95rem;
+    }
+
+    .dashboard-page .dash-docs-drawer-meta {
+        font-size: 0.76rem;
+        max-width: 52vw;
+    }
+
+    .dashboard-page .dash-docs-drawer-body {
+        padding: 10px 10px 12px;
     }
 
     .dashboard-page .document-item--dash {

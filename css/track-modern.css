@@ -207,35 +207,52 @@
     opacity: 1;
 }
 
-.track-page .list {
-    max-height: calc(100vh - 248px);
+/* Sidebar — search + filter chips */
+.track-sidebar-search {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+    margin-bottom: 8px;
 }
 
-/* Sidebar — collapsible search (mobile) */
-.track-sidebar-tools {
-    margin-bottom: 6px;
+.track-sidebar-filters {
+    margin-bottom: 8px;
 }
 
-.track-sidebar-tools-summary {
+.track-sidebar-filters-summary {
     display: none;
     list-style: none;
     cursor: pointer;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--track-muted);
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     padding: 8px 10px;
     margin-bottom: 6px;
     border-radius: var(--track-radius);
     border: 1px solid var(--track-border-subtle);
     background: rgba(255, 255, 255, 0.03);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--track-muted);
 }
 
-.track-sidebar-tools-summary::-webkit-details-marker {
+.track-sidebar-filters-summary::-webkit-details-marker {
     display: none;
 }
 
-.track-sidebar-tools-body {
-    display: block;
+.track-sidebar-filters-active {
+    color: #93c5fd;
+    font-weight: 650;
+}
+
+.track-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.track-page .list {
+    max-height: calc(100vh - 248px);
 }
 
 .track-page .client-item {
@@ -332,7 +349,78 @@
     box-shadow: inset 3px 0 0 var(--track-accent);
 }
 
-/* ── Main workspace (compact) ── */
+/* ── Main workspace ── */
+.track-client-card {
+    margin-bottom: 10px;
+    border: 1px solid var(--track-border-subtle);
+    border-radius: var(--track-radius);
+    background: rgba(255, 255, 255, 0.02);
+    overflow: hidden;
+}
+
+.track-client-card-summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 10px 12px;
+}
+
+.track-client-card-summary::-webkit-details-marker {
+    display: none;
+}
+
+.track-client-card-head {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding-right: 18px;
+    position: relative;
+}
+
+.track-client-card-head::after {
+    content: '▾';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--track-muted);
+    font-size: 0.75rem;
+}
+
+.track-client-card[open] .track-client-card-head::after {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.track-client-card-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.track-client-card-short {
+    font-size: 0.75rem;
+    color: var(--track-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.track-client-card-body {
+    padding: 0 12px 12px;
+    border-top: 1px solid var(--track-border-subtle);
+}
+
+.track-client-header-meta {
+    font-size: 0.78rem;
+    color: var(--track-muted);
+    line-height: 1.4;
+    padding-top: 10px;
+}
+
 .track-client-header {
     margin-bottom: 12px;
 }
@@ -342,10 +430,6 @@
     font-size: 1.25rem;
     font-weight: 700;
     letter-spacing: -0.025em;
-}
-
-.track-client-header-meta {
-    font-size: 0.8125rem;
 }
 
 .track-quick-bar {
@@ -1357,32 +1441,120 @@
 }
 
 @media (max-width: 768px) {
-    .track-page { --track-gap: 12px; }
-    .track-page .list { max-height: 28vh; }
+    .track-page { --track-gap: 10px; }
+    .track-page .layout {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .track-sidebar-search {
+        position: sticky;
+        top: 0;
+        z-index: 6;
+        padding-bottom: 6px;
+        margin-bottom: 6px;
+        background: var(--track-panel);
+        border-bottom: 1px solid var(--track-border-subtle);
+    }
+
+    .track-sidebar-filters-summary {
+        display: flex;
+    }
+
+    .track-sidebar-filters:not([open]) .track-filter-chips {
+        display: none;
+    }
+
+    .track-sidebar-filters[open] .track-filter-chips {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 6px;
+        padding-bottom: 4px;
+        margin-bottom: 4px;
+        scrollbar-width: none;
+    }
+
+    .track-sidebar-filters[open] .track-filter-chips::-webkit-scrollbar {
+        display: none;
+    }
+
+    .track-sidebar-filters[open] .track-filter-chips button {
+        flex: 0 0 auto;
+    }
+
+    .track-page .list { max-height: 22vh; }
+
+    .track-page .client-item {
+        margin-bottom: 3px;
+    }
+
+    .track-page .track-client-inner {
+        padding: 8px 10px;
+        gap: 8px;
+    }
+
+    .track-page .track-client-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.68rem;
+    }
+
+    .track-page .track-client-head strong {
+        font-size: 0.8125rem;
+    }
+
+    .track-page .track-client-sub,
+    .track-page .track-client-meta {
+        font-size: 0.68rem;
+    }
+
+    .track-page .track-chip {
+        font-size: 0.58rem;
+        padding: 1px 5px;
+    }
+
+    .track-client-card {
+        margin-bottom: 8px;
+    }
+
+    .track-client-card-summary {
+        padding: 8px 10px;
+    }
+
+    .track-client-card-name {
+        font-size: 0.9375rem;
+    }
+
+    .track-client-card-short {
+        font-size: 0.72rem;
+    }
+
+    .track-client-card-body .track-action-groups {
+        margin-top: 8px;
+    }
+
+    .track-quick-bar .primary,
+    .track-quick-bar .btn-secondary,
+    .track-quick-bar .track-wa {
+        font-size: 0.72rem;
+        min-height: 32px;
+        padding: 0 10px;
+    }
+
     .track-pricing-row.is-internal,
     .track-rail-finance-row.is-internal,
     .track-order-kv,
     .track-status-stepper { display: none; }
 
-    .track-sidebar-tools-summary {
-        display: block;
-    }
-
-    .track-sidebar-tools:not([open]) .track-sidebar-tools-body {
-        display: none;
-    }
-
-    .track-sidebar-tools[open] .track-sidebar-tools-summary {
-        margin-bottom: 8px;
-        color: var(--track-text);
-        border-color: rgba(59, 130, 246, 0.35);
-    }
-
     .track-page .stats {
         display: flex;
-        font-size: 0.68rem;
-        padding-bottom: 6px;
-        margin-bottom: 6px;
+        font-size: 0.65rem;
+        padding-bottom: 4px;
+        margin-bottom: 4px;
+        gap: 6px;
     }
 
     .track-comment-grid {
@@ -1393,27 +1565,27 @@
     .track-page .track-comment-grid textarea.track-internal,
     .track-page .track-comment-grid textarea.track-public-comment,
     .track-page .track-comment-grid textarea.track-internal-comment {
-        min-height: 72px;
+        min-height: 68px;
         font-size: 0.8125rem;
     }
 
     .track-page .card,
     .track-page .track-sidebar,
     .track-page .track-workspace-main,
-    .track-page .track-workspace-rail { padding: 12px 14px; }
+    .track-page .track-workspace-rail { padding: 10px 12px; }
 
     .track-page .quick-filters button {
-        font-size: 0.68rem;
+        font-size: 0.66rem;
         padding: 4px 8px;
-        min-height: 26px;
+        min-height: 28px;
     }
 
     .track-rail-panel {
-        gap: 8px;
+        gap: 6px;
     }
 
     .track-rail-widget {
-        padding: 10px 12px;
+        padding: 8px 10px;
     }
 
     .track-order-header { flex-direction: column; }
@@ -1421,4 +1593,206 @@
     .track-rail-actions { flex-direction: row; flex-wrap: wrap; }
     .track-rail-actions a,
     .track-rail-actions button { width: auto; flex: 1 1 calc(50% - 6px); }
+}
+
+@media (min-width: 769px) {
+    .track-sidebar-filters {
+        display: block;
+    }
+
+    .track-sidebar-filters-summary {
+        display: none;
+    }
+
+    .track-client-card {
+        border: none;
+        background: transparent;
+    }
+
+    .track-client-card-summary {
+        cursor: default;
+        padding: 0 0 8px;
+        pointer-events: none;
+    }
+
+    .track-client-card-head::after {
+        display: none;
+    }
+
+    .track-client-card-body {
+        border-top: none;
+        padding: 0;
+    }
+
+    .track-client-card-name {
+        font-size: 1.25rem;
+    }
+
+    .track-client-card-short {
+        display: none;
+    }
+
+    .track-client-header-meta {
+        padding-top: 0;
+        font-size: 0.8125rem;
+    }
+}
+
+/* ── Предоплата за запчасти (Track) ── */
+.track-prepay-wrap {
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border-radius: var(--track-radius);
+    border: 1px solid var(--track-panel-border);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.track-prepay-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.track-prepay-status {
+    font-size: 0.78rem;
+    color: var(--track-muted);
+    text-align: right;
+}
+
+.track-prepay-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.track-prepay-btn {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 64px;
+    padding: 10px 11px;
+    border-radius: 10px;
+    border: 1px solid var(--track-panel-border);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--track-text);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.track-prepay-btn-ico {
+    flex-shrink: 0;
+    font-size: 1.35rem;
+    line-height: 1;
+    margin-top: 1px;
+}
+
+.track-prepay-btn-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.track-prepay-btn-title {
+    font-size: 0.82rem;
+    font-weight: 650;
+    line-height: 1.25;
+    color: rgba(255, 255, 255, 0.94);
+}
+
+.track-prepay-btn-sub {
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--track-muted);
+}
+
+.track-prepay-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+}
+
+.track-prepay-btn--required {
+    border-color: rgba(245, 158, 11, 0.22);
+    background: rgba(245, 158, 11, 0.06);
+}
+
+.track-prepay-btn--paid {
+    border-color: rgba(34, 197, 94, 0.22);
+    background: rgba(34, 197, 94, 0.06);
+}
+
+.track-prepay-btn--skip {
+    border-color: rgba(148, 163, 184, 0.2);
+    background: rgba(148, 163, 184, 0.05);
+}
+
+.track-prepay-btn.is-active[data-status="paid"],
+.track-prepay-btn--paid.is-active {
+    border-color: rgba(34, 197, 94, 0.55);
+    background: rgba(34, 197, 94, 0.16);
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.12);
+}
+
+.track-prepay-btn.is-active[data-status="not_required"],
+.track-prepay-btn--skip.is-active {
+    border-color: rgba(148, 163, 184, 0.45);
+    background: rgba(148, 163, 184, 0.14);
+    box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.1);
+}
+
+.track-prepay-btn.is-active[data-status="required"],
+.track-prepay-btn--required.is-active {
+    border-color: rgba(245, 158, 11, 0.55);
+    background: rgba(245, 158, 11, 0.16);
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.12);
+}
+
+.track-prepay-amount-row {
+    display: grid;
+    gap: 6px;
+    max-width: 220px;
+    margin-bottom: 8px;
+}
+
+.track-prepay-amount-row.is-hidden {
+    display: none;
+}
+
+.track-prepay-amount {
+    min-height: var(--track-control-h);
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid var(--track-panel-border);
+    background: rgba(0, 0, 0, 0.22);
+    color: var(--track-text);
+    font-size: 0.875rem;
+}
+
+.track-prepay-hint {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.35;
+}
+
+@media (max-width: 768px) {
+    .track-prepay-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .track-prepay-btn {
+        width: 100%;
+        min-height: 58px;
+    }
+
+    .track-prepay-amount-row {
+        max-width: none;
+    }
 }
