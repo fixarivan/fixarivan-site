@@ -104,8 +104,8 @@
         }
     </style>
     <link rel="stylesheet" href="css/fixarivan-theme.css">
-    <link rel="stylesheet" href="mobile_fixes.css?v=20250625track">
-    <link rel="stylesheet" href="css/track-modern.css?v=20250625trackfix">
+    <link rel="stylesheet" href="mobile_fixes.css?v=20250625trackcompact">
+    <link rel="stylesheet" href="css/track-modern.css?v=20250625trackcompact">
     <script src="js/track_ui.js?v=20250625polish"></script>
 </head>
 <body class="fv-page track-page">
@@ -487,23 +487,33 @@
             const st = trackPartsPrepaymentStatusNorm(o.parts_prepayment_status);
             const amt = trackPartsPrepaymentAmount(o);
             const amtDisplay = amt > 0 ? amt.toFixed(2) : '';
+            const drawerOpen = st ? '' : ' open';
             return `
-                <div class="track-prepay-wrap" data-doc="${esc(orderDocId)}">
-                    <div class="track-prepay-head">
-                        <span class="track-field-label">💰 Предоплата за запчасти</span>
+                <details class="track-prepay-wrap track-prepay-drawer${st ? ' is-set' : ''}" data-doc="${esc(orderDocId)}"${drawerOpen}>
+                    <summary class="track-prepay-summary">
+                        <span class="track-prepay-summary-left">
+                            <span class="track-prepay-summary-icon" aria-hidden="true">💰</span>
+                            <span class="track-prepay-summary-title">Предоплата</span>
+                        </span>
                         <span class="track-prepay-status">${esc(trackPartsPrepaymentStatusRu(st))}</span>
+                    </summary>
+                    <div class="track-prepay-body">
+                        <div class="track-prepay-head track-prepay-head--in-body">
+                            <span class="track-field-label">💰 Предоплата за запчасти</span>
+                            <span class="track-prepay-status">${esc(trackPartsPrepaymentStatusRu(st))}</span>
+                        </div>
+                        <div class="track-prepay-actions">
+                            ${trackPartsPrepaymentBtnHtml('required', st)}
+                            ${trackPartsPrepaymentBtnHtml('paid', st)}
+                            ${trackPartsPrepaymentBtnHtml('not_required', st)}
+                        </div>
+                        <div class="track-prepay-amount-row${st === 'required' ? '' : ' is-hidden'}">
+                            <label class="track-field-label">💶 Сумма для клиента (€)</label>
+                            <input type="number" min="0" step="0.01" inputmode="decimal" class="track-prepay-amount" value="${esc(amtDisplay)}" placeholder="0,00" aria-label="Сумма предоплаты">
+                        </div>
+                        <p class="track-prepay-hint muted">💡 «Запросить предоплату» — клиент на портале увидит сумму, MobilePay и банковские реквизиты из настроек.</p>
                     </div>
-                    <div class="track-prepay-actions">
-                        ${trackPartsPrepaymentBtnHtml('required', st)}
-                        ${trackPartsPrepaymentBtnHtml('paid', st)}
-                        ${trackPartsPrepaymentBtnHtml('not_required', st)}
-                    </div>
-                    <div class="track-prepay-amount-row${st === 'required' ? '' : ' is-hidden'}">
-                        <label class="track-field-label">💶 Сумма для клиента (€)</label>
-                        <input type="number" min="0" step="0.01" inputmode="decimal" class="track-prepay-amount" value="${esc(amtDisplay)}" placeholder="0,00" aria-label="Сумма предоплаты">
-                    </div>
-                    <p class="track-prepay-hint muted">💡 «Запросить предоплату» — клиент на портале увидит сумму, MobilePay и банковские реквизиты из настроек.</p>
-                </div>
+                </details>
             `;
         }
         function normalizePortalLang(v) {
@@ -734,7 +744,7 @@
             const optsHtml = opts.map((opt) =>
                 `<option value="${esc(opt.v)}"${cur === opt.v ? ' selected' : ''}>${esc(opt.label)}</option>`
             ).join('');
-            return `<div class="track-field-cell track-field-cell--span2">
+            return `<div class="track-field-cell track-field-cell--span2 track-field-cell--portal-lang">
                 <span class="track-field-label">Язык портала</span>
                 <select class="track-select track-portal-lang" data-doc="${esc(orderDocId)}" aria-label="Язык портала">${optsHtml}</select>
             </div>`;
@@ -1306,11 +1316,11 @@
                 const orderBody = orderDocId ? (
                     trackSectionHtml('info', '📋', 'Информация о заказе', 'Статус и сроки', `
                         <div class="track-info-grid">
-                            <div class="track-field-cell">
+                            <div class="track-field-cell track-field-cell--status-pub">
                                 <span class="track-field-label">${esc(T.stClient)}</span>
                                 ${publicStatusSelectHtml(orderDocId, pub)}
                             </div>
-                            <div class="track-field-cell">
+                            <div class="track-field-cell track-field-cell--status-parts">
                                 <span class="track-field-label">${esc(T.partsStatusChip)}</span>
                                 <span class="badge ${partsStatusBadgeClass(pst)}">${esc(trackPartsStatusRu(pst))}</span>
                             </div>

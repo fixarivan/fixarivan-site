@@ -446,6 +446,17 @@
         max-width: none;
         width: 100%;
     }
+
+    .track-page .track-expected-row .track-expected-date {
+        width: auto;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .track-page .track-expected-row .track-expected-clear {
+        width: auto;
+        flex: 0 0 auto;
+    }
 }
 
 @media (max-width: 480px) {

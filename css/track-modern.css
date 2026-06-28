@@ -1611,35 +1611,103 @@
     }
 
     .track-info-grid {
-        grid-template-columns: 1fr;
-        gap: 10px;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 8px 10px;
+        align-items: end;
     }
 
-    .track-field-row {
-        grid-template-columns: 1fr;
-        align-items: stretch;
+    .track-info-grid .track-field-cell--status-pub,
+    .track-info-grid .track-field-cell--status-parts {
+        min-width: 0;
+    }
+
+    .track-info-grid .track-field-cell--portal-lang,
+    .track-info-grid .track-expected-wrap {
+        grid-column: 1 / -1;
+    }
+
+    .track-info-grid .track-field-label {
+        font-size: 0.64rem;
+        margin-bottom: 3px;
+        line-height: 1.2;
+    }
+
+    .track-info-grid .track-field-cell--status-pub .track-field-label {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .track-info-grid .track-select,
+    .track-info-grid .track-pub-status,
+    .track-info-grid .track-portal-lang {
+        min-height: 34px;
+        font-size: 0.76rem;
+        padding: 0 8px;
+    }
+
+    .track-info-grid .track-field-cell--status-parts .badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        width: 100%;
+        box-sizing: border-box;
+        font-size: 0.62rem;
+        padding: 4px 6px;
+        text-align: center;
+        line-height: 1.15;
     }
 
     .track-expected-row {
-        flex-direction: column;
-        align-items: stretch;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 6px;
     }
 
-    .track-expected-row .track-expected-date,
-    .track-expected-row .track-expected-clear {
-        width: 100%;
+    .track-expected-row .track-expected-date {
+        flex: 1 1 auto;
+        min-width: 0;
+        width: auto;
         max-width: none;
+        min-height: 34px;
+        font-size: 0.76rem;
     }
 
-    .track-prepay-head {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
+    .track-expected-row .track-expected-clear {
+        flex: 0 0 auto;
+        width: auto;
+        max-width: none;
+        min-height: 34px;
+        padding: 0 10px;
+        font-size: 0.72rem;
+        white-space: nowrap;
     }
 
-    .track-prepay-status {
-        text-align: left;
-        white-space: normal;
+    .track-prepay-drawer .track-prepay-summary {
+        display: flex;
+    }
+
+    .track-prepay-drawer .track-prepay-body {
+        padding: 10px 10px 12px;
+    }
+
+    .track-prepay-drawer.is-set:not([open]) {
+        margin-bottom: 8px;
+    }
+
+    .track-prepay-drawer.is-set .track-prepay-status {
+        font-size: 0.72rem;
+        text-align: right;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 52vw;
+    }
+
+    .track-prepay-head--in-body {
+        display: none;
     }
 
     .track-prepay-actions {
@@ -1783,6 +1851,23 @@
         padding-top: 0;
         font-size: 0.8125rem;
     }
+
+    .track-prepay-drawer .track-prepay-summary {
+        display: none;
+    }
+
+    .track-prepay-drawer .track-prepay-body {
+        display: block !important;
+        padding: 12px 14px 14px;
+    }
+
+    .track-prepay-drawer:not([open]) .track-prepay-body {
+        display: block !important;
+    }
+
+    .track-prepay-head--in-body {
+        display: flex;
+    }
 }
 
 /* ── Предоплата за запчасти (Track) ── */
@@ -1792,6 +1877,52 @@
     border-radius: var(--track-radius);
     border: 1px solid var(--track-panel-border);
     background: rgba(255, 255, 255, 0.02);
+}
+
+.track-prepay-drawer {
+    padding: 0;
+    overflow: hidden;
+}
+
+.track-prepay-summary {
+    display: none;
+    list-style: none;
+    cursor: pointer;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    user-select: none;
+}
+
+.track-prepay-summary::-webkit-details-marker { display: none; }
+.track-prepay-summary::marker { content: ''; }
+
+.track-prepay-summary-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.track-prepay-summary-icon { font-size: 1rem; line-height: 1; }
+
+.track-prepay-summary-title {
+    font-size: 0.82rem;
+    font-weight: 650;
+    color: rgba(248, 250, 252, 0.94);
+}
+
+.track-prepay-body {
+    padding: 12px 14px 14px;
+}
+
+.track-prepay-drawer:not([open]) .track-prepay-body {
+    display: none;
+}
+
+.track-prepay-head--in-body {
+    display: none;
 }
 
 .track-prepay-head {
