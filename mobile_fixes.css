@@ -319,6 +319,30 @@
     .track-page .layout {
         gap: 10px;
         min-width: 0;
+        width: 100%;
+    }
+
+    .track-page .track-workspace-main,
+    .track-page .track-workspace-rail,
+    .track-page .track-sidebar {
+        min-width: 0;
+        overflow-x: hidden;
+    }
+
+    .track-page #ordersTree,
+    .track-page .track-order-body,
+    .track-page .order-lines-table-wrap {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .track-page .track-sidebar-search input {
+        min-width: 0;
+    }
+
+    .track-page .track-sidebar-search .primary {
+        padding: 0 12px;
+        min-width: 64px;
     }
 
     .track-page .card {

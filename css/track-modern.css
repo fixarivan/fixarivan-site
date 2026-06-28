@@ -33,11 +33,13 @@
 
 /* ── 3-column layout ── */
 .track-page .layout {
+    display: grid;
     max-width: 1520px;
     margin: 0 auto;
     grid-template-columns: 272px minmax(0, 1fr) 300px;
     gap: 18px;
     align-items: start;
+    min-width: 0;
 }
 
 @media (min-width: 1400px) {
@@ -1422,7 +1424,7 @@
 }
 
 /* Responsive */
-@media (max-width: 1040px) {
+@media (max-width: 1040px) and (min-width: 981px) {
     .track-page .layout {
         max-width: 100%;
         grid-template-columns: 248px minmax(0, 1fr);
@@ -1437,16 +1439,62 @@
 }
 
 @media (max-width: 980px) {
-    .track-page .layout { grid-template-columns: 1fr; }
+    .track-page .layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .track-page .track-sidebar {
+        order: 1;
+        min-width: 0;
+    }
+
+    .track-page .track-workspace-main {
+        order: 2;
+        min-width: 0;
+    }
+
+    .track-page .track-workspace-rail {
+        order: 3;
+        position: static;
+        max-height: none;
+        grid-column: auto;
+        min-width: 0;
+    }
 }
 
 @media (max-width: 768px) {
-    .track-page { --track-gap: 10px; }
+    .track-page {
+        --track-gap: 10px;
+        overflow-x: hidden;
+    }
+
+    .track-page .top {
+        max-width: 100%;
+        min-width: 0;
+    }
+
     .track-page .layout {
         display: flex;
         flex-direction: column;
         gap: 10px;
+        width: 100%;
+        min-width: 0;
     }
+
+    .track-page .track-sidebar,
+    .track-page .track-workspace-main,
+    .track-page .track-workspace-rail {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .track-page .track-sidebar { order: 1; }
+    .track-page .track-workspace-main { order: 2; }
+    .track-page .track-workspace-rail { order: 3; }
 
     .track-sidebar-search {
         position: sticky;
@@ -1485,7 +1533,7 @@
         flex: 0 0 auto;
     }
 
-    .track-page .list { max-height: 22vh; }
+    .track-page .list { max-height: min(36vh, 320px); }
 
     .track-page .client-item {
         margin-bottom: 3px;
@@ -1562,6 +1610,98 @@
         gap: 10px;
     }
 
+    .track-info-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .track-field-row {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .track-expected-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .track-expected-row .track-expected-date,
+    .track-expected-row .track-expected-clear {
+        width: 100%;
+        max-width: none;
+    }
+
+    .track-prepay-head {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .track-prepay-status {
+        text-align: left;
+        white-space: normal;
+    }
+
+    .track-prepay-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .track-prepay-btn {
+        width: 100%;
+        min-height: 58px;
+    }
+
+    .track-prepay-amount-row {
+        max-width: none;
+    }
+
+    .track-page .order-lines-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .track-page .order-lines-actions button {
+        width: 100%;
+    }
+
+    .track-page .track-action-row,
+    .track-page .track-quick {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .track-page .track-action-row a,
+    .track-page .track-action-row button,
+    .track-page .track-quick a {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .track-doc-row {
+        grid-template-columns: 28px minmax(0, 1fr);
+        grid-template-areas:
+            "icon main"
+            "actions actions";
+        align-items: start;
+        gap: 8px 10px;
+    }
+
+    .track-doc-row-icon { grid-area: icon; }
+    .track-doc-row-main { grid-area: main; min-width: 0; }
+    .track-doc-row-actions {
+        grid-area: actions;
+        width: 100%;
+        flex-wrap: wrap;
+        display: flex;
+        gap: 6px;
+    }
+
+    .track-doc-row-actions button,
+    .track-doc-row-actions a {
+        flex: 1 1 calc(50% - 4px);
+        min-width: 0;
+    }
+
     .track-page .track-comment-grid textarea.track-internal,
     .track-page .track-comment-grid textarea.track-public-comment,
     .track-page .track-comment-grid textarea.track-internal-comment {
@@ -1593,6 +1733,13 @@
     .track-rail-actions { flex-direction: row; flex-wrap: wrap; }
     .track-rail-actions a,
     .track-rail-actions button { width: auto; flex: 1 1 calc(50% - 6px); }
+
+    .track-workspace-rail {
+        position: static;
+        top: auto;
+        max-height: none;
+        overflow: visible;
+    }
 }
 
 @media (min-width: 769px) {
@@ -1782,16 +1929,17 @@
     line-height: 1.35;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
     .track-prepay-actions {
         grid-template-columns: 1fr;
     }
 
     .track-prepay-btn {
         width: 100%;
-        min-height: 58px;
     }
+}
 
+@media (max-width: 768px) {
     .track-prepay-amount-row {
         max-width: none;
     }
