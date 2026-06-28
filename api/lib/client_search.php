@@ -98,8 +98,14 @@ function fixarivan_client_search_clients_full(PDO $pdo, string $q, int $limit): 
     $q = trim($q);
     if ($q === '') {
         $stmt = $pdo->query(
-            'SELECT c.client_id, c.full_name, c.phone, c.email, c.updated_at,
-                    (SELECT COUNT(*) FROM orders o WHERE o.client_id = c.id) AS orders_count
+            'SELECT c.client_id, c.full_name, c.phone, c.email, c.notes, c.created_at, c.updated_at,
+                    (SELECT COUNT(*) FROM orders o WHERE o.client_id = c.id) AS orders_count,
+                    (SELECT COUNT(*) FROM orders o WHERE o.client_id = c.id
+                        AND lower(IFNULL(o.status, \'\')) NOT IN (\'completed\',\'cancelled\',\'signed\',\'done\')) AS active_orders_count,
+                    (SELECT COUNT(*) FROM orders o WHERE o.client_id = c.id
+                        AND (lower(IFNULL(o.status, \'\')) LIKE \'%part%\'
+                          OR lower(IFNULL(o.status, \'\')) LIKE \'%wait%\'
+                          OR lower(IFNULL(o.status, \'\')) LIKE \'%await%\')) AS waiting_parts_count
              FROM clients c
              ORDER BY c.updated_at DESC
              LIMIT ' . (int)$limit
@@ -124,9 +130,12 @@ function fixarivan_client_search_clients_full(PDO $pdo, string $q, int $limit): 
         $parts[] = 'IFNULL(c.email, \'\') LIKE :qlike';
         $parts[] = 'IFNULL(c.phone, \'\') LIKE :qlike';
         $parts[] = 'IFNULL(o.device_model, \'\') LIKE :qlike';
+        $parts[] = 'IFNULL(o.device_serial, \'\') LIKE :qlike';
         $parts[] = 'IFNULL(o.problem_description, \'\') LIKE :qlike';
         $parts[] = 'IFNULL(o.order_id, \'\') LIKE :qlike';
         $parts[] = 'IFNULL(o.document_id, \'\') LIKE :qlike';
+        $parts[] = 'EXISTS (SELECT 1 FROM invoices i WHERE i.client_id = c.id AND (IFNULL(i.invoice_id, \'\') LIKE :qlike OR IFNULL(i.document_id, \'\') LIKE :qlike))';
+        $parts[] = 'EXISTS (SELECT 1 FROM receipts r INNER JOIN orders o3 ON o3.order_id = r.order_id WHERE o3.client_id = c.id AND IFNULL(r.receipt_number, \'\') LIKE :qlike)';
     }
 
     if (strlen($phoneSearch) >= 2) {
@@ -138,9 +147,15 @@ function fixarivan_client_search_clients_full(PDO $pdo, string $q, int $limit): 
         return [];
     }
 
-    $sql = 'SELECT DISTINCT c.client_id, c.full_name, c.phone, c.email,
+    $sql = 'SELECT DISTINCT c.client_id, c.full_name, c.phone, c.email, c.notes, c.created_at,
                    COALESCE(NULLIF(TRIM(c.updated_at), \'\'), \'\') AS updated_at,
-                   (SELECT COUNT(*) FROM orders o2 WHERE o2.client_id = c.id) AS orders_count
+                   (SELECT COUNT(*) FROM orders o2 WHERE o2.client_id = c.id) AS orders_count,
+                   (SELECT COUNT(*) FROM orders o2 WHERE o2.client_id = c.id
+                        AND lower(IFNULL(o2.status, \'\')) NOT IN (\'completed\',\'cancelled\',\'signed\',\'done\')) AS active_orders_count,
+                   (SELECT COUNT(*) FROM orders o2 WHERE o2.client_id = c.id
+                        AND (lower(IFNULL(o2.status, \'\')) LIKE \'%part%\'
+                          OR lower(IFNULL(o2.status, \'\')) LIKE \'%wait%\'
+                          OR lower(IFNULL(o2.status, \'\')) LIKE \'%await%\')) AS waiting_parts_count
             FROM clients c
             LEFT JOIN orders o ON o.client_id = c.id
             WHERE (' . implode(' OR ', $parts) . ')

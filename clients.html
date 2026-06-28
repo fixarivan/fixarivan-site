@@ -3,244 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>FixariVan — клиенты</title>
+    <title>FixariVan — CRM клиентов</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <meta name="theme-color" content="#070b14">
     <script>window.FIXARIVAN_REQUIRE_ADMIN_SESSION = true;</script>
     <script src="auth_check.js"></script>
     <script src="js/ui_helpers.js"></script>
-    <style>
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            background: radial-gradient(circle at top, #0F1629 0%, #0B0F1A 60%);
-            color: #eef2ff;
-            padding: 16px;
-        }
-        a { color:#93c5fd; }
-        .top { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
-        .layout { display:grid; grid-template-columns: 340px 1fr; gap:16px; max-width:1300px; margin:0 auto; }
-        @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
-        .card {
-            background: #161D2F;
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            transition: all 0.2s ease;
-        }
-        .card:hover {
-            transform: translateY(-2px);
-            background: #1C2540;
-        }
-        .layout > aside.card { margin-bottom: 0; }
-        .client-main { min-width: 0; }
-        .search-row { display:flex; gap:8px; margin-bottom:10px; }
-        input, textarea {
-            width:100%;
-            padding:10px 12px;
-            border-radius:8px;
-            border:1px solid rgba(255,255,255,0.08);
-            background:#141A2B;
-            color:#e5e7eb;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-        }
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: #6C8CFF;
-            box-shadow: 0 0 0 1px rgba(108,140,255,0.3);
-            background: #182033;
-        }
-        textarea { min-height:80px; resize:vertical; }
-        button {
-            padding:9px 13px;
-            border-radius:8px;
-            border:1px solid rgba(255,255,255,0.12);
-            background:rgba(255,255,255,0.06);
-            color:#e5e7eb;
-            cursor:pointer;
-            font-size:0.9rem;
-            transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
-        }
-        button:hover { background: #1C2540; transform: translateY(-1px); }
-        button.primary { background:#315fd8; border-color:#6C8CFF; color:#fff; }
-        button.primary:hover { background:#3a6cf3; border-color:#85a1ff; }
-        button.secondary { background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.14); }
-        button.danger { background:#4a1e28; border-color:#a83b55; color:#ffd7df; }
-        button.danger:hover { background:#5b2530; border-color:#cf4a69; }
-        .list { max-height:72vh; overflow:auto; }
-        .item {
-            padding:12px;
-            border-radius:10px;
-            border:1px solid rgba(255,255,255,0.06);
-            background:#161D2F;
-            margin-bottom:8px;
-            cursor:pointer;
-            transition: background 0.2s ease, border-color 0.2s ease;
-        }
-        .item:hover { background:#182033; border-color:rgba(255,255,255,0.1); }
-        .item.active {
-            background:#1C2540;
-            border-color:rgba(108,140,255,0.45);
-            box-shadow: 0 0 0 1px rgba(108,140,255,0.25);
-        }
-        .muted { color:rgba(255,255,255,0.6); font-size:0.9rem; }
-        .section-title { margin:0 0 10px 0; color: rgba(255,255,255,0.9); }
-        .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-        @media (max-width: 720px){ .grid-2 { grid-template-columns:1fr; } }
-        .client-head { margin-bottom: 4px; }
-        .client-name { font-size: 1.65rem; font-weight: 800; color: rgba(255,255,255,0.92); line-height: 1.2; }
-        .client-meta { margin-top: 8px; display:flex; flex-wrap:wrap; gap:14px; }
-        .client-meta-item { color: rgba(255,255,255,0.6); font-size: 0.92rem; }
-        .stat-chips { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 0 0; }
-        .chip-stat {
-            font-size:0.82rem;
-            padding:5px 11px;
-            border-radius:999px;
-            background:rgba(108,140,255,0.14);
-            border:1px solid rgba(108,140,255,0.35);
-            color: rgba(255,255,255,0.86);
-        }
-        .quick-docs { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; }
-        .quick-docs button { justify-content: center; }
-        .form-actions-main { display:flex; gap:8px; margin-top:12px; }
-        .danger-actions { margin-top: 12px; }
-        .order-card { border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px 14px; margin-bottom:12px; background:rgba(0,0,0,0.22); }
-        .order-card.done { border-color:rgba(34,197,94,0.35); background:rgba(34,197,94,0.06); }
-        .order-card-head { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px; }
-        .order-id { font-weight:800; font-size:1.02rem; letter-spacing:0.02em; }
-        .badge-row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
-        .badge { font-size:0.75rem; padding:3px 8px; border-radius:999px; border:1px solid rgba(255,255,255,0.15); }
-        .badge.pub { background:rgba(59,130,246,0.15); border-color:rgba(96,165,250,0.45); }
-        .badge.parts { background:rgba(245,158,11,0.12); border-color:rgba(251,191,36,0.4); }
-        .order-meta { font-size:0.88rem; margin-top:4px; line-height:1.45; }
-        .order-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
-        .order-actions button { font-size:0.82rem; padding:6px 10px; }
-        .nest { margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.1); }
-        .nest h5 { margin:0 0 6px 0; font-size:0.82rem; font-weight:700; color:#a5b4fc; text-transform:uppercase; letter-spacing:0.04em; }
-        .nest ul { list-style:none; margin:0; padding:0; }
-        .nest li { font-size:0.88rem; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
-        .nest li:last-child { border-bottom:none; }
-        .inv-doc-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:6px; }
-        .inv-doc-actions a {
-            font-size:0.82rem; padding:5px 9px; border-radius:8px; text-decoration:none;
-            border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#e5e7eb;
-        }
-        .inv-doc-actions a:hover { background:rgba(59,130,246,0.18); border-color:rgba(96,165,250,0.45); }
-        .inv-doc-actions button { font-size:0.82rem; padding:5px 9px; }
-        .empty-orders {
-            padding:18px;
-            border-radius:10px;
-            background:#1C2540;
-            border:1px dashed rgba(255,255,255,0.12);
-            font-size:0.92rem;
-            text-align:center;
-            color: rgba(255,255,255,0.6);
-        }
-        .empty-orders .btn-empty-create { margin-top: 10px; }
-        label { display:block; margin-bottom:6px; color: rgba(255,255,255,0.6); font-size: 0.88rem; }
-        .left-meta { margin-top: 6px; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; color: rgba(255,255,255,0.6); font-size:0.84rem; }
-    </style>
     <link rel="stylesheet" href="css/fixarivan-theme.css">
-    <link rel="stylesheet" href="mobile_fixes.css">
+    <link rel="stylesheet" href="css/clients-crm.css?v=20250625crm">
+    <link rel="stylesheet" href="mobile_fixes.css?v=20250625crm">
+    <script src="js/clients_crm.js?v=20250625crm"></script>
 </head>
 <body class="fv-page clients-page">
-    <div class="top">
-        <h1 style="margin:0;">👥 Клиенты</h1>
+    <header class="crm-topbar">
+        <h1>👥 Клиенты</h1>
         <nav><a href="dashboard_app.html">← Рабочий стол</a></nav>
-    </div>
+    </header>
 
-    <div class="layout">
-        <aside class="card">
-            <div class="search-row">
-                <input type="text" id="q" placeholder="Поиск: имя, телефон, email, client_id, заказ, акт">
-                <button id="btnSearch">Найти</button>
+    <div class="crm-workspace">
+        <aside class="crm-sidebar">
+            <div class="crm-search">
+                <input type="search" id="q" placeholder="Поиск: имя, телефон, email, IMEI, заказ, счёт…" autocomplete="off">
+                <button type="button" id="btnSearch" title="Найти">🔍</button>
             </div>
-            <div style="display:flex; gap:8px; margin-bottom:10px;">
-                <button class="primary" id="btnNew">+ Новый клиент</button>
-                <button id="btnReload">Обновить</button>
+            <div class="crm-toolbar">
+                <button type="button" class="primary" id="btnNew">+ Новый</button>
+                <button type="button" id="btnReload">Обновить</button>
             </div>
-            <div id="clientsList" class="list"><div class="muted">Загрузка…</div></div>
+            <div class="crm-filters" id="crmFilters">
+                <button type="button" class="crm-filter-btn is-active" data-filter="all">Все</button>
+                <button type="button" class="crm-filter-btn" data-filter="active">Активные</button>
+                <button type="button" class="crm-filter-btn" data-filter="vip">VIP</button>
+                <button type="button" class="crm-filter-btn" data-filter="waiting">Ожидают</button>
+            </div>
+            <div id="clientsList" class="crm-list"><div class="crm-muted">Загрузка…</div></div>
         </aside>
 
-        <main class="client-main">
-            <section class="card">
-                <div class="client-head">
-                    <div class="client-name" id="detailsTitle">Новый клиент</div>
-                    <div class="client-meta">
-                        <span class="client-meta-item" id="summaryPhone">Телефон: —</span>
-                        <span class="client-meta-item" id="summaryEmail">Email: —</span>
-                    </div>
-                </div>
-                <div class="stat-chips" id="statChips">
-                    <span class="chip-stat" id="chipActive">Активных заказов: —</span>
-                    <span class="chip-stat" id="chipWait">Ожидание запчастей: —</span>
-                </div>
-            </section>
-
-            <section class="card">
-                <h3 class="section-title">Действия</h3>
-                <div class="quick-docs">
-                    <button type="button" id="btnNewOrderBlank">➕ Новый заказ</button>
-                    <button type="button" id="btnNewReceipt">🧾 Квитанция</button>
-                    <button type="button" id="btnNewInvoice">📄 Счёт</button>
-                </div>
-            </section>
-
-            <section class="card">
-                <h3 class="section-title">Данные клиента</h3>
-                <form id="clientForm">
-                    <input type="hidden" id="fClientId">
-                    <div class="grid-2">
-                        <div>
-                            <label>ФИО</label>
-                            <input type="text" id="fFullName" required>
-                        </div>
-                        <div>
-                            <label>Телефон</label>
-                            <input type="text" id="fPhone">
-                        </div>
-                    </div>
-                    <div class="grid-2" style="margin-top:10px;">
-                        <div>
-                            <label>Email</label>
-                            <input type="email" id="fEmail">
-                        </div>
-                        <div>
-                            <label>Client ID</label>
-                            <input type="text" id="fClientIdVisible" disabled>
-                        </div>
-                    </div>
-                    <div style="margin-top:10px;">
-                        <label>Заметки</label>
-                        <textarea id="fNotes"></textarea>
-                    </div>
-                    <div class="form-actions-main">
-                        <button type="submit" class="primary">Сохранить</button>
-                        <button type="button" id="btnReset" class="secondary">Очистить</button>
-                    </div>
-                </form>
-            </section>
-
-            <section class="card">
-                <h3 class="section-title">Заказы клиента</h3>
-                <p class="muted" id="ordersPlaceholder">Выберите клиента слева или создайте нового.</p>
-                <div id="ordersContainer"></div>
-            </section>
-
-            <section class="card">
-                <h3 class="section-title">Опасные действия</h3>
-                <div class="danger-actions">
-                    <button type="button" id="btnDeleteClient" class="danger">Удалить клиента</button>
-                </div>
-            </section>
+        <main class="crm-profile" id="crmProfile">
+            <div class="crm-empty" id="crmEmpty">
+                <p>Выберите клиента слева или создайте нового.</p>
+                <p class="crm-muted">CRM-профиль: история, устройства, финансы и инсайты.</p>
+            </div>
+            <div id="crmProfileBody" hidden></div>
         </main>
+
+        <aside class="crm-rail" id="crmRail" hidden></aside>
     </div>
 
+    <form id="clientForm" hidden>
+        <input type="hidden" id="fClientId">
+        <input type="text" id="fFullName">
+        <input type="text" id="fPhone">
+        <input type="email" id="fEmail">
+        <textarea id="fNotes"></textarea>
+        <input type="text" id="fClientIdVisible" disabled>
+    </form>
+
     <script>
-        const fetchJson = window.FixariVan?.http?.fetchJson ?? (async function(url, options = {}) {
+    (function () {
+        const C = window.FixariVanClientsCrm;
+        const fetchJson = window.FixariVan?.http?.fetchJson ?? (async function (url, options = {}) {
             const response = await fetch(url, options);
             const text = await response.text();
             if (!response.ok) throw new Error((text || '').trim().slice(0, 200) || ('HTTP ' + response.status));
@@ -248,16 +71,21 @@
             if (parsed && parsed.success === false) throw new Error(parsed.message || 'Ошибка запроса');
             return parsed;
         });
-        const showToast = window.FixariVan?.ui?.showToast ?? function(m){ alert(m); };
+        const showToast = window.FixariVan?.ui?.showToast ?? function (m) { alert(m); };
         const fvErr = (e) => (window.FixariVan?.ui?.humanizeApiError ? window.FixariVan.ui.humanizeApiError(e) : (e?.message || String(e)));
 
-        const state = { clients: [], activeId: '' };
-        function esc(s) {
-            const d = document.createElement('div');
-            d.textContent = String(s ?? '');
-            return d.innerHTML;
-        }
-        function dataBlock(r){ return (r && typeof r.data === 'object' && r.data) ? r.data : {}; }
+        const state = {
+            clients: [],
+            activeId: '',
+            filter: 'all',
+            detail: null,
+            client: null,
+            meta: { v: 1, tier: 'new', tags: [], bullets: [] },
+            analytics: null,
+        };
+
+        function dataBlock(r) { return (r && typeof r.data === 'object' && r.data) ? r.data : {}; }
+
         function buildClientQuery() {
             const q = new URLSearchParams();
             const name = (document.getElementById('fFullName').value || '').trim();
@@ -269,14 +97,62 @@
             return q.toString();
         }
 
-        function orderIsDone(o) {
-            const s = String(o.status || o.order_status || '').toLowerCase();
-            return ['completed', 'cancelled', 'signed', 'done'].includes(s);
+        function syncFormFromClient(c, notesRaw) {
+            document.getElementById('fClientId').value = c.client_id || '';
+            document.getElementById('fClientIdVisible').value = c.client_id || '';
+            document.getElementById('fFullName').value = c.full_name || '';
+            document.getElementById('fPhone').value = c.phone || '';
+            document.getElementById('fEmail').value = c.email || '';
+            document.getElementById('fNotes').value = notesRaw || '';
         }
 
-        function renderNestDocs(title, rows, mapLine) {
-            if (!rows || !rows.length) return '';
-            return `<div class="nest"><h5>${esc(title)}</h5><ul>${rows.map(mapLine).join('')}</ul></div>`;
+        function getNotesForSave() {
+            return C.serializeNotes(state.meta, '');
+        }
+
+        function filteredClients() {
+            return state.clients.filter((c) => {
+                const parsed = C.parseNotes(c.notes);
+                const tier = parsed.meta.tier;
+                const active = Number(c.active_orders_count ?? 0) > 0;
+                if (state.filter === 'active') return active;
+                if (state.filter === 'vip') return tier === 'vip';
+                if (state.filter === 'waiting') return Number(c.waiting_parts_count ?? 0) > 0;
+                return true;
+            });
+        }
+
+        function renderList() {
+            const box = document.getElementById('clientsList');
+            const rows = filteredClients();
+            if (!rows.length) {
+                box.innerHTML = '<div class="crm-muted">Клиентов не найдено</div>';
+                return;
+            }
+            box.innerHTML = rows.map((c) => {
+                const parsed = C.parseNotes(c.notes);
+                const tier = C.tierById(parsed.meta.tier);
+                const st = C.listStatus(c, parsed.meta);
+                const active = c.client_id === state.activeId ? ' is-active' : '';
+                const color = C.avatarColor(c.client_id);
+                const ini = C.initials(c.full_name);
+                return `<article class="crm-list-card${active}" data-id="${C.esc(c.client_id)}" tabindex="0">
+                    <div class="crm-avatar" style="background:${color}">${C.esc(ini)}</div>
+                    <div class="crm-list-main">
+                        <div class="crm-list-name">${C.esc(c.full_name || 'Без имени')}</div>
+                        <div class="crm-list-phone">${C.esc(c.phone || '—')}</div>
+                        <div class="crm-list-meta">
+                            <span>${C.esc(C.formatRelative(c.updated_at))}</span>
+                            <span>📋 ${C.esc(c.orders_count ?? 0)}</span>
+                            <span class="crm-tier-pill">${C.esc(tier.label)}</span>
+                        </div>
+                    </div>
+                    <span class="crm-list-badge ${st.cls}">${C.esc(st.label)}</span>
+                </article>`;
+            }).join('');
+            box.querySelectorAll('.crm-list-card[data-id]').forEach((el) => {
+                el.addEventListener('click', () => openClient(el.getAttribute('data-id') || ''));
+            });
         }
 
         function invoiceViewerHref(token) {
@@ -287,191 +163,374 @@
             const t = String(token || '').trim();
             return t ? ('client_portal.php?token=' + encodeURIComponent(t)) : '';
         }
-        function invoiceActionsHtml(x) {
-            const docId = String(x.document_id || '').trim();
-            const tok = String(x.client_token || '').trim();
-            const view = invoiceViewerHref(tok);
-            const portal = invoicePortalHref(tok);
-            const edit = docId ? ('invoice.html?document_id=' + encodeURIComponent(docId)) : '';
-            const parts = [];
-            if (view) parts.push(`<a href="${esc(view)}" target="_blank" rel="noopener">👁 Просмотр</a>`);
-            if (portal) parts.push(`<a href="${esc(portal)}" target="_blank" rel="noopener">🌐 Портал</a>`);
-            if (edit) parts.push(`<a href="${esc(edit)}" target="_blank" rel="noopener">✏ Редактировать</a>`);
-            if (portal) {
-                parts.push(`<button type="button" class="btn-inv-copy-inv" data-portal="${esc(portal)}">📋 Копировать ссылку</button>`);
-            }
-            return parts.length ? `<div class="inv-doc-actions">${parts.join('')}</div>` : '';
-        }
-
-        /** Счета, попавшие в карточку клиента по client_id/телефону, но не сгруппированы ни с одним заказом */
-        function renderOrphanInvoicesCard(rows) {
-            if (!rows || !rows.length) return '';
-            return `<div class="order-card orphan-docs">
-                <div class="order-card-head">
-                    <div>
-                        <div class="order-id">Счета без привязки к заказу</div>
-                        <div class="order-meta muted">В счёте не указан заказ или номер не совпадает с заказами клиента — проверьте order_id в счёте или привязку в Track</div>
-                    </div>
-                </div>
-                ${renderNestDocs('Счета', rows, (x) =>
-                    `<li><div>📄 <strong>${esc(x.invoice_id || x.document_id || '—')}</strong> <span class="muted">• ${esc(x.status || '—')}</span></div>${invoiceActionsHtml(x)}</li>`
-                )}
-            </div>`;
-        }
 
         function renderOrderCard(g) {
             const o = g.order || {};
             const oid = String(o.order_id || '').trim();
             const docId = String(o.document_id || '').trim();
-            const dev = o.device_model || '—';
-            const pub = o.public_status || o.order_status || o.status || '—';
-            const parts = o.parts_status || '';
-            const est = g.estimate_total != null ? ('≈ ' + Number(g.estimate_total).toFixed(2) + ' € (позиции)') : '';
-            const done = orderIsDone(o);
-            const recs = g.receipts || [];
-            const invs = g.invoices || [];
-            const reps = g.reports || [];
-
-            const receiptsHtml = renderNestDocs('Квитанции', recs, (x) =>
-                `<li>🧾 ${esc(x.receipt_number || x.document_id || '—')} <span class="muted">• ${esc(x.status || '—')}</span></li>`
-            );
-            const invoicesHtml = renderNestDocs('Счета', invs, (x) =>
-                `<li><div>📄 <strong>${esc(x.invoice_id || x.document_id || '—')}</strong> <span class="muted">• ${esc(x.status || '—')}</span></div>${invoiceActionsHtml(x)}</li>`
-            );
-            const reportsHtml = renderNestDocs('Диагностика', reps, (x) =>
-                `<li>📱 ${esc(x.report_id || '—')} <span class="muted">${esc(x.model || x.device_type || '—')}</span></li>`
-            );
-
+            const done = C.orderIsDone(o);
             const trackUrl = 'track.html?q=' + encodeURIComponent(oid || docId);
-
-            return `
-            <div class="order-card${done ? ' done' : ''}">
-                <div class="order-card-head">
+            const est = g.estimate_total != null ? ('≈ ' + Number(g.estimate_total).toFixed(2) + ' €') : '';
+            return `<div class="crm-order-card${done ? ' done' : ''}">
+                <div class="crm-order-head">
                     <div>
-                        <div class="order-id">${esc(oid || docId || '—')}</div>
-                        <div class="order-meta muted">${esc(dev)}</div>
-                        ${est ? `<div class="order-meta">${esc(est)}</div>` : ''}
+                        <div class="crm-order-id">${C.esc(oid || docId || '—')}</div>
+                        <div class="crm-muted">${C.esc(o.device_model || '—')}${est ? ' • ' + C.esc(est) : ''}</div>
                     </div>
-                    <div class="badge-row">
-                        <span class="badge pub">${esc(pub)}</span>
-                        ${parts ? `<span class="badge parts">Запчасти: ${esc(parts)}</span>` : ''}
+                    <div class="crm-order-badges">
+                        <span class="crm-order-badge">${C.esc(o.public_status || o.status || '—')}</span>
                     </div>
                 </div>
-                <div class="order-actions">
-                    <button type="button" class="btn-open-track" data-url="${esc(trackUrl)}">Открыть в Track</button>
-                    <button type="button" class="btn-portal-open" data-doc="${esc(docId)}" data-oid="${esc(oid)}">Портал клиента</button>
-                    <button type="button" class="btn-portal-copy" data-doc="${esc(docId)}" data-oid="${esc(oid)}">Копировать ссылку</button>
-                    <button type="button" class="btn-new-order-here" data-q="${esc(buildClientQuery())}">Новый заказ</button>
+                <div class="crm-order-actions">
+                    <button type="button" class="btn-open-track" data-url="${C.esc(trackUrl)}">Track</button>
+                    <button type="button" class="btn-portal-open" data-doc="${C.esc(docId)}" data-oid="${C.esc(oid)}">Портал</button>
+                    <button type="button" class="btn-new-order-here" data-q="${C.esc(buildClientQuery())}">+ Заказ</button>
                 </div>
-                ${receiptsHtml}${invoicesHtml}${reportsHtml}
             </div>`;
         }
 
-        function renderOrdersBlock(d) {
-            const ph = document.getElementById('ordersPlaceholder');
-            const box = document.getElementById('ordersContainer');
-            const activeOrders = Array.isArray(d.active_orders) ? d.active_orders : [];
-            const waitingParts = Array.isArray(d.waiting_parts) ? d.waiting_parts : [];
-            document.getElementById('chipActive').textContent = 'Активных заказов: ' + activeOrders.length;
-            document.getElementById('chipWait').textContent = 'Ожидание запчастей: ' + waitingParts.length;
+        function renderOrdersHtml(d) {
+            const groups = Array.isArray(d.orders_with_docs) ? d.orders_with_docs : [];
+            if (groups.length) return groups.map(renderOrderCard).join('');
+            const flat = d.history?.orders || [];
+            if (!flat.length) return '<p class="crm-muted">Заказов пока нет.</p>';
+            return flat.map((o) => renderOrderCard({ order: o, estimate_total: null })).join('');
+        }
 
-            const orphanInv = Array.isArray(d.invoices_without_order) ? d.invoices_without_order : [];
-            const orphanHtml = renderOrphanInvoicesCard(orphanInv);
-
-            const groups = Array.isArray(d.orders_with_docs) ? d.orders_with_docs : null;
-            ph.style.display = 'none';
-            if (groups && groups.length) {
-                box.innerHTML = orphanHtml + groups.map(renderOrderCard).join('');
+        function renderProfile() {
+            const empty = document.getElementById('crmEmpty');
+            const body = document.getElementById('crmProfileBody');
+            const rail = document.getElementById('crmRail');
+            if (!state.client || !state.activeId) {
+                empty.hidden = false;
+                body.hidden = true;
+                rail.hidden = true;
                 return;
             }
-            const h = d.history || {};
-            const flat = h.orders || [];
-            if (!flat.length) {
-                if (orphanHtml) {
-                    box.innerHTML = orphanHtml + `<div class="empty-orders">Нет заказов<br><button type="button" class="btn-empty-create btn-new-order-here" data-q="${esc(buildClientQuery())}">Создать заказ</button></div>`;
-                    return;
-                }
-                box.innerHTML = `<div class="empty-orders">Нет заказов<br><button type="button" class="btn-empty-create btn-new-order-here" data-q="${esc(buildClientQuery())}">Создать заказ</button></div>`;
-                return;
-            }
-            box.innerHTML = orphanHtml + flat.map((o) => renderOrderCard({
-                order: o,
-                estimate_total: null,
-                receipts: [],
-                invoices: [],
-                reports: []
-            })).join('');
+            empty.hidden = true;
+            body.hidden = false;
+            rail.hidden = false;
+
+            const c = state.client;
+            const a = state.analytics;
+            const meta = state.meta;
+            const tier = C.tierById(meta.tier);
+            const loyalty = C.loyaltyLevel(a);
+            const timeline = C.buildTimeline(state.detail, c);
+            const opps = C.buildOpportunities(a, meta);
+            const insights = C.buildInsights(c, a, meta);
+            const color = C.avatarColor(c.client_id);
+            const ini = C.initials(c.full_name);
+            const phone = c.phone || '';
+            const email = c.email || '';
+            const waOk = C.whatsappOk(phone);
+            const lang = a.preferredLang ? C.langLabel(a.preferredLang) : '—';
+            const firstDate = C.formatDateShort(c.created_at || a.firstOrderDate);
+            const lastDate = C.formatDateShort(a.lastOrderDate || c.updated_at);
+
+            const tierButtons = C.TIERS.map((t) =>
+                `<button type="button" class="crm-star-btn${meta.tier === t.id ? ' is-active' : ''}" data-tier="${C.esc(t.id)}">${'⭐'.repeat(t.stars)} ${C.esc(t.label)}</button>`
+            ).join('');
+
+            const tagChecks = C.TAG_DEFS.map((tag) =>
+                `<label class="crm-check"><input type="checkbox" class="crm-tag-check" data-tag="${C.esc(tag.id)}"${meta.tags.includes(tag.id) ? ' checked' : ''}> ${C.esc(tag.label)}</label>`
+            ).join('');
+
+            const devicesHtml = a.devices.length
+                ? a.devices.map((d) => `<div class="crm-device-card">
+                    <div class="crm-device-icon">${C.deviceIcon(d.model, d.type)}</div>
+                    <div class="crm-device-name">${C.esc(d.model)}</div>
+                    <div class="crm-device-sub">Ремонтов: ${d.repairs.length}<br>Последний: ${C.esc(C.formatDateShort(d.lastDate))}<br>${C.esc(d.lastStatus || '')}</div>
+                </div>`).join('')
+                : '<p class="crm-muted">Устройства появятся после первого заказа.</p>';
+
+            const notesHtml = (meta.bullets || []).map((b, i) => `<li data-idx="${i}">${C.esc(b)}</li>`).join('');
+
+            const oppHtml = opps.length
+                ? opps.map((o) => `<label class="crm-opp-item"><input type="checkbox" class="crm-opp-check" data-opp="${C.esc(o.id)}"${o.checked ? ' checked' : ''}> ${C.esc(o.label)} ${o.suggested ? '<span class="crm-opp-tag">Рекомендуется</span>' : ''}</label>`).join('')
+                : '<p class="crm-muted">Рекомендации появятся на основе истории заказов.</p>';
+
+            const tlHtml = timeline.length
+                ? timeline.map((e) => `<div class="crm-tl-item"><div class="crm-tl-dot">${C.esc(e.icon)}</div><div><div class="crm-tl-title">${C.esc(e.title)}</div><div class="crm-tl-sub">${C.esc(e.sub)}</div></div></div>`).join('')
+                : '<p class="crm-muted">События появятся после заказов.</p>';
+
+            body.innerHTML = `
+                <section class="crm-panel">
+                    <div class="crm-hero">
+                        <div class="crm-hero-avatar" style="background:${color}">${C.esc(ini)}</div>
+                        <div>
+                            <h2 class="crm-hero-name">${C.esc(c.full_name || '—')}</h2>
+                            <div class="crm-hero-badges">
+                                <span class="crm-badge crm-badge--vip">${C.esc(tier.label)}</span>
+                                ${a.activeCount ? `<span class="crm-badge crm-badge--active">${a.activeCount} в работе</span>` : ''}
+                                <span class="crm-badge">${C.esc(loyalty.label)}</span>
+                            </div>
+                            <div class="crm-hero-contacts">
+                                ${phone ? `<a class="crm-contact-chip" href="${C.esc(C.telUrl(phone))}">📞 ${C.esc(phone)}</a>` : ''}
+                                ${waOk ? `<a class="crm-contact-chip" href="${C.esc(C.whatsappUrl(phone))}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
+                                ${email ? `<a class="crm-contact-chip" href="${C.esc(C.mailUrl(email))}">✉ ${C.esc(email)}</a>` : ''}
+                            </div>
+                            <div class="crm-hero-meta">
+                                Клиент с ${C.esc(firstDate)} · Последний контакт ${C.esc(lastDate)} · Язык: ${C.esc(lang)}
+                            </div>
+                        </div>
+                        <button type="button" class="crm-hero-edit" id="btnToggleEdit">✏️ Редактировать</button>
+                    </div>
+                    <div class="crm-edit-drawer" id="crmEditDrawer" hidden>
+                        <div class="crm-form-grid">
+                            <div><label>ФИО</label><input type="text" id="editFullName" value="${C.escAttr(c.full_name || '')}"></div>
+                            <div><label>Телефон</label><input type="text" id="editPhone" value="${C.escAttr(c.phone || '')}"></div>
+                            <div><label>Email</label><input type="email" id="editEmail" value="${C.escAttr(c.email || '')}"></div>
+                            <div><label>Client ID</label><input type="text" value="${C.escAttr(c.client_id || '')}" disabled></div>
+                        </div>
+                        <div class="crm-form-actions">
+                            <button type="button" class="primary" id="btnSaveClient">Сохранить</button>
+                            <button type="button" id="btnCancelEdit">Отмена</button>
+                            <button type="button" class="danger" id="btnDeleteClient">Удалить клиента</button>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="crm-kpi-row">
+                    <div class="crm-kpi"><div class="crm-kpi-val">${a.ordersTotal}</div><div class="crm-kpi-label">Заказов</div></div>
+                    <div class="crm-kpi"><div class="crm-kpi-val">${a.activeCount}</div><div class="crm-kpi-label">Активных</div></div>
+                    <div class="crm-kpi"><div class="crm-kpi-val">${a.totalRevenue.toFixed(0)} €</div><div class="crm-kpi-label">Сумма заказов</div></div>
+                    <div class="crm-kpi"><div class="crm-kpi-val">${a.avgCheck.toFixed(0)} €</div><div class="crm-kpi-label">Средний чек</div></div>
+                    <div class="crm-kpi"><div class="crm-kpi-val">${a.completedCount}</div><div class="crm-kpi-label">Завершено</div></div>
+                    <div class="crm-kpi"><div class="crm-kpi-val">${a.ltv.toFixed(0)} €</div><div class="crm-kpi-label">LTV</div></div>
+                </div>
+
+                <div class="crm-grid-2">
+                    <section class="crm-panel">
+                        <h3 class="crm-panel-title">⭐ Отношения с клиентом</h3>
+                        <div>${tierButtons}</div>
+                        <div style="margin-top:10px">${tagChecks}</div>
+                    </section>
+                    <section class="crm-panel">
+                        <h3 class="crm-panel-title">Уровень лояльности</h3>
+                        <p class="crm-muted">${C.esc(loyalty.label)} · до ${C.esc(loyalty.next)}${loyalty.need > 0 ? ' ≈ ' + loyalty.need.toFixed(0) + ' €' : ''}</p>
+                        <div class="crm-loyalty-bar"><div class="crm-loyalty-fill" style="width:${loyalty.pct}%"></div></div>
+                    </section>
+                </div>
+
+                <section class="crm-panel">
+                    <h3 class="crm-panel-title">📱 Устройства клиента</h3>
+                    <div class="crm-devices-scroll">${devicesHtml}</div>
+                </section>
+
+                <div class="crm-grid-3">
+                    <section class="crm-panel">
+                        <h3 class="crm-panel-title">История взаимодействий</h3>
+                        <div class="crm-timeline">${tlHtml}</div>
+                    </section>
+                    <section class="crm-panel">
+                        <h3 class="crm-panel-title">📝 Заметки</h3>
+                        <ul class="crm-notes-list" id="crmNotesList">${notesHtml || '<li class="crm-muted">Нет заметок</li>'}</ul>
+                        <div class="crm-note-add">
+                            <input type="text" id="crmNoteInput" placeholder="Добавить заметку…">
+                            <button type="button" id="crmNoteAdd">+</button>
+                        </div>
+                    </section>
+                    <section class="crm-panel">
+                        <h3 class="crm-panel-title">💡 Возможности</h3>
+                        <div class="crm-opp-list">${oppHtml}</div>
+                    </section>
+                </div>
+
+                <section class="crm-panel crm-orders-wrap">
+                    <details open>
+                        <summary>📋 Заказы и документы (${a.ordersTotal})</summary>
+                        <div id="ordersContainer">${renderOrdersHtml(state.detail)}</div>
+                    </details>
+                </section>
+
+                <section class="crm-panel" aria-hidden="true">
+                    <h3 class="crm-panel-title crm-muted">Будущее развитие</h3>
+                    ${C.FUTURE_SLOTS.map((s) => `<div class="crm-future-slot" data-future-slot="${C.esc(s.id)}"><div class="crm-future-slot-title">${C.esc(s.title)}</div><div class="crm-future-slot-hint">${C.esc(s.hint)}</div></div>`).join('')}
+                </section>
+            `;
+
+            rail.innerHTML = `
+                <section class="crm-panel">
+                    <h3 class="crm-panel-title">Быстрые действия</h3>
+                    <div class="crm-actions-grid">
+                        <a class="crm-action-btn${phone ? '' : ' is-disabled'}" href="${C.esc(C.telUrl(phone))}"><span>📞</span><span>Звонок</span></a>
+                        <a class="crm-action-btn${waOk ? '' : ' is-disabled'}" href="${C.esc(C.whatsappUrl(phone))}" target="_blank" rel="noopener"><span>💬</span><span>WhatsApp</span></a>
+                        <a class="crm-action-btn${email ? '' : ' is-disabled'}" href="${C.esc(C.mailUrl(email))}"><span>✉</span><span>Email</span></a>
+                        <a class="crm-action-btn${phone ? '' : ' is-disabled'}" href="${C.esc(C.smsUrl(phone))}"><span>📱</span><span>SMS</span></a>
+                    </div>
+                    <div style="margin-top:10px">
+                        <button type="button" class="crm-action-link" id="btnNewOrderBlank">➕ Создать заказ</button>
+                        <button type="button" class="crm-action-link" id="btnNewInvoice">📄 Создать счёт</button>
+                        <button type="button" class="crm-action-link" id="btnNewReceipt">🧾 Квитанция</button>
+                        <button type="button" class="crm-action-link" id="btnOpenTrack">🔗 Открыть в Track</button>
+                    </div>
+                </section>
+                <section class="crm-panel">
+                    <h3 class="crm-panel-title">💶 Финансы клиента</h3>
+                    <div class="crm-finance-row"><span>Общая сумма</span><span class="val">${a.totalRevenue.toFixed(2)} €</span></div>
+                    <div class="crm-finance-row"><span>Средний чек</span><span class="val">${a.avgCheck.toFixed(2)} €</span></div>
+                    <div class="crm-finance-row"><span>Средняя прибыль</span><span class="val">${a.avgProfit.toFixed(2)} €</span></div>
+                    <div class="crm-finance-row"><span>Ремонтов</span><span class="val">${a.completedCount}</span></div>
+                    <div class="crm-finance-row"><span>Последний ремонт</span><span class="val">${C.esc(C.formatDateShort(a.lastOrderDate))}</span></div>
+                    <div class="crm-finance-row"><span>Долг</span><span class="val debt">${a.debt.toFixed(2)} €</span></div>
+                    <div class="crm-finance-row"><span>Оплачено вовремя</span><span class="val">${a.onTimePct != null ? a.onTimePct + '%' : '—'}</span></div>
+                    <div class="crm-finance-row"><span>Lifetime Value</span><span class="val">${a.ltv.toFixed(2)} €</span></div>
+                </section>
+                <section class="crm-panel">
+                    <h3 class="crm-panel-title">Инсайты</h3>
+                    <ul class="crm-insights">${insights.map((x) => `<li>${C.esc(x)}</li>`).join('')}</ul>
+                </section>
+            `;
+
+            bindProfileEvents();
+        }
+
+        async function persistCrmMeta() {
+            if (!state.activeId) return;
+            document.getElementById('fNotes').value = getNotesForSave();
+            const body = {
+                action: 'save',
+                client_id: state.activeId,
+                full_name: document.getElementById('fFullName').value.trim(),
+                phone: document.getElementById('fPhone').value.trim(),
+                email: document.getElementById('fEmail').value.trim(),
+                notes: getNotesForSave(),
+            };
+            await fetchJson('./api/clients.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+        }
+
+        function bindProfileEvents() {
+            document.getElementById('btnToggleEdit')?.addEventListener('click', () => {
+                const d = document.getElementById('crmEditDrawer');
+                if (d) d.hidden = !d.hidden;
+            });
+            document.getElementById('btnCancelEdit')?.addEventListener('click', () => {
+                const d = document.getElementById('crmEditDrawer');
+                if (d) d.hidden = true;
+            });
+            document.getElementById('btnSaveClient')?.addEventListener('click', () => saveClientFromEdit().catch((e) => showToast(fvErr(e), 'error')));
+            document.getElementById('btnDeleteClient')?.addEventListener('click', () => deleteClient().catch((e) => showToast(fvErr(e), 'error')));
+
+            document.querySelectorAll('.crm-star-btn[data-tier]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    state.meta.tier = btn.getAttribute('data-tier') || 'new';
+                    try {
+                        await persistCrmMeta();
+                        renderProfile();
+                        renderList();
+                        showToast('Статус обновлён', 'success');
+                    } catch (e) { showToast(fvErr(e), 'error'); }
+                });
+            });
+
+            document.querySelectorAll('.crm-tag-check').forEach((inp) => {
+                inp.addEventListener('change', async () => {
+                    const id = inp.getAttribute('data-tag') || '';
+                    if (!id) return;
+                    if (inp.checked) {
+                        if (!state.meta.tags.includes(id)) state.meta.tags.push(id);
+                    } else {
+                        state.meta.tags = state.meta.tags.filter((t) => t !== id);
+                    }
+                    try { await persistCrmMeta(); } catch (e) { showToast(fvErr(e), 'error'); }
+                });
+            });
+
+            document.querySelectorAll('.crm-opp-check').forEach((inp) => {
+                inp.addEventListener('change', async () => {
+                    const id = inp.getAttribute('data-opp') || '';
+                    if (!state.meta.opp) state.meta.opp = [];
+                    if (inp.checked) {
+                        if (!state.meta.opp.includes(id)) state.meta.opp.push(id);
+                    } else {
+                        state.meta.opp = state.meta.opp.filter((x) => x !== id);
+                    }
+                    try { await persistCrmMeta(); } catch (e) { showToast(fvErr(e), 'error'); }
+                });
+            });
+
+            document.getElementById('crmNoteAdd')?.addEventListener('click', async () => {
+                const inp = document.getElementById('crmNoteInput');
+                const val = (inp?.value || '').trim();
+                if (!val) return;
+                if (!state.meta.bullets) state.meta.bullets = [];
+                state.meta.bullets.push(val);
+                if (inp) inp.value = '';
+                try {
+                    await persistCrmMeta();
+                    renderProfile();
+                } catch (e) { showToast(fvErr(e), 'error'); }
+            });
+
+            document.getElementById('btnNewOrderBlank')?.addEventListener('click', () => {
+                const q = buildClientQuery();
+                window.location.href = 'order_new.html' + (q ? ('?' + q) : '');
+            });
+            document.getElementById('btnNewReceipt')?.addEventListener('click', () => {
+                window.location.href = 'receipt.html?' + buildClientQuery();
+            });
+            document.getElementById('btnNewInvoice')?.addEventListener('click', () => {
+                window.location.href = 'invoice.html?' + buildClientQuery();
+            });
+            document.getElementById('btnOpenTrack')?.addEventListener('click', () => {
+                const q = encodeURIComponent(state.client?.full_name || state.activeId || '');
+                window.open('track.html?q=' + q, '_blank', 'noopener');
+            });
         }
 
         async function loadClients() {
             const q = (document.getElementById('q').value || '').trim();
             const url = './api/clients.php' + (q ? ('?q=' + encodeURIComponent(q)) : '');
             const r = await fetchJson(url, { credentials: 'same-origin' });
-            const rows = Array.isArray(r.clients) ? r.clients : (Array.isArray(dataBlock(r).clients) ? dataBlock(r).clients : []);
-            state.clients = rows;
+            state.clients = Array.isArray(r.clients) ? r.clients : (Array.isArray(dataBlock(r).clients) ? dataBlock(r).clients : []);
             renderList();
-            if (!state.activeId) {
-                updateClientSummary({}, { chipsPlaceholder: true });
-            }
-        }
-
-        function renderList() {
-            const box = document.getElementById('clientsList');
-            if (!state.clients.length) {
-                box.innerHTML = '<div class="muted">Клиентов пока нет</div>';
-                return;
-            }
-            box.innerHTML = state.clients.map((c) => {
-                const active = c.client_id === state.activeId ? ' active' : '';
-                const ordersCount = Number(c.orders_count ?? c.total_orders ?? c.active_orders_count ?? 0);
-                return `<div class="item${active}" data-id="${esc(c.client_id)}">
-                    <strong>${esc(c.full_name || 'Без имени')}</strong>
-                    <div class="muted">${esc(c.email || '—')}</div>
-                    <div class="left-meta">
-                        <span>${esc(c.phone || '—')}</span>
-                        <span>Заказов: ${esc(ordersCount)}</span>
-                    </div>
-                </div>`;
-            }).join('');
-            box.querySelectorAll('.item[data-id]').forEach((el) => {
-                el.addEventListener('click', () => openClient(el.getAttribute('data-id') || ''));
-            });
-        }
-
-        function updateClientSummary(c, stats) {
-            const name = String(c?.full_name || '').trim();
-            const phone = String(c?.phone || '').trim();
-            const email = String(c?.email || '').trim();
-            document.getElementById('detailsTitle').textContent = name || 'Новый клиент';
-            document.getElementById('summaryPhone').textContent = 'Телефон: ' + (phone || '—');
-            document.getElementById('summaryEmail').textContent = 'Email: ' + (email || '—');
-            if (stats && stats.chipsPlaceholder) {
-                document.getElementById('chipActive').textContent = 'Активных заказов: —';
-                document.getElementById('chipWait').textContent = 'Ожидание запчастей: —';
-                return;
-            }
-            const activeCount = Number(stats?.activeCount ?? 0);
-            const waitCount = Number(stats?.waitCount ?? 0);
-            document.getElementById('chipActive').textContent = 'Активных заказов: ' + activeCount;
-            document.getElementById('chipWait').textContent = 'Ожидание запчастей: ' + waitCount;
         }
 
         function resetForm() {
             state.activeId = '';
-            document.getElementById('fClientId').value = '';
-            document.getElementById('fClientIdVisible').value = '';
-            document.getElementById('fFullName').value = '';
-            document.getElementById('fPhone').value = '';
-            document.getElementById('fEmail').value = '';
-            document.getElementById('fNotes').value = '';
-            document.getElementById('ordersContainer').innerHTML = '';
-            document.getElementById('ordersPlaceholder').style.display = 'block';
-            updateClientSummary({}, { chipsPlaceholder: true });
+            state.client = null;
+            state.detail = null;
+            state.meta = { v: 1, tier: 'new', tags: [], bullets: [] };
+            state.analytics = C.computeAnalytics({ history: { orders: [], receipts: [], invoices: [] }, orders_with_docs: [], active_orders: [] });
+            syncFormFromClient({ full_name: '', phone: '', email: '' }, '');
+            renderProfileNewClient();
             renderList();
-            setTimeout(() => {
-                const f = document.getElementById('fFullName');
-                if (f) f.focus();
-            }, 0);
+        }
+
+        function renderProfileNewClient() {
+            const empty = document.getElementById('crmEmpty');
+            const body = document.getElementById('crmProfileBody');
+            const rail = document.getElementById('crmRail');
+            empty.hidden = true;
+            body.hidden = false;
+            rail.hidden = true;
+            body.innerHTML = `
+                <section class="crm-panel">
+                    <h2 class="crm-hero-name">Новый клиент</h2>
+                    <p class="crm-muted">Заполните контакты и сохраните — CRM-профиль создастся автоматически.</p>
+                    <div class="crm-edit-drawer" id="crmEditDrawer">
+                        <div class="crm-form-grid">
+                            <div><label>ФИО *</label><input type="text" id="editFullName" autofocus></div>
+                            <div><label>Телефон</label><input type="text" id="editPhone"></div>
+                            <div><label>Email</label><input type="email" id="editEmail"></div>
+                        </div>
+                        <div class="crm-form-actions">
+                            <button type="button" class="primary" id="btnSaveClient">Создать клиента</button>
+                            <button type="button" id="btnCancelEdit">Отмена</button>
+                        </div>
+                    </div>
+                </section>`;
+            document.getElementById('btnSaveClient')?.addEventListener('click', () => saveClientFromEdit().catch((e) => showToast(fvErr(e), 'error')));
+            document.getElementById('btnCancelEdit')?.addEventListener('click', () => {
+                body.hidden = true;
+                empty.hidden = false;
+            });
         }
 
         async function openClient(clientId) {
@@ -480,69 +539,45 @@
             const d = dataBlock(r);
             const c = d.client || {};
             state.activeId = c.client_id || clientId;
-
-            document.getElementById('fClientId').value = c.client_id || '';
-            document.getElementById('fClientIdVisible').value = c.client_id || '';
-            document.getElementById('fFullName').value = c.full_name || '';
-            document.getElementById('fPhone').value = c.phone || '';
-            document.getElementById('fEmail').value = c.email || '';
-            document.getElementById('fNotes').value = c.notes || '';
-            const activeOrders = Array.isArray(d.active_orders) ? d.active_orders : [];
-            const waitingParts = Array.isArray(d.waiting_parts) ? d.waiting_parts : [];
-            updateClientSummary(c, { activeCount: activeOrders.length, waitCount: waitingParts.length });
-
-            renderOrdersBlock(d);
+            state.client = c;
+            state.detail = d;
+            const parsed = C.parseNotes(c.notes);
+            state.meta = parsed.meta;
+            state.analytics = C.computeAnalytics(d);
+            syncFormFromClient(c, getNotesForSave());
+            renderProfile();
             renderList();
         }
 
-        async function saveClient(e) {
-            e.preventDefault();
+        async function saveClientFromEdit() {
+            const name = (document.getElementById('editFullName')?.value || '').trim();
+            if (!name) { showToast('Нужно указать ФИО', 'warning'); return; }
+            document.getElementById('fFullName').value = name;
+            document.getElementById('fPhone').value = (document.getElementById('editPhone')?.value || '').trim();
+            document.getElementById('fEmail').value = (document.getElementById('editEmail')?.value || '').trim();
             const body = {
                 action: 'save',
-                client_id: (document.getElementById('fClientId').value || '').trim(),
-                full_name: (document.getElementById('fFullName').value || '').trim(),
-                phone: (document.getElementById('fPhone').value || '').trim(),
-                email: (document.getElementById('fEmail').value || '').trim(),
-                notes: (document.getElementById('fNotes').value || '').trim()
+                client_id: state.activeId || '',
+                full_name: name,
+                phone: document.getElementById('fPhone').value.trim(),
+                email: document.getElementById('fEmail').value.trim(),
+                notes: getNotesForSave(),
             };
-            if (!body.full_name) {
-                showToast('Нужно указать ФИО', 'warning');
-                return;
-            }
             const r = await fetchJson('./api/clients.php', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
+                body: JSON.stringify(body),
             });
-            const cid = String(r.client_id || dataBlock(r).client_id || '').trim();
+            const cid = String(r.client_id || dataBlock(r).client_id || state.activeId).trim();
             showToast('Клиент сохранён', 'success');
             await loadClients();
             if (cid) await openClient(cid);
         }
 
-        document.getElementById('btnSearch').addEventListener('click', () => loadClients().catch((e) => showToast(fvErr(e), 'error')));
-        document.getElementById('btnReload').addEventListener('click', () => loadClients().catch((e) => showToast(fvErr(e), 'error')));
-        document.getElementById('btnNew').addEventListener('click', resetForm);
-        document.getElementById('btnReset').addEventListener('click', resetForm);
-        document.getElementById('btnNewOrderBlank').addEventListener('click', () => {
-            const query = buildClientQuery();
-            window.location.href = 'order_new.html' + (query ? ('?' + query) : '');
-        });
-        document.getElementById('btnNewReceipt').addEventListener('click', () => {
-            const query = buildClientQuery();
-            window.location.href = 'receipt.html' + (query ? ('?' + query) : '');
-        });
-        document.getElementById('btnNewInvoice').addEventListener('click', () => {
-            const query = buildClientQuery();
-            window.location.href = 'invoice.html' + (query ? ('?' + query) : '');
-        });
-        document.getElementById('btnDeleteClient').addEventListener('click', async () => {
-            const cid = (document.getElementById('fClientId').value || '').trim();
-            if (!cid) {
-                showToast('Сначала выберите клиента', 'warning');
-                return;
-            }
+        async function deleteClient() {
+            const cid = state.activeId;
+            if (!cid) return;
             if (!confirm('Удалить клиента ' + cid + '?')) return;
             const pass = prompt('Введите пароль удаления:');
             if (!pass) return;
@@ -550,25 +585,20 @@
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'delete', client_id: cid, delete_password: pass })
+                body: JSON.stringify({ action: 'delete', client_id: cid, delete_password: pass }),
             });
-            if (!r.success) {
-                showToast(r.message || 'Ошибка удаления', 'error');
-                return;
-            }
+            if (!r.success) { showToast(r.message || 'Ошибка удаления', 'error'); return; }
             showToast('Клиент удалён', 'success');
             resetForm();
             await loadClients();
-        });
-        document.getElementById('clientForm').addEventListener('submit', (e) => saveClient(e).catch((err) => showToast(fvErr(err) || 'Ошибка', 'error')));
+        }
 
         async function clientsResolvePortalUrl(docId, orderId) {
-            if (!docId && !orderId) return '';
             const res = await fetch('./api/order_ensure_token.php', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ documentId: docId || '', orderId: orderId || '' })
+                body: JSON.stringify({ documentId: docId || '', orderId: orderId || '' }),
             });
             const json = await res.json();
             if (!json || json.success !== true) return '';
@@ -576,27 +606,22 @@
             return String((d && d.portal_url) ? d.portal_url : '').trim();
         }
 
+        document.getElementById('btnSearch').addEventListener('click', () => loadClients().catch((e) => showToast(fvErr(e), 'error')));
+        document.getElementById('q').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') loadClients().catch((err) => showToast(fvErr(err), 'error'));
+        });
+        document.getElementById('btnReload').addEventListener('click', () => loadClients().catch((e) => showToast(fvErr(e), 'error')));
+        document.getElementById('btnNew').addEventListener('click', resetForm);
+
+        document.getElementById('crmFilters').addEventListener('click', (e) => {
+            const btn = e.target.closest('.crm-filter-btn[data-filter]');
+            if (!btn) return;
+            state.filter = btn.getAttribute('data-filter') || 'all';
+            document.querySelectorAll('.crm-filter-btn').forEach((b) => b.classList.toggle('is-active', b === btn));
+            renderList();
+        });
+
         document.addEventListener('click', async (e) => {
-            const copyInv = e.target.closest('.btn-inv-copy-inv');
-            if (copyInv) {
-                e.preventDefault();
-                const u = copyInv.getAttribute('data-portal') || '';
-                if (!u) {
-                    showToast('Нет ссылки портала', 'warning');
-                    return;
-                }
-                try {
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                        await navigator.clipboard.writeText(u);
-                        showToast('Ссылка скопирована', 'success');
-                    } else {
-                        prompt('Ссылка:', u);
-                    }
-                } catch (_) {
-                    prompt('Ссылка:', u);
-                }
-                return;
-            }
             const trackBtn = e.target.closest('.btn-open-track');
             if (trackBtn) {
                 e.preventDefault();
@@ -607,38 +632,23 @@
             const newHere = e.target.closest('.btn-new-order-here');
             if (newHere) {
                 e.preventDefault();
-                const q = newHere.getAttribute('data-q') || '';
-                window.location.href = 'order_new.html' + (q ? ('?' + q) : '');
+                window.location.href = 'order_new.html?' + (newHere.getAttribute('data-q') || '');
                 return;
             }
-            const open = e.target.closest('#ordersContainer .btn-portal-open');
-            const copy = e.target.closest('#ordersContainer .btn-portal-copy');
-            const btn = open || copy;
-            if (!btn) return;
-            e.preventDefault();
-            const docId = btn.getAttribute('data-doc') || '';
-            const oid = btn.getAttribute('data-oid') || '';
-            btn.disabled = true;
-            try {
-                const u = await clientsResolvePortalUrl(docId, oid);
-                if (!u) {
-                    showToast('Не удалось получить ссылку портала', 'error');
-                    return;
-                }
-                if (open) {
-                    window.open(u, '_blank', 'noopener');
-                } else if (navigator.clipboard && navigator.clipboard.writeText) {
-                    await navigator.clipboard.writeText(u);
-                    showToast('Ссылка скопирована', 'success');
-                } else {
-                    prompt('Ссылка:', u);
-                }
-            } finally {
-                btn.disabled = false;
+            const open = e.target.closest('.btn-portal-open');
+            if (open) {
+                e.preventDefault();
+                open.disabled = true;
+                try {
+                    const u = await clientsResolvePortalUrl(open.getAttribute('data-doc') || '', open.getAttribute('data-oid') || '');
+                    if (u) window.open(u, '_blank', 'noopener');
+                    else showToast('Не удалось получить ссылку', 'error');
+                } finally { open.disabled = false; }
             }
         });
 
-        document.addEventListener('DOMContentLoaded', () => { loadClients().catch((e) => showToast(fvErr(e), 'error')); });
+        document.addEventListener('DOMContentLoaded', () => loadClients().catch((e) => showToast(fvErr(e), 'error')));
+    })();
     </script>
 </body>
 </html>

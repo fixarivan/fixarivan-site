@@ -951,63 +951,50 @@
 }
 
 /* -------------------------------------------------------------------------- */
-/* Страница: клиенты — clients.html (.clients-page) */
+/* Страница: CRM клиентов — clients.html (.clients-page) */
 /* -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
     body.clients-page {
         overflow-x: hidden;
-        padding: max(12px, env(safe-area-inset-left, 0px)) max(12px, env(safe-area-inset-right, 0px))
+        padding: max(10px, env(safe-area-inset-left, 0px)) max(10px, env(safe-area-inset-right, 0px))
             max(12px, env(safe-area-inset-bottom, 0px));
-        box-sizing: border-box;
     }
 
-    .clients-page .top {
+    .clients-page .crm-topbar {
         flex-wrap: wrap;
-        align-items: flex-start;
-        gap: 10px;
-        min-width: 0;
+        gap: 8px;
     }
 
-    .clients-page .top h1 {
-        min-width: 0;
+    .clients-page .crm-search input {
+        font-size: 16px !important;
     }
 
-    .clients-page .layout {
-        min-width: 0;
+    .clients-page .crm-list {
+        max-height: 38vh;
     }
 
-    .clients-page .search-row {
-        flex-wrap: wrap;
-        min-width: 0;
-    }
-
-    .clients-page .search-row input {
-        min-width: 0;
-        flex: 1 1 200px;
-    }
-
-    .clients-page .list {
-        max-height: none;
-    }
-
-    .clients-page .order-actions {
+    .clients-page .crm-order-actions {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
     }
 
-    .clients-page .order-actions button {
+    .clients-page .crm-order-actions button {
         width: 100%;
         min-height: 44px;
     }
 
-    .clients-page .quick-docs {
-        grid-template-columns: 1fr 1fr;
+    .clients-page .crm-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .clients-page .crm-action-btn {
+        min-height: 56px;
     }
 }
 
 @media (max-width: 420px) {
-    .clients-page .order-actions {
+    .clients-page .crm-order-actions {
         grid-template-columns: 1fr;
     }
 }
