@@ -351,6 +351,9 @@ function fixarivan_finance_overview(PDO $pdo, string $start, string $end, ?strin
     $recPartialSum = 0.0;
     $recPaidCount = 0;
     $recUnpaidCount = 0;
+    $receiptPaidOrderIdsInPeriod = [];
+    $invoicePaidOrderIdsInPeriod = [];
+    $paymentMethods = [];
 
     foreach ($receiptRows as $r) {
         if (!fixarivan_finance_row_matches_client($r, $clientId, $orderClientMap)) {
@@ -366,7 +369,17 @@ function fixarivan_finance_overview(PDO $pdo, string $start, string $end, ?strin
                 $oid = trim((string)($r['order_id'] ?? ''));
                 if ($oid !== '') {
                     $paidOrderIdsInPeriod[$oid] = true;
+                    $receiptPaidOrderIdsInPeriod[$oid] = ($receiptPaidOrderIdsInPeriod[$oid] ?? 0.0) + $rev;
                 }
+                $pm = strtolower(trim((string)($r['payment_method'] ?? 'other')));
+                if ($pm === '') {
+                    $pm = 'other';
+                }
+                if (!isset($paymentMethods[$pm])) {
+                    $paymentMethods[$pm] = ['method' => $pm, 'count' => 0, 'sum' => 0.0];
+                }
+                $paymentMethods[$pm]['count']++;
+                $paymentMethods[$pm]['sum'] += $rev;
             }
             $ps = strtolower(trim((string)($r['payment_status'] ?? '')));
             if (($ps === 'partial' || $ps === 'partially_paid') && $cashD !== '' && $cashD >= $start && $cashD <= $end) {
@@ -410,6 +423,7 @@ function fixarivan_finance_overview(PDO $pdo, string $start, string $end, ?strin
                 $oid = trim((string)($inv['order_id'] ?? ''));
                 if ($oid !== '') {
                     $paidOrderIdsInPeriod[$oid] = true;
+                    $invoicePaidOrderIdsInPeriod[$oid] = ($invoicePaidOrderIdsInPeriod[$oid] ?? 0.0) + $amt;
                 }
             }
         } else {
@@ -494,6 +508,25 @@ function fixarivan_finance_overview(PDO $pdo, string $start, string $end, ?strin
         $expenseTaxParts += fixarivan_finance_order_purchase_amount($ordersById[$oid]);
     }
     $profitTaxApprox = $revenueManagement - $expenseTaxParts;
+    $marginPctCash = $revenueManagement > 0 ? round(($profitTaxApprox / $revenueManagement) * 100, 1) : 0.0;
+
+    $duplicateOrderIds = [];
+    $duplicateInvoiceSum = 0.0;
+    foreach ($invoicePaidOrderIdsInPeriod as $oid => $invSum) {
+        if (isset($receiptPaidOrderIdsInPeriod[$oid])) {
+            $duplicateOrderIds[] = $oid;
+            $duplicateInvoiceSum += (float)$invSum;
+        }
+    }
+
+    $paymentMethodsList = array_values($paymentMethods);
+    usort($paymentMethodsList, static function ($a, $b): int {
+        return ($b['sum'] <=> $a['sum']);
+    });
+    foreach ($paymentMethodsList as &$pmRow) {
+        $pmRow['sum'] = round((float)$pmRow['sum'], 2);
+    }
+    unset($pmRow);
 
     return [
         'period' => ['start' => $start, 'end' => $end],
@@ -532,8 +565,18 @@ function fixarivan_finance_overview(PDO $pdo, string $start, string $end, ?strin
             'income' => round($revenueManagement, 2),
             'expense_parts_manual' => round($expenseTaxParts, 2),
             'approx_profit' => round($revenueManagement - $expenseTaxParts, 2),
+            'margin_pct_cash' => $marginPctCash,
             'orders_income_estimate' => round($partsSale + $ordersLaborEst, 2),
             'orders_profit_estimate' => round($partsSale + $ordersLaborEst - $partsPurchase, 2),
+        ],
+        'payment_methods' => $paymentMethodsList,
+        'warnings' => [
+            'duplicate_order_count' => count($duplicateOrderIds),
+            'duplicate_invoice_sum' => round($duplicateInvoiceSum, 2),
+            'duplicate_order_ids' => array_slice($duplicateOrderIds, 0, 25),
+            'duplicate_hint' => count($duplicateOrderIds) > 0
+                ? 'У этих заказов в периоде есть и оплаченная квитанция, и оплаченный счёт — сумма счетов может дублировать кассу.'
+                : '',
         ],
         'tax' => [
             'receipts_paid_total' => round($recPaidInPeriod, 2),
@@ -789,11 +832,74 @@ function fixarivan_finance_management_csv_rows(string $start, string $end, array
         ['metric' => 'summary_income', 'value' => (string)($sum['income'] ?? ''), 'unit' => 'EUR'],
         ['metric' => 'summary_expense_parts', 'value' => (string)($sum['expense_parts_manual'] ?? ''), 'unit' => 'EUR'],
         ['metric' => 'summary_approx_profit', 'value' => (string)($sum['approx_profit'] ?? ''), 'unit' => 'EUR'],
+        ['metric' => 'summary_margin_pct_cash', 'value' => (string)($sum['margin_pct_cash'] ?? ''), 'unit' => 'percent'],
+        ['metric' => 'warnings_duplicate_invoice_sum', 'value' => (string)($overview['warnings']['duplicate_invoice_sum'] ?? ''), 'unit' => 'EUR'],
         ['metric' => 'tax_total_income', 'value' => (string)($tax['total_income'] ?? ''), 'unit' => 'EUR'],
         ['metric' => 'tax_expense_parts', 'value' => (string)($tax['expense_parts_orders'] ?? ''), 'unit' => 'EUR'],
         ['metric' => 'tax_approx_profit', 'value' => (string)($tax['approx_profit'] ?? ''), 'unit' => 'EUR'],
         ['metric' => 'receipts_unpaid_sum', 'value' => (string)($pr['unpaid_sum'] ?? ''), 'unit' => 'EUR'],
         ['metric' => 'invoices_unpaid_sum', 'value' => (string)($inv['unpaid_open_sum'] ?? ''), 'unit' => 'EUR'],
         ['metric' => 'orders_in_period', 'value' => (string)($ord['in_period'] ?? ''), 'unit' => 'count'],
+    ];
+}
+
+/**
+ * Динамика кассового дохода и прибыли по периоду (для графика на finance.html).
+ *
+ * @return array{labels: list<string>, revenue: list<float>, profit: list<float>}
+ */
+function fixarivan_finance_cash_series(PDO $pdo, string $start, string $end): array
+{
+    $tz = fixarivan_finance_tz();
+    $startDt = new DateTimeImmutable($start, $tz);
+    $endDt = new DateTimeImmutable($end, $tz);
+    $days = (int)$startDt->diff($endDt)->days + 1;
+    $useMonthly = $days > 62;
+    $maxPoints = $useMonthly ? 12 : min(10, max(1, $days));
+
+    $labels = [];
+    $revenue = [];
+    $profit = [];
+    $buckets = [];
+
+    if ($useMonthly) {
+        $cursor = $startDt->modify('first day of this month');
+        while ($cursor <= $endDt && count($buckets) < 12) {
+            $buckets[] = [
+                'label' => $cursor->format('m.Y'),
+                'start' => max($start, $cursor->format('Y-m-d')),
+                'end' => min($end, $cursor->modify('last day of this month')->format('Y-m-d')),
+            ];
+            $cursor = $cursor->modify('+1 month');
+        }
+    } else {
+        $step = max(1, (int)ceil($days / $maxPoints));
+        $cursor = $startDt;
+        while ($cursor <= $endDt && count($buckets) < $maxPoints) {
+            $sliceStart = $cursor->format('Y-m-d');
+            $sliceEndDt = $cursor->modify('+' . ($step - 1) . ' days');
+            if ($sliceEndDt > $endDt) {
+                $sliceEndDt = $endDt;
+            }
+            $buckets[] = [
+                'label' => $cursor->format('d.m'),
+                'start' => $sliceStart,
+                'end' => $sliceEndDt->format('Y-m-d'),
+            ];
+            $cursor = $sliceEndDt->modify('+1 day');
+        }
+    }
+
+    foreach ($buckets as $bucket) {
+        $ov = fixarivan_finance_overview($pdo, (string)$bucket['start'], (string)$bucket['end']);
+        $labels[] = (string)$bucket['label'];
+        $revenue[] = round((float)($ov['revenue']['total'] ?? 0), 2);
+        $profit[] = round((float)($ov['summary']['approx_profit'] ?? 0), 2);
+    }
+
+    return [
+        'labels' => $labels,
+        'revenue' => $revenue,
+        'profit' => $profit,
     ];
 }

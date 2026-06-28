@@ -44,6 +44,17 @@ if ($action === 'overview') {
     exit;
 }
 
+if ($action === 'series') {
+    header('Content-Type: application/json; charset=utf-8');
+    $series = fixarivan_finance_cash_series($pdo, $start, $end);
+    echo json_encode([
+        'success' => true,
+        'period_meta' => $period,
+        'series' => $series,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 if ($action === 'drilldown') {
     header('Content-Type: application/json; charset=utf-8');
     $kind = trim((string)($get['kind'] ?? ''));
@@ -126,4 +137,4 @@ if ($action === 'export') {
 }
 
 header('Content-Type: application/json; charset=utf-8');
-echo json_encode(['success' => false, 'message' => 'Unknown action', 'errors' => ['overview', 'drilldown', 'export']], JSON_UNESCAPED_UNICODE);
+echo json_encode(['success' => false, 'message' => 'Unknown action', 'errors' => ['overview', 'series', 'drilldown', 'export']], JSON_UNESCAPED_UNICODE);

@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Финансы — FixariVan</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -149,8 +149,61 @@
         .orphan-table th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
         .orphan-table a { color: var(--accent); text-decoration: none; }
         .orphan-table a:hover { text-decoration: underline; }
+        .info-banner {
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 0.84rem;
+            color: #cbd5e1;
+            margin-bottom: 14px;
+            line-height: 1.45;
+        }
+        .info-banner strong { color: #e2e8f0; }
+        .warn-banner {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.35);
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 0.86rem;
+            color: #fde68a;
+            margin-bottom: 14px;
+            line-height: 1.45;
+        }
+        .chart-block {
+            background: var(--card);
+            border: 1px solid #334155;
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+        }
+        .chart-block h2 {
+            margin: 0 0 10px;
+            font-size: 0.95rem;
+            color: var(--muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .chart-wrap { position: relative; height: 220px; max-width: 100%; }
+        .drill-table-wrap { max-height: 420px; overflow: auto; }
+        .drill-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 8px; }
+        .drill-table th, .drill-table td { border: 1px solid #334155; padding: 7px 9px; text-align: left; vertical-align: top; word-break: break-word; }
+        .drill-table th { color: var(--muted); font-weight: 600; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em; position: sticky; top: 0; background: #0c1222; }
+        .drill-table a { color: var(--accent); text-decoration: none; }
+        .drill-table a:hover { text-decoration: underline; }
+        .drill-title { font-size: 0.92rem; font-weight: 650; margin-bottom: 6px; color: #e2e8f0; }
+        .drill-subtitle { font-size: 0.78rem; color: var(--muted); margin: 12px 0 4px; }
+        .kpi-sub { font-size: 0.68rem; color: var(--muted); margin-top: 4px; }
+        @media (max-width: 640px) {
+            .wrap { padding: 12px 10px 40px; }
+            .kpi-hero { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .chart-wrap { height: 200px; }
+            .tools a, .tools button { flex: 1 1 calc(50% - 4px); text-align: center; }
+        }
     </style>
     <link rel="stylesheet" href="css/fixarivan-theme.css">
+    <link rel="stylesheet" href="mobile_fixes.css?v=20250625finance">
 </head>
 <body class="fv-finance">
 <div class="wrap">
@@ -159,6 +212,15 @@
     </div>
     <h1>Финансы и отчёты</h1>
     <p class="sub" id="periodLabel">Загрузка…</p>
+
+    <div class="info-banner" id="infoBanner">
+        <strong>Три типа цифр:</strong>
+        <strong>Касса</strong> — оплаченные квитанции и счета по дате оплаты.
+        <strong>Запчасти</strong> — закупка/продажа по дате приёма заказа.
+        <strong>Оценка</strong> — позиции + работа по заказам (не касса).
+    </div>
+
+    <div id="warnBanner" class="warn-banner" style="display:none;"></div>
 
     <div class="chips" id="presetChips" role="group" aria-label="Период">
         <button type="button" class="chip" data-preset="today">Сегодня</button>
@@ -177,21 +239,30 @@
 
     <section class="kpi-hero" id="kpiHero" aria-label="Ключевые показатели">
         <div class="kpi-cell">
-            <div class="kpi-label">Доход</div>
-            <button type="button" class="kpi-num kpi-click" data-drill="income" aria-label="Доход: детализация">—</button>
+            <div class="kpi-label">Кассовый доход</div>
+            <button type="button" class="kpi-num kpi-click" data-drill="income" aria-label="Кассовый доход: детализация">—</button>
+            <div class="kpi-sub">Квитанции + счета</div>
         </div>
         <div class="kpi-cell">
-            <div class="kpi-label">Расход</div>
-            <button type="button" class="kpi-num kpi-click" data-drill="expense" aria-label="Расход: детализация">—</button>
+            <div class="kpi-label">Закупка запчастей</div>
+            <button type="button" class="kpi-num kpi-click" data-drill="expense" aria-label="Закупка: детализация">—</button>
+            <div class="kpi-sub">По оплаченным заказам</div>
         </div>
         <div class="kpi-cell">
-            <div class="kpi-label">Прибыль</div>
+            <div class="kpi-label">Кассовая прибыль ≈</div>
             <button type="button" class="kpi-num kpi-click kpi-profit" data-drill="profit" aria-label="Прибыль: детализация">—</button>
+            <div class="kpi-sub" id="kpiMarginSub">Маржа —</div>
         </div>
         <div class="kpi-cell">
             <div class="kpi-label">Неоплачено</div>
             <button type="button" class="kpi-num kpi-click kpi-debt" data-drill="unpaid" aria-label="Неоплачено: детализация">—</button>
+            <div class="kpi-sub">Все открытые долги</div>
         </div>
+    </section>
+
+    <section class="chart-block" id="chartSection" aria-label="Динамика">
+        <h2>Динамика за период</h2>
+        <div class="chart-wrap"><canvas id="financeChart" aria-label="График дохода и прибыли"></canvas></div>
     </section>
 
     <section class="block" id="orphanInvoicesSection" style="margin-top: 14px;">
@@ -201,6 +272,11 @@
     </section>
 
     <div class="grid" id="mainGrid"></div>
+
+    <section class="block" id="payMethodsSection" style="margin-top:14px; display:none;">
+        <h2>Способы оплаты (квитанции в периоде)</h2>
+        <div id="payMethodsBlock"></div>
+    </section>
 
     <section class="block" id="taxSection" style="margin-top:14px;">
         <h2>Налоговая сводка (касса)</h2>
@@ -218,14 +294,23 @@
         <h2>Детализация</h2>
         <p class="muted">Нажмите сумму в блоке выше или ссылку ниже — список документов из SQLite.</p>
         <div class="tools" id="drillLinks"></div>
-        <div id="drillPanel" class="panel" style="display:none;"><pre id="drillPre"></pre></div>
+        <div id="drillPanel" class="panel drill-table-wrap" style="display:none;">
+            <div id="drillTitle" class="drill-title"></div>
+            <div id="drillTableHost"></div>
+        </div>
     </section>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 (function () {
     const eur = new Intl.NumberFormat('fi-FI', { style: 'currency', currency: 'EUR' });
+    const PAY_METHOD_RU = {
+        holvi_terminal: 'Holvi (терминал)', cash: 'Наличные', bank_transfer: 'Банковский перевод',
+        card: 'Карта', mobilepay: 'MobilePay', other: 'Другое'
+    };
     let currentPreset = 'month';
     let lastMeta = null;
+    let financeChart = null;
 
     function money(n) {
         const x = Number(n);
@@ -285,6 +370,170 @@
         return '<div class="rowline"><span>' + label + '</span><span>' + inner + '</span></div>';
     }
 
+    function docLinkReceipt(row) {
+        const id = String(row.document_id || '').trim();
+        return id ? ('receipt.html?document_id=' + encodeURIComponent(id)) : '';
+    }
+    function docLinkInvoice(row) {
+        const id = String(row.document_id || '').trim();
+        return id ? ('invoice.html?document_id=' + encodeURIComponent(id)) : '';
+    }
+    function docLinkOrder(row) {
+        const oid = String(row.order_id || '').trim();
+        if (!oid) return '';
+        return 'track.html?q=' + encodeURIComponent(oid);
+    }
+
+    function renderDrillTable(title, columns, rows) {
+        if (!rows || !rows.length) {
+            return '<p class="muted">' + escHtml(title) + ': записей нет.</p>';
+        }
+        let h = '<div class="drill-subtitle">' + escHtml(title) + ' (' + rows.length + ')</div>';
+        h += '<table class="drill-table"><thead><tr>';
+        columns.forEach(function (c) { h += '<th>' + escHtml(c.label) + '</th>'; });
+        h += '</tr></thead><tbody>';
+        rows.forEach(function (row) {
+            h += '<tr>';
+            columns.forEach(function (c) {
+                const raw = typeof c.render === 'function' ? c.render(row) : String(row[c.key] ?? '—');
+                h += '<td>' + (c.rawHtml ? raw : escHtml(raw)) + '</td>';
+            });
+            h += '</tr>';
+        });
+        h += '</tbody></table>';
+        return h;
+    }
+
+    function receiptDrillColumns() {
+        return [
+            { label: 'Дата оплаты', key: '_cash_date' },
+            { label: '№', render: function (r) { return String(r.receipt_number || r.document_id || '—'); } },
+            { label: 'Заказ', key: 'order_id' },
+            { label: 'Клиент', key: 'client_name' },
+            { label: 'Сумма', render: function (r) { return money(r._revenue_amount != null ? r._revenue_amount : r.total_amount); } },
+            { label: 'Способ', render: function (r) { return PAY_METHOD_RU[String(r.payment_method || 'other').toLowerCase()] || r.payment_method || '—'; } },
+            { label: '', rawHtml: true, render: function (r) {
+                const href = docLinkReceipt(r);
+                return href ? ('<a href="' + escHtml(href) + '">Открыть</a>') : '—';
+            } }
+        ];
+    }
+    function invoiceDrillColumns(paid) {
+        return [
+            { label: paid ? 'Дата оплаты' : 'Срок', render: function (r) {
+                return String(r._paid_date || r.due_date || r.date_created || '—').slice(0, 10);
+            } },
+            { label: '№', render: function (r) { return String(r.invoice_id || r.document_id || '—'); } },
+            { label: 'Заказ', key: 'order_id' },
+            { label: 'Клиент', key: 'client_name' },
+            { label: 'Сумма', render: function (r) { return money(r._revenue_amount != null ? r._revenue_amount : r.total_amount); } },
+            { label: 'Статус', key: 'status' },
+            { label: '', rawHtml: true, render: function (r) {
+                const href = docLinkInvoice(r);
+                return href ? ('<a href="' + escHtml(href) + '">Открыть</a>') : '—';
+            } }
+        ];
+    }
+    function orderDrillColumns() {
+        return [
+            { label: 'Приём', key: '_period_date' },
+            { label: 'Заказ', key: 'order_id' },
+            { label: 'Клиент', key: 'client_name' },
+            { label: 'Устройство', key: 'device_model' },
+            { label: 'Закупка', render: function (r) { return money(r.parts_purchase_total); } },
+            { label: 'Продажа', render: function (r) { return money(r.parts_sale_total); } },
+            { label: '', rawHtml: true, render: function (r) {
+                const href = docLinkOrder(r);
+                return href ? ('<a href="' + escHtml(href) + '">Track</a>') : '—';
+            } }
+        ];
+    }
+
+    function renderFinanceChart(series) {
+        const canvas = qs('#financeChart');
+        if (!canvas || typeof Chart === 'undefined') return;
+        const labels = (series && series.labels) ? series.labels : [];
+        const rev = (series && series.revenue) ? series.revenue : [];
+        const prof = (series && series.profit) ? series.profit : [];
+        if (financeChart) {
+            financeChart.destroy();
+            financeChart = null;
+        }
+        if (!labels.length) {
+            return;
+        }
+        financeChart = new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Доход (касса)',
+                        data: rev,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                        tension: 0.25,
+                        fill: true,
+                    },
+                    {
+                        label: 'Прибыль ≈',
+                        data: prof,
+                        borderColor: '#4ade80',
+                        backgroundColor: 'rgba(74, 222, 128, 0.08)',
+                        tension: 0.25,
+                        fill: false,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#cbd5e1', boxWidth: 12 } } },
+                scales: {
+                    x: { ticks: { color: '#94a3b8', maxRotation: 0 }, grid: { color: 'rgba(51,65,85,0.35)' } },
+                    y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(51,65,85,0.35)' } }
+                }
+            }
+        });
+    }
+
+    function renderWarnings(warnings) {
+        const el = qs('#warnBanner');
+        if (!el) return;
+        const w = warnings || {};
+        const n = Number(w.duplicate_order_count) || 0;
+        const sum = Number(w.duplicate_invoice_sum) || 0;
+        if (n <= 0 || sum <= 0) {
+            el.style.display = 'none';
+            el.textContent = '';
+            return;
+        }
+        const ids = Array.isArray(w.duplicate_order_ids) ? w.duplicate_order_ids.slice(0, 5).join(', ') : '';
+        el.style.display = 'block';
+        el.innerHTML = '⚠️ Возможный двойной учёт: у <strong>' + n + '</strong> заказ(ов) в периоде есть и квитанция, и счёт (сумма счетов ≈ <strong>' + escHtml(money(sum)) + '</strong>). '
+            + (ids ? ('Примеры: ' + escHtml(ids) + (n > 5 ? '…' : '') + '. ') : '')
+            + (w.duplicate_hint ? escHtml(String(w.duplicate_hint)) : '');
+    }
+
+    function renderPaymentMethods(list) {
+        const sec = qs('#payMethodsSection');
+        const box = qs('#payMethodsBlock');
+        if (!sec || !box) return;
+        const rows = Array.isArray(list) ? list : [];
+        if (!rows.length) {
+            sec.style.display = 'none';
+            return;
+        }
+        sec.style.display = 'block';
+        let html = '';
+        rows.forEach(function (pm) {
+            const code = String(pm.method || 'other');
+            const label = PAY_METHOD_RU[code] || code;
+            html += row(label, money(pm.sum) + ' · ' + String(pm.count || 0) + ' шт.');
+        });
+        box.innerHTML = html;
+    }
+
     function render(data, meta) {
         lastMeta = meta;
         qs('#periodLabel').textContent = (meta && meta.label ? meta.label + ' · ' : '') +
@@ -307,6 +556,14 @@
         if (hExpense) hExpense.textContent = money(sum.expense_parts_manual);
         if (hProfit) hProfit.textContent = money(sum.approx_profit);
         if (hUnpaid) hUnpaid.textContent = money(unpaidTotal);
+        const marginSub = qs('#kpiMarginSub');
+        if (marginSub) {
+            const mp = Number(sum.margin_pct_cash);
+            marginSub.textContent = isFinite(mp) && mp !== 0 ? ('Маржа ' + mp + ' %') : 'Маржа —';
+        }
+
+        renderWarnings(data.warnings);
+        renderPaymentMethods(data.payment_methods);
 
         let html = '';
         html += card('Выручка (касса за период)', ''
@@ -328,10 +585,10 @@
             + row('Просрочено (шт.)', String(inv.overdue_count))
             + rowDrill('Просрочено (сумма)', money(inv.overdue_sum), 'invoices_overdue', 'val-debt'));
 
-        html += card('Запчасти по заказам', ''
-            + rowDrill('Закупка', money(parts.purchase), 'expense')
+        html += card('Запчасти по заказам (дата приёма)', ''
+            + rowDrill('Закупка', money(parts.purchase), 'orders_period')
             + rowDrill('Продажа', money(parts.sale), 'orders_period')
-            + rowDrill('Прибыль', money(parts.profit), 'orders_period', 'val-profit'));
+            + rowDrill('Маржа запчастей', money(parts.profit), 'orders_period', 'val-profit'));
 
         html += card('Заказы (по дате приёма в периоде)', ''
             + rowDrill('Всего', String(ord.in_period), 'orders_period')
@@ -339,12 +596,13 @@
             + row('В работе', String(ord.in_progress))
             + row('Оценка работ (сумма)', money(ord.estimated_labor_sum || 0)));
 
-        html += card('Сводка', ''
+        html += card('Сводка (касса)', ''
             + rowDrill('Доход (касса)', money(sum.income), 'income')
-            + rowDrill('Расход (запчасти, вручную)', money(sum.expense_parts_manual), 'expense')
-            + rowDrill('Ориентировочная прибыль', money(sum.approx_profit), 'profit', 'val-profit')
+            + rowDrill('Расход (закупка по оплаченным заказам)', money(sum.expense_parts_manual), 'expense')
+            + rowDrill('Кассовая прибыль ≈', money(sum.approx_profit), 'profit', 'val-profit')
+            + row('Маржа (касса)', (Number(sum.margin_pct_cash) || 0) + ' %')
             + row('Оценка выручки по заказам (позиции + работа)', money(sum.orders_income_estimate || 0))
-            + row('Оценка прибыли по заказам', money(sum.orders_profit_estimate || 0)));
+            + row('Оценка прибыли по заказам (не касса)', money(sum.orders_profit_estimate || 0)));
 
         qs('#mainGrid').innerHTML = html;
 
@@ -364,7 +622,10 @@
             + '<a href="api/finance.php?action=export&kind=tax&format=csv&' + q + '">Налоговый CSV</a>'
             + '<a href="api/finance.php?action=export&kind=management&format=json&' + q + '">JSON сводка</a>'
             + '<a href="api/finance.php?action=export&kind=receipts_paid&format=csv&' + q + '">Квитанции (оплаченные)</a>'
+            + '<a href="api/finance.php?action=export&kind=receipts_unpaid&format=csv&' + q + '">Квитанции (неоплаченные)</a>'
             + '<a href="api/finance.php?action=export&kind=invoices_paid&format=csv&' + q + '">Счета (оплаченные)</a>'
+            + '<a href="api/finance.php?action=export&kind=invoices_unpaid&format=csv&' + q + '">Счета (долг)</a>'
+            + '<a href="api/finance.php?action=export&kind=invoices_overdue&format=csv&' + q + '">Счета (просрочено)</a>'
             + '<a href="api/finance.php?action=export&kind=orders&format=csv&' + q + '">Заказы</a>';
 
         qs('#drillLinks').innerHTML = ''
@@ -378,24 +639,35 @@
 
     async function runDrill(kind) {
         const panel = qs('#drillPanel');
-        const pre = qs('#drillPre');
-        pre.textContent = 'Загрузка…';
+        const titleEl = qs('#drillTitle');
+        const host = qs('#drillTableHost');
+        titleEl.textContent = 'Загрузка…';
+        host.innerHTML = '';
         panel.style.display = 'block';
         panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         const q = periodQuery();
+        const titles = {
+            receipts_paid: 'Оплаченные квитанции',
+            receipts_unpaid: 'Неоплаченные квитанции',
+            invoices_paid: 'Оплаченные счета',
+            invoices_unpaid: 'Неоплаченные счета',
+            invoices_overdue: 'Просроченные счета',
+            orders_period: 'Заказы в периоде',
+            income: 'Кассовый доход',
+            unpaid: 'Неоплачено',
+            expense: 'Закупка запчастей',
+            profit: 'Кассовая прибыль'
+        };
         try {
             if (kind === 'income') {
                 const [r1, r2] = await Promise.all([
                     fetch('api/finance.php?action=drilldown&kind=receipts_paid&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); }),
                     fetch('api/finance.php?action=drilldown&kind=invoices_paid&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); })
                 ]);
-                if (!r1.success || !r2.success) {
-                    throw new Error(r1.message || r2.message || 'Ошибка');
-                }
-                pre.textContent = JSON.stringify({
-                    оплаченные_квитанции: r1.rows,
-                    оплаченные_счета: r2.rows
-                }, null, 2);
+                if (!r1.success || !r2.success) throw new Error(r1.message || r2.message || 'Ошибка');
+                titleEl.textContent = titles.income;
+                host.innerHTML = renderDrillTable('Квитанции', receiptDrillColumns(), r1.rows)
+                    + renderDrillTable('Счета', invoiceDrillColumns(true), r2.rows);
                 return;
             }
             if (kind === 'unpaid') {
@@ -403,52 +675,54 @@
                     fetch('api/finance.php?action=drilldown&kind=receipts_unpaid&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); }),
                     fetch('api/finance.php?action=drilldown&kind=invoices_unpaid&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); })
                 ]);
-                if (!r1.success || !r2.success) {
-                    throw new Error(r1.message || r2.message || 'Ошибка');
-                }
-                pre.textContent = JSON.stringify({
-                    неоплаченные_квитанции: r1.rows,
-                    неоплаченные_счета: r2.rows
-                }, null, 2);
+                if (!r1.success || !r2.success) throw new Error(r1.message || r2.message || 'Ошибка');
+                titleEl.textContent = titles.unpaid;
+                host.innerHTML = renderDrillTable('Квитанции', receiptDrillColumns(), r1.rows)
+                    + renderDrillTable('Счета', invoiceDrillColumns(false), r2.rows);
                 return;
             }
-            if (kind === 'expense') {
-                const j = await fetch('api/finance.php?action=drilldown&kind=orders_period&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); });
-                if (!j.success) {
-                    throw new Error(j.message || 'Ошибка');
+            if (kind === 'expense' || kind === 'profit') {
+                const reqs = kind === 'profit'
+                    ? [
+                        fetch('api/finance.php?action=drilldown&kind=receipts_paid&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); }),
+                        fetch('api/finance.php?action=drilldown&kind=invoices_paid&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); }),
+                        fetch('api/finance.php?action=drilldown&kind=orders_period&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); })
+                    ]
+                    : [fetch('api/finance.php?action=drilldown&kind=orders_period&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); })];
+                const results = await Promise.all(reqs);
+                results.forEach(function (j) { if (!j.success) throw new Error(j.message || 'Ошибка'); });
+                titleEl.textContent = titles[kind];
+                if (kind === 'expense') {
+                    host.innerHTML = '<p class="muted">Закупка считается по заказам, у которых в периоде была оплата (квитанция или счёт).</p>'
+                        + renderDrillTable('Заказы', orderDrillColumns(), results[0].rows);
+                    return;
                 }
-                pre.textContent = JSON.stringify({
-                    пояснение: 'Расход: суммы parts_purchase_total из заказов с датой приёма в периоде (см. строки заказов).',
-                    заказы_в_периоде: j.rows
-                }, null, 2);
-                return;
-            }
-            if (kind === 'profit') {
-                const [r1, r2, r3] = await Promise.all([
-                    fetch('api/finance.php?action=drilldown&kind=receipts_paid&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); }),
-                    fetch('api/finance.php?action=drilldown&kind=invoices_paid&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); }),
-                    fetch('api/finance.php?action=drilldown&kind=orders_period&' + q, { credentials: 'same-origin' }).then(function (r) { return r.json(); })
-                ]);
-                if (!r1.success || !r2.success || !r3.success) {
-                    throw new Error(r1.message || r2.message || r3.message || 'Ошибка');
-                }
-                pre.textContent = JSON.stringify({
-                    пояснение: 'Доход (оплаченные квитанции и счета в периоде) минус расход (закупка запчастей по заказам в периоде).',
-                    оплаченные_квитанции: r1.rows,
-                    оплаченные_счета: r2.rows,
-                    заказы_в_периоде: r3.rows
-                }, null, 2);
+                host.innerHTML = '<p class="muted">Доход — оплаченные документы; расход — закупка по связанным заказам.</p>'
+                    + renderDrillTable('Квитанции', receiptDrillColumns(), results[0].rows)
+                    + renderDrillTable('Счета', invoiceDrillColumns(true), results[1].rows)
+                    + renderDrillTable('Заказы', orderDrillColumns(), results[2].rows);
                 return;
             }
             const res = await fetch('api/finance.php?action=drilldown&kind=' + encodeURIComponent(kind) + '&' + q, { credentials: 'same-origin' });
             const j = await res.json();
             if (!j.success) {
-                pre.textContent = j.message || 'Ошибка';
+                titleEl.textContent = 'Ошибка';
+                host.innerHTML = '<p class="muted">' + escHtml(j.message || 'Ошибка') + '</p>';
                 return;
             }
-            pre.textContent = JSON.stringify(j.rows, null, 2);
+            titleEl.textContent = titles[kind] || kind;
+            if (kind === 'receipts_paid' || kind === 'receipts_unpaid') {
+                host.innerHTML = renderDrillTable(titleEl.textContent, receiptDrillColumns(), j.rows);
+            } else if (kind.indexOf('invoice') === 0) {
+                host.innerHTML = renderDrillTable(titleEl.textContent, invoiceDrillColumns(kind === 'invoices_paid'), j.rows);
+            } else if (kind === 'orders_period') {
+                host.innerHTML = renderDrillTable(titleEl.textContent, orderDrillColumns(), j.rows);
+            } else {
+                host.innerHTML = renderDrillTable(titleEl.textContent, [{ label: 'Данные', render: function (r) { return JSON.stringify(r); } }], j.rows);
+            }
         } catch (e) {
-            pre.textContent = humanizeFi(e);
+            titleEl.textContent = 'Ошибка';
+            host.innerHTML = '<p class="muted">' + escHtml(humanizeFi(e)) + '</p>';
         }
     }
 
@@ -479,13 +753,21 @@
     async function load() {
         showErr('');
         try {
-            const res = await fetch('api/finance.php?action=overview&' + periodQuery(), { credentials: 'same-origin', cache: 'no-store' });
-            const j = await res.json();
+            const q = periodQuery();
+            const [overviewRes, seriesRes] = await Promise.all([
+                fetch('api/finance.php?action=overview&' + q, { credentials: 'same-origin', cache: 'no-store' }),
+                fetch('api/finance.php?action=series&' + q, { credentials: 'same-origin', cache: 'no-store' })
+            ]);
+            const j = await overviewRes.json();
             if (!j.success) {
                 showErr(j.message || 'Ошибка загрузки');
                 return;
             }
             render(j.data, j.period_meta);
+            try {
+                const sj = await seriesRes.json();
+                if (sj.success && sj.series) renderFinanceChart(sj.series);
+            } catch (_) {}
         } catch (e) {
             showErr(humanizeFi(e));
         }
@@ -552,7 +834,7 @@
 
     qs('#applyCustom').addEventListener('click', () => { load(); });
 
-    ['kpiHero', 'mainGrid', 'taxSection', 'drillLinks'].forEach(function (id) {
+    ['kpiHero', 'mainGrid', 'taxSection', 'drillLinks', 'payMethodsSection'].forEach(function (id) {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('click', onDrillActivate);

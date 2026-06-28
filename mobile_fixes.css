@@ -296,6 +296,28 @@
 }
 
 /* -------------------------------------------------------------------------- */
+/* Страница: finance.html */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    body.fv-finance .wrap {
+        padding: max(10px, env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px));
+    }
+
+    body.fv-finance .chips {
+        gap: 6px;
+    }
+
+    body.fv-finance .chip {
+        padding: 7px 11px;
+        font-size: 0.8rem;
+    }
+
+    body.fv-finance .drill-table-wrap {
+        max-height: 55vh;
+    }
+}
+
+/* -------------------------------------------------------------------------- */
 /* Страница: Track — track.html (.track-page) */
 /* -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
