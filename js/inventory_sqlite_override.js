@@ -320,7 +320,12 @@
         }
 
         grid.innerHTML = filtered.map(function (item) {
-            if (window.InventoryMobileApp && typeof InventoryMobileApp.buildItemCardHtml === 'function') {
+            if (
+                window.InventoryMobileApp
+                && typeof InventoryMobileApp.isMobile === 'function'
+                && InventoryMobileApp.isMobile()
+                && typeof InventoryMobileApp.buildItemCardHtml === 'function'
+            ) {
                 return InventoryMobileApp.buildItemCardHtml(item, escapeHtml);
             }
             var status = getStatus(item);

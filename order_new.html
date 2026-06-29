@@ -664,7 +664,7 @@
         }
     </style>
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625mobile">
-    <link rel="stylesheet" href="css/order-new-mobile-wizard.css?v=20250625onwwiz">
+    <link rel="stylesheet" href="css/order-new-mobile-wizard.css?v=20250625onwfix">
 </head>
 <body class="order-new-page order-mode-repair">
     <div class="container">
@@ -807,6 +807,7 @@
                         <p class="muted show-custom-only" style="margin-top:0;">Можно использовать как гибкий список работ, товаров или смешанных позиций. Если добавлены строки, они сохраняются в заказ как обычно и совместимы со складской логикой.</p>
                         <p class="muted show-repair-only">Формат цен в строках: закуп €… / продажа €… — для учёта на складе.</p>
                         <p class="muted" style="margin-top:8px;">Кнопка <strong>«Склад»</strong> у названия строки открывает список позиций каталога (поиск по названию и артикулу) — подставятся название, закуп/продажа из карточки, ID и галочка «Со склада». Полный каталог по-прежнему в <a href="inventory.html" target="_blank" rel="noopener">складе</a>.</p>
+                        <p class="muted onw-lines-scroll-hint" style="margin-top:8px;">На телефоне проведите таблицу влево, чтобы увидеть все колонки.</p>
                         <p class="muted" style="margin-top:8px;">Галочка «Со склада» и ID позиции из <a href="inventory.html" target="_blank" rel="noopener">каталога склада</a>: строка не попадает в заявку на закупку; при статусе «готово» / «выдано» списывается остаток (не больше колич.) в строке. «Сразу» — то же со складом, но списание выполняется при сохранении заказа (для срочной выдачи). Новая позиция без выбора из каталога: ID и карточка склада создаются автоматически (приход по заказу), если заполнено наименование.</p>
                     </div>
                 </span>
@@ -1637,7 +1638,7 @@
         window.inferOrderMode = inferOrderMode;
 
     </script>
-    <script src="js/order_new_mobile_wizard.js?v=20250625onwwiz"></script>
+    <script src="js/order_new_mobile_wizard.js?v=20250625onwfix"></script>
     <script src="js/order_problem_templates.js?v=20250625tpl2"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {

@@ -985,7 +985,7 @@
 
     </style>
     <link rel="stylesheet" href="mobile_fixes.css">
-    <link rel="stylesheet" href="css/inventory-mobile-app.css?v=20250625invwork">
+    <link rel="stylesheet" href="css/inventory-mobile-app.css?v=20250625invfix">
 </head>
 <body class="inventory-page fv-inventory">
     <div class="header">
@@ -1362,7 +1362,7 @@
 
     <script src="js/format_money.js"></script>
     <script>
-        let inventory = [];
+        var inventory = [];
         /** Строки из заказов (SQLite), ожидающие закупки — подгружаются с сервера */
         let orderPurchaseQueueLines = [];
         /** id карточек склада, привязанных к активной очереди закупки (ответ API queue_inventory_item_ids) */
@@ -1592,6 +1592,9 @@
         }
 
         async function loadInventory() {
+            if (typeof window.loadInventory === 'function' && window.loadInventory !== loadInventory) {
+                return window.loadInventory();
+            }
             let remoteLoaded = false;
 
             try {
@@ -1981,6 +1984,9 @@
         }
 
         function renderInventory() {
+            if (typeof window.renderInventory === 'function' && window.renderInventory !== renderInventory) {
+                return window.renderInventory();
+            }
             const grid = document.getElementById('inventoryGrid');
             const finish = () => { scheduleUsageChartUpdate(); };
 
@@ -2034,7 +2040,7 @@
             }
 
             grid.innerHTML = filtered.map(item => {
-                if (window.InventoryMobileApp && typeof InventoryMobileApp.buildItemCardHtml === 'function') {
+                if (window.InventoryMobileApp && typeof InventoryMobileApp.isMobile === 'function' && InventoryMobileApp.isMobile() && typeof InventoryMobileApp.buildItemCardHtml === 'function') {
                     return InventoryMobileApp.buildItemCardHtml(item, escHtmlInv);
                 }
                 const status = getStatus(item);
@@ -2737,7 +2743,7 @@
 
         // Auto popup disabled by request: low stock is visible in widgets/filters only.
     </script>
-    <script src="js/inventory_mobile_app.js?v=20250625invwork"></script>
+    <script src="js/inventory_mobile_app.js?v=20250625invfix"></script>
     <script src="js/inventory_sqlite_override.js"></script>
     <script src="js/brand_logo.js?v=20250625"></script>
 

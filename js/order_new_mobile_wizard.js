@@ -9,10 +9,9 @@
     const STORAGE_TYPE = 'fixarivan_order_new_wizard_type_v1';
 
     const TYPE_OPTIONS = [
-        { id: 'repair', icon: '🔧', label: 'Ремонт', desc: 'Акт приёма, устройство, неисправность' },
-        { id: 'sale', icon: '📦', label: 'Продажа', desc: 'Позиции со склада, без полей ремонта' },
-        { id: 'hybrid', icon: '🔀', label: 'Гибрид', desc: 'Ремонт + продажа запчастей' },
-        { id: 'custom', icon: '⚙️', label: 'Другая услуга', desc: 'Камеры, Wi‑Fi, настройка, выезд' },
+        { id: 'repair', icon: '🔧', label: 'Ремонт', desc: 'Акт приёма: устройство, неисправность' },
+        { id: 'sale', icon: '📦', label: 'Продажа', desc: 'Позиции и склад, без полей ремонта' },
+        { id: 'custom', icon: '⚙️', label: 'Нестандарт', desc: 'Другое: камеры, Wi‑Fi, настройка, выезд' },
     ];
 
     const PROGRESS = [
@@ -188,6 +187,7 @@
     }
 
     function startWizard(typeId) {
+        if (typeId === 'hybrid') typeId = 'repair';
         selectedType = typeId;
         try { localStorage.setItem(STORAGE_TYPE, typeId); } catch (_) { /* ignore */ }
         setOrderMode(modeFromType(typeId));
@@ -198,6 +198,7 @@
         if (typeScreen) typeScreen.hidden = true;
         if (wizardForm) wizardForm.hidden = false;
         if (form) form.hidden = false;
+        mountFormInWizard();
         goStep(1);
     }
 
@@ -406,6 +407,20 @@
         return true;
     }
 
+    function mountFormInWizard() {
+        const form = el('orderForm');
+        const wizardForm = el('onwWizardForm');
+        if (!form || !wizardForm || form.parentElement === wizardForm) return;
+        wizardForm.appendChild(form);
+    }
+
+    function unmountFormFromWizard() {
+        const form = el('orderForm');
+        const container = document.querySelector('.container');
+        if (!form || !container || form.parentElement !== el('onwWizardForm')) return;
+        container.appendChild(form);
+    }
+
     function injectShell() {
         if (el('onwApp')) return;
         const app = document.createElement('div');
@@ -466,6 +481,7 @@
 
     function teardown() {
         document.body.classList.remove('order-new-mobile-wizard');
+        unmountFormFromWizard();
         const app = el('onwApp');
         if (app) app.hidden = true;
         const succ = el('onwSuccess');
@@ -493,6 +509,8 @@
             el('onwFooter').hidden = true;
         } else {
             if (form) form.hidden = false;
+            mountFormInWizard();
+            el('onwWizardForm').hidden = false;
             applyStepVisibility();
             updateProgress();
         }

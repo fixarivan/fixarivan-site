@@ -163,6 +163,33 @@
         });
     }
 
+    function syncCatalogHead() {
+        const grid = document.getElementById('inventoryGrid');
+        if (!grid) return;
+        let head = document.getElementById('invMobileCatalogHead');
+        if (!head) {
+            head = document.createElement('div');
+            head.className = 'inv-m-catalog-head';
+            head.id = 'invMobileCatalogHead';
+            grid.parentNode.insertBefore(head, grid);
+        }
+        const filter = getActiveFilter();
+        const showList = filter === 'all' || isStockFilter(filter);
+        head.style.display = showList ? '' : 'none';
+        if (!showList) return;
+        const cards = grid.querySelectorAll('.inv-m-card, .item-card');
+        const n = cards.length;
+        if (filter === 'all') {
+            head.textContent = n > 0 ? 'Товары (' + n + ')' : 'Товары';
+        } else if (filter === 'in-stock') {
+            head.textContent = 'В наличии (' + n + ')';
+        } else if (filter === 'low-stock') {
+            head.textContent = 'Мало на складе (' + n + ')';
+        } else if (filter === 'out-of-stock') {
+            head.textContent = 'Нет в наличии (' + n + ')';
+        }
+    }
+
     function syncCategoryCards() {
         const filter = getActiveFilter();
         document.querySelectorAll('.inv-m-cat-card').forEach(function (btn) {
@@ -506,15 +533,24 @@
         renderCategoryGrid();
         syncStockChips();
         syncCategoryCards();
+        syncCatalogHead();
     }
 
     function initMediaListener() {
         if (global.__invMobileMqBound) return;
         global.__invMobileMqBound = true;
         const mq = global.matchMedia('(max-width: 768px)');
-        const fn = function () { refresh(); afterRender(); };
+        const fn = function () {
+            refresh();
+            if (isMobile() && typeof global.loadInventory === 'function') {
+                global.loadInventory();
+            } else {
+                afterRender();
+            }
+        };
         if (mq.addEventListener) mq.addEventListener('change', fn);
         else mq.addListener(fn);
+        if (isMobile()) refresh();
     }
 
     global.InventoryMobileApp = {

@@ -240,6 +240,14 @@
         flex: 1;
     }
 
+    .inv-m-catalog-head {
+        font-size: 0.88rem;
+        font-weight: 800;
+        margin: 4px 0 10px;
+        color: #c4b5fd;
+        letter-spacing: 0.02em;
+    }
+
     /* ── Grid ── */
     body.inventory-page.inventory-mobile-app .inventory-grid {
         display: flex;
@@ -514,6 +522,11 @@
     }
 
     body.inventory-page.inventory-mobile-app .item-actions {
+        display: none !important;
+    }
+
+    /* Desktop card markup hidden on mobile — only when not using inv-m-card */
+    body.inventory-page.inventory-mobile-app .item-card:not(.inv-m-card) .item-content {
         display: none !important;
     }
 
