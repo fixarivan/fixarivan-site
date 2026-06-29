@@ -106,9 +106,9 @@
     <link rel="stylesheet" href="css/fixarivan-theme.css">
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625mobile">
     <link rel="stylesheet" href="css/track-modern.css?v=20250625trackcompact">
-    <link rel="stylesheet" href="css/track-mobile-app.css?v=20250625trackwork">
+    <link rel="stylesheet" href="css/track-mobile-app.css?v=20250625trackfix">
     <script src="js/track_ui.js?v=20250625polish"></script>
-    <script src="js/track_mobile_app.js?v=20250625trackwork"></script>
+    <script src="js/track_mobile_app.js?v=20250625trackfix"></script>
 </head>
 <body class="fv-page track-page">
     <div class="top">
@@ -1591,6 +1591,21 @@
                 email: g.client_email,
                 serial: primary.device_serial || '',
                 deviceType: primary.device_type || '',
+                portalUrl: String(primary.portal_url || (function () {
+                    const od = primary.documents.find((d) => d.type === 'order');
+                    const iv = primary.documents.find((d) => String(d.type || '').toLowerCase() === 'invoice');
+                    return (od && od.portal_url) || (iv && iv.portal_url) || '';
+                })()),
+                portalDocId: orderDocIdFromOrder(primary) || (function () {
+                    const iv = primary.documents.find((d) => String(d.type || '').toLowerCase() === 'invoice');
+                    return iv ? String(iv.document_id || '') : '';
+                })(),
+                orderId: primary.order_id || '',
+                clientToken: String(primary.client_token || (function () {
+                    const od = primary.documents.find((d) => d.type === 'order');
+                    const iv = primary.documents.find((d) => String(d.type || '').toLowerCase() === 'invoice');
+                    return (od && od.client_token) || (iv && iv.client_token) || '';
+                })()),
             };
             if (window.TrackMobileApp) TrackMobileApp.refresh(tree, window.__trackMobileMeta);
         }
@@ -1808,6 +1823,8 @@
 
         function bindPortalButtons(root) {
             root.querySelectorAll('.portal-open').forEach((btn) => {
+                if (btn.dataset.portalBound === '1') return;
+                btn.dataset.portalBound = '1';
                 btn.addEventListener('click', async () => {
                     const docId = btn.getAttribute('data-doc') || '';
                     const oid = btn.getAttribute('data-oid') || '';
@@ -1823,6 +1840,8 @@
                 });
             });
             root.querySelectorAll('.portal-copy').forEach((btn) => {
+                if (btn.dataset.portalBound === '1') return;
+                btn.dataset.portalBound = '1';
                 btn.addEventListener('click', async () => {
                     const docId = btn.getAttribute('data-doc') || '';
                     const oid = btn.getAttribute('data-oid') || '';
@@ -1846,6 +1865,8 @@
                 });
             });
         }
+        window.bindPortalButtons = bindPortalButtons;
+        window.resolvePortalUrl = resolvePortalUrl;
 
         function parseOrderLinesFromDoc(doc) {
             const raw = doc.order_lines_json;
@@ -2531,7 +2552,6 @@
         <button type="button" class="track-m-nav-btn" data-tab="parts"><span>🔧</span><span>Запчасти</span></button>
         <button type="button" class="track-m-nav-btn" data-tab="finance"><span>💶</span><span>Финансы</span></button>
         <button type="button" class="track-m-nav-btn" data-tab="documents"><span>📄</span><span>Документы</span></button>
-        <button type="button" class="track-m-nav-btn" data-tab="history"><span>🕒</span><span>История</span></button>
     </nav>
 </body>
 </html>

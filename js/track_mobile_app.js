@@ -9,7 +9,6 @@
         parts: ['parts'],
         finance: [],
         documents: ['documents'],
-        history: ['history'],
     };
 
     const HERO_VISIBLE_TABS = ['details', 'parts', 'finance'];
@@ -38,6 +37,7 @@
     function getSavedTab() {
         try {
             const t = localStorage.getItem(STORAGE_KEY);
+            if (t === 'history') return 'details';
             if (t && TAB_SECTIONS[t]) return t;
         } catch (_) { /* ignore */ }
         return 'details';
@@ -258,6 +258,7 @@
         const pricing = body.querySelector('.track-section[data-section="pricing"]');
         const documents = body.querySelector('.track-section[data-section="documents"]');
         const history = body.querySelector('.track-section[data-section="history"]');
+        if (history) history.remove();
 
         let stack = body.querySelector('.track-m-work-stack');
         if (!stack) {
@@ -270,7 +271,7 @@
             if (el) stack.appendChild(el);
         });
 
-        [pricing, documents, history].forEach((el) => {
+        [pricing, documents].forEach((el) => {
             if (el) body.appendChild(el);
         });
 
@@ -298,9 +299,14 @@
         const orderId = card.querySelector('.track-order-id')?.textContent?.trim() || '—';
         const model = card.querySelector('.track-order-device')?.textContent?.trim() || '—';
         const problem = card.querySelector('.track-order-subtitle')?.textContent?.trim() || '—';
-        const badges = card.querySelector('.track-order-badges')?.innerHTML || '';
+        const badgesRaw = card.querySelector('.track-order-badges')?.innerHTML || '';
+        const badges = badgesRaw.replace(/\bbadge-lg\b/g, '').replace(/\s+/g, ' ').trim();
         const clientName = meta?.clientName || document.getElementById('clientTitle')?.textContent?.trim() || '—';
         const phone = meta?.phone || '';
+        const portalDocId = meta?.portalDocId || '';
+        const portalUrl = meta?.portalUrl || '';
+        const portalOrderId = meta?.orderId || orderId;
+        const clientToken = meta?.clientToken || '';
         const initials = global.TrackUi ? TrackUi.clientInitials(clientName) : clientName.slice(0, 2).toUpperCase();
         const hue = global.TrackUi ? TrackUi.clientAvatarHue(clientName) : 0;
         const emoji = deviceEmoji(model, meta?.deviceType || '');
@@ -334,6 +340,10 @@
                 </div>
                 <div class="track-m-client-badges">${badges}</div>
             </div>
+            <button type="button" class="track-m-portal-btn portal-open" data-doc="${esc(portalDocId)}" data-oid="${esc(portalOrderId)}" data-url="${esc(portalUrl)}" data-token="${esc(clientToken)}">
+                <span class="track-m-portal-btn-icon" aria-hidden="true">🔗</span>
+                <span>Открыть портал клиента</span>
+            </button>
             <div class="track-m-quick">
                 <a class="track-m-quick-btn${phone ? '' : ' is-disabled'}" href="${esc(tel)}" ${phone ? '' : ' tabindex="-1"'}><span>📞</span><span>Звонок</span></a>
                 <a class="track-m-quick-btn${wa ? '' : ' is-disabled'}" href="${esc(wa)}" target="_blank" rel="noopener noreferrer"><span>💬</span><span>WhatsApp</span></a>
@@ -392,7 +402,6 @@
                     parts: '.track-section[data-section="parts"]',
                     finance: '.track-m-cost-card',
                     documents: '.track-section[data-section="documents"]',
-                    history: '.track-section[data-section="history"]',
                 };
                 const sel = scrollTargets[tab];
                 if (card && sel) {
@@ -468,6 +477,9 @@
             sel.addEventListener('change', () => buildStepper(card));
         });
         applyTab(getSavedTab(), root);
+        if (typeof global.bindPortalButtons === 'function') {
+            global.bindPortalButtons(card);
+        }
     }
 
     function initMediaListener() {
