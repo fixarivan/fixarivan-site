@@ -664,6 +664,7 @@
         }
     </style>
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625mobile">
+    <link rel="stylesheet" href="css/order-new-mobile-wizard.css?v=20250625onwwiz">
 </head>
 <body class="order-new-page order-mode-repair">
     <div class="container">
@@ -1602,11 +1603,22 @@
                 document.getElementById('qdRepMob').href = qu.reportMobile;
                 document.getElementById('qdRepPc').href = qu.reportPc;
                 document.getElementById('quickDocsBox').hidden = false;
-                let okMsg = 'Заказ сохранён. Ссылка для клиента и быстрые документы — ниже.';
+                var okMsg = 'Заказ сохранён. Ссылка для клиента и быстрые документы — ниже.';
                 if (result.supply_warning) {
                     okMsg += '\n\n' + result.supply_warning;
                 }
-                alert(okMsg);
+                if (window.OrderNewMobileWizard && OrderNewMobileWizard.handleSaveSuccess({
+                    result: result,
+                    link: link,
+                    orderId: orderIdResolved,
+                    token: token,
+                    payload: payload,
+                    supplyWarning: result.supply_warning || ''
+                })) {
+                    /* mobile wizard success screen */
+                } else {
+                    alert(okMsg);
+                }
             } catch (err) {
                 alert('Ошибка: ' + err.message);
             } finally {
@@ -1615,10 +1627,21 @@
             }
         });
 
+        window.collectLines = collectLines;
+        window.addLineRow = addLineRow;
+        window.updateOrderTypeUI = updateOrderTypeUI;
+        window.applyAutoOrderMode = applyAutoOrderMode;
+        window.refreshOrderModeAutoNote = refreshOrderModeAutoNote;
+        window.genId = genId;
+        window.copyTextToClipboard = copyTextToClipboard;
+        window.inferOrderMode = inferOrderMode;
+
     </script>
+    <script src="js/order_new_mobile_wizard.js?v=20250625onwwiz"></script>
     <script src="js/order_problem_templates.js?v=20250625tpl2"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            if (window.OrderNewMobileWizard) OrderNewMobileWizard.refresh();
             if (window.FixariVanProblemTemplates) {
                 FixariVanProblemTemplates.loadAndRender({
                     container: document.getElementById('problemTemplateBar'),
