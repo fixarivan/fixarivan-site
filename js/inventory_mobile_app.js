@@ -5,25 +5,15 @@
 (function (global) {
     'use strict';
 
-    const STOCK_FILTERS = ['all', 'in-stock', 'low-stock', 'out-of-stock'];
+    const STOCK_FILTERS = ['all', 'in-stock', 'low-stock', 'out-of-stock', 'for-order'];
 
-    const MOBILE_CATEGORIES = [
-        { id: 'screens', icon: '📱', label: 'Экраны' },
-        { id: 'batteries', icon: '🔋', label: 'Батареи' },
-        { id: 'protective_glass', icon: '🛡️', label: 'Стёкла' },
-        { id: 'charging', icon: '🔌', label: 'Разъёмы' },
-        { id: 'accessories', icon: '🎧', label: 'Аксессуары' },
-        { id: 'technology', icon: '💻', label: 'Ноутбуки' },
-        { id: 'tools', icon: '🛠️', label: 'Инструменты' },
-        { id: 'for-order', icon: '📦', label: 'Под заказ' },
+    /** Те же id, что в `.filter-chips` на десктопе (inventory.html). */
+    const DESKTOP_CATEGORY_IDS = [
+        'accessories', 'consumables', 'cables', 'tools', 'parts',
+        'technology', 'protective_glass', 'screens', 'batteries', 'charging',
     ];
 
-    const EXTRA_CATEGORIES = [
-        { id: 'consumables', icon: '🧪', label: 'Расходники' },
-        { id: 'cables', icon: '🔌', label: 'Кабели' },
-        { id: 'parts', icon: '📦', label: 'Запчасти' },
-        { id: 'other', icon: '🔹', label: 'Другое' },
-    ];
+    const NON_CATEGORY_FILTERS = ['all', 'in-stock', 'low-stock', 'out-of-stock', 'for-order'];
 
     let patchedViewItem = false;
 
@@ -53,16 +43,24 @@
 
     function catIcon(cat) {
         if (global.categoryIcons && global.categoryIcons[cat]) return global.categoryIcons[cat];
-        const found = MOBILE_CATEGORIES.concat(EXTRA_CATEGORIES).find(function (c) { return c.id === cat; });
-        return found ? found.icon : '📦';
+        return '📦';
     }
 
     function catLabel(cat) {
         if (global.translations && global.translations.ru && global.translations.ru[cat]) {
             return global.translations.ru[cat];
         }
-        const found = MOBILE_CATEGORIES.concat(EXTRA_CATEGORIES).find(function (c) { return c.id === cat; });
-        return found ? found.label : cat;
+        return cat;
+    }
+
+    function getCategoryIds() {
+        const fromDom = [];
+        document.querySelectorAll('.filter-chips .chip[data-filter]').forEach(function (chip) {
+            const id = chip.getAttribute('data-filter');
+            if (!id || NON_CATEGORY_FILTERS.indexOf(id) !== -1) return;
+            fromDom.push(id);
+        });
+        return fromDom.length ? fromDom : DESKTOP_CATEGORY_IDS.slice();
     }
 
     function stockBarMeta(item) {
@@ -78,7 +76,11 @@
     }
 
     function isStockFilter(filter) {
-        return STOCK_FILTERS.indexOf(String(filter || '')) !== -1;
+        return ['all', 'in-stock', 'low-stock', 'out-of-stock'].indexOf(String(filter || '')) !== -1;
+    }
+
+    function isCategoryFilter(filter) {
+        return getCategoryIds().indexOf(String(filter || '')) !== -1;
     }
 
     function countCategory(cat) {
@@ -159,7 +161,17 @@
         const filter = getActiveFilter();
         document.querySelectorAll('.inv-m-stock-chip').forEach(function (btn) {
             const f = btn.getAttribute('data-filter');
-            btn.classList.toggle('is-active', isStockFilter(filter) ? f === filter : f === 'all');
+            let active = false;
+            if (filter === 'for-order') {
+                active = f === 'for-order';
+            } else if (isStockFilter(filter)) {
+                active = f === filter;
+            } else if (isCategoryFilter(filter)) {
+                active = false;
+            } else if (filter === 'all') {
+                active = f === 'all';
+            }
+            btn.classList.toggle('is-active', active);
         });
     }
 
@@ -174,7 +186,7 @@
             grid.parentNode.insertBefore(head, grid);
         }
         const filter = getActiveFilter();
-        const showList = filter === 'all' || isStockFilter(filter);
+        const showList = filter === 'all' || isStockFilter(filter) || filter === 'for-order';
         head.style.display = showList ? '' : 'none';
         if (!showList) return;
         const cards = grid.querySelectorAll('.inv-m-card, .item-card');
@@ -187,6 +199,8 @@
             head.textContent = 'Мало на складе (' + n + ')';
         } else if (filter === 'out-of-stock') {
             head.textContent = 'Нет в наличии (' + n + ')';
+        } else if (filter === 'for-order') {
+            head.textContent = n > 0 ? 'Под заказ (' + n + ')' : 'Под заказ';
         }
     }
 
@@ -194,7 +208,7 @@
         const filter = getActiveFilter();
         document.querySelectorAll('.inv-m-cat-card').forEach(function (btn) {
             const id = btn.getAttribute('data-category');
-            btn.classList.toggle('is-active', !isStockFilter(filter) && filter === id);
+            btn.classList.toggle('is-active', isCategoryFilter(filter) && filter === id);
         });
         const head = document.getElementById('invMobileListHead');
         const title = document.getElementById('invMobileListHeadTitle');
@@ -211,19 +225,19 @@
         }
         const catsWrap = document.getElementById('invMobileCategoriesWrap');
         if (catsWrap) {
-            catsWrap.style.display = (!isStockFilter(filter) && filter !== 'all') ? 'none' : '';
+            catsWrap.style.display = (isCategoryFilter(filter) || filter === 'for-order') ? 'none' : '';
         }
     }
 
     function renderCategoryGrid() {
         const grid = document.getElementById('invMobileCategories');
         if (!grid) return;
-        grid.innerHTML = MOBILE_CATEGORIES.map(function (cat) {
-            const cnt = countCategory(cat.id);
+        grid.innerHTML = getCategoryIds().map(function (catId) {
+            const cnt = countCategory(catId);
             return (
-                '<button type="button" class="inv-m-cat-card" data-category="' + cat.id + '">' +
-                '<span class="inv-m-cat-icon">' + cat.icon + '</span>' +
-                '<span class="inv-m-cat-label">' + esc(cat.label) + '</span>' +
+                '<button type="button" class="inv-m-cat-card" data-category="' + catId + '">' +
+                '<span class="inv-m-cat-icon">' + catIcon(catId) + '</span>' +
+                '<span class="inv-m-cat-label">' + esc(catLabel(catId)) + '</span>' +
                 '<span class="inv-m-cat-count">' + cnt + '</span></button>'
             );
         }).join('');
@@ -235,6 +249,11 @@
     }
 
     async function applyFilter(filter) {
+        const prevFilter = getActiveFilter();
+        if (prevFilter !== filter) {
+            const search = document.getElementById('searchInput');
+            if (search && search.value.trim()) search.value = '';
+        }
         if (typeof global.setInventoryFilter === 'function') {
             global.setInventoryFilter(filter);
         } else {
@@ -366,8 +385,12 @@
         const grid = document.getElementById('invMobileFilterSheetGrid');
         if (!grid || grid.dataset.built === '1') return;
         grid.dataset.built = '1';
-        const all = EXTRA_CATEGORIES.concat([{ id: 'all', icon: '📋', label: 'Все позиции' }]);
-        grid.innerHTML = all.map(function (cat) {
+        const shortcuts = [{ id: 'all', icon: '📋', label: 'Все позиции' }]
+            .concat(getCategoryIds().map(function (id) {
+                return { id: id, icon: catIcon(id), label: catLabel(id) };
+            }))
+            .concat([{ id: 'for-order', icon: '📋', label: 'Под заказ' }]);
+        grid.innerHTML = shortcuts.map(function (cat) {
             return (
                 '<button type="button" class="inv-m-sheet-btn" data-filter="' + cat.id + '">' +
                 cat.icon + ' ' + esc(cat.label) + '</button>'
@@ -432,7 +455,8 @@
             '<button type="button" class="inv-m-stock-chip is-active" data-filter="all">Все</button>' +
             '<button type="button" class="inv-m-stock-chip" data-filter="in-stock">✅ В наличии</button>' +
             '<button type="button" class="inv-m-stock-chip" data-filter="low-stock">⚠️ Мало</button>' +
-            '<button type="button" class="inv-m-stock-chip" data-filter="out-of-stock">❌ Нет</button>';
+            '<button type="button" class="inv-m-stock-chip" data-filter="out-of-stock">❌ Нет</button>' +
+            '<button type="button" class="inv-m-stock-chip" data-filter="for-order">📋 Под заказ</button>';
         top.appendChild(stockFilters);
 
         const searchWrap = controls.querySelector('.search-container');

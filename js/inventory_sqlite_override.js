@@ -105,6 +105,7 @@
                 console.warn('FixariVan: на сервере недоступен SQLite (pdo_sqlite). Склад пустой до настройки PHP.');
             }
             inventory = items.map(normalizeInventoryItemFromApi);
+            window.inventory = inventory;
             if (typeof reloadOrderPurchaseQueue === 'function') {
                 await reloadOrderPurchaseQueue();
             }
