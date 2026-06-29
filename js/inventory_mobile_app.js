@@ -27,6 +27,12 @@
         return global.matchMedia && global.matchMedia('(max-width: 768px)').matches;
     }
 
+    function useMobileCards() {
+        if (!isMobile()) return false;
+        if (typeof buildItemCardHtml !== 'function') return false;
+        return true;
+    }
+
     function fmtMoney(v) {
         if (typeof global.formatMoney === 'function') return global.formatMoney(Number(v) || 0, 'ru');
         return (Number(v) || 0).toFixed(2).replace('.', ',') + ' €';
@@ -550,6 +556,9 @@
         syncCategoryCards();
         const nav = document.getElementById('inventoryMobileNav');
         if (nav) nav.hidden = false;
+        if ((global.inventory || []).length && typeof global.renderInventory === 'function') {
+            global.renderInventory();
+        }
     }
 
     function afterRender() {
@@ -581,6 +590,7 @@
         refresh: refresh,
         afterRender: afterRender,
         buildItemCardHtml: buildItemCardHtml,
+        useMobileCards: useMobileCards,
         isMobile: isMobile,
         openDetail: openDetail,
         closeDetail: closeDetail,

@@ -323,8 +323,8 @@
         grid.innerHTML = filtered.map(function (item) {
             if (
                 window.InventoryMobileApp
-                && typeof InventoryMobileApp.isMobile === 'function'
-                && InventoryMobileApp.isMobile()
+                && typeof InventoryMobileApp.useMobileCards === 'function'
+                && InventoryMobileApp.useMobileCards()
                 && typeof InventoryMobileApp.buildItemCardHtml === 'function'
             ) {
                 return InventoryMobileApp.buildItemCardHtml(item, escapeHtml);

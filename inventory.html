@@ -985,7 +985,7 @@
 
     </style>
     <link rel="stylesheet" href="mobile_fixes.css">
-    <link rel="stylesheet" href="css/inventory-mobile-app.css?v=20250625invcats">
+    <link rel="stylesheet" href="css/inventory-mobile-app.css?v=20250625invcards">
 </head>
 <body class="inventory-page fv-inventory">
     <div class="header">
@@ -2040,7 +2040,7 @@
             }
 
             grid.innerHTML = filtered.map(item => {
-                if (window.InventoryMobileApp && typeof InventoryMobileApp.isMobile === 'function' && InventoryMobileApp.isMobile() && typeof InventoryMobileApp.buildItemCardHtml === 'function') {
+                if (window.InventoryMobileApp && typeof InventoryMobileApp.useMobileCards === 'function' && InventoryMobileApp.useMobileCards() && typeof InventoryMobileApp.buildItemCardHtml === 'function') {
                     return InventoryMobileApp.buildItemCardHtml(item, escHtmlInv);
                 }
                 const status = getStatus(item);
@@ -2743,7 +2743,7 @@
 
         // Auto popup disabled by request: low stock is visible in widgets/filters only.
     </script>
-    <script src="js/inventory_mobile_app.js?v=20250625invcats"></script>
+    <script src="js/inventory_mobile_app.js?v=20250625invcards"></script>
     <script src="js/inventory_sqlite_override.js"></script>
     <script src="js/brand_logo.js?v=20250625"></script>
 

@@ -125,6 +125,13 @@
         min-width: 0;
     }
 
+    /* App-like склад: одна колонка, полноширинные карточки */
+    body.inventory-page.inventory-mobile-app #inventoryGrid {
+        display: flex;
+        flex-direction: column;
+        grid-template-columns: unset;
+    }
+
     .inventory-page #inventoryGrid .item-card.order-queue-card {
         grid-column: 1 / -1;
     }
@@ -292,6 +299,12 @@
     .inventory-page #inventoryGrid {
         grid-template-columns: 1fr 1fr;
         gap: 10px;
+    }
+
+    body.inventory-page.inventory-mobile-app #inventoryGrid {
+        display: flex;
+        flex-direction: column;
+        grid-template-columns: unset;
     }
 }
 

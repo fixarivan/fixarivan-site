@@ -252,12 +252,23 @@
         letter-spacing: 0.02em;
     }
 
-    /* ── Grid ── */
-    body.inventory-page.inventory-mobile-app .inventory-grid {
-        display: flex;
+    /* ── Grid (перебиваем mobile_fixes.css: там #inventoryGrid = 2 колонки) ── */
+    body.inventory-page.inventory-mobile-app #inventoryGrid {
+        display: flex !important;
         flex-direction: column;
         gap: 10px;
-        grid-template-columns: none;
+        grid-template-columns: none !important;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    body.inventory-page.inventory-mobile-app #inventoryGrid .item-card,
+    body.inventory-page.inventory-mobile-app #inventoryGrid .item-card.inv-m-card {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        grid-column: auto;
     }
 
     /* ── Product cards ── */
@@ -270,6 +281,7 @@
         animation: none;
         transform: none;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+        overflow: visible;
     }
 
     body.inventory-page.inventory-mobile-app .item-card::before {
@@ -475,7 +487,7 @@
 
     .inv-m-card-actions {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 6px;
         margin-top: 10px;
         padding-top: 10px;
