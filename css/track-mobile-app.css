@@ -168,6 +168,13 @@
         font-size: 0.82rem;
         font-weight: 700;
         cursor: pointer;
+        text-decoration: none;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    a.track-m-portal-btn:visited {
+        color: #dbeafe;
     }
 
     .track-m-portal-btn:disabled {

@@ -24,10 +24,25 @@
 
     const STORAGE_KEY = 'fixarivan_track_mobile_tab_v1';
 
+    function escAttr(s) {
+        return String(s ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;');
+    }
+
     function esc(s) {
         const d = document.createElement('div');
         d.textContent = String(s ?? '');
         return d.innerHTML;
+    }
+
+    function portalHref(url, token) {
+        const u = String(url || '').trim();
+        if (u) return u;
+        const t = String(token || '').trim();
+        if (t) return 'client_portal.php?token=' + encodeURIComponent(t);
+        return '';
     }
 
     function isMobile() {
@@ -317,6 +332,14 @@
             ? ('https://wa.me/' + phone.replace(/\D/g, '').replace(/^\+/, ''))
             : '';
         const sms = phone ? ('sms:' + String(phone).replace(/[^\d+]/g, '')) : '';
+        const portalLink = portalHref(portalUrl, clientToken);
+        const portalBtnHtml = portalLink
+            ? ('<a class="track-m-portal-btn" href="' + escAttr(portalLink) + '" target="_blank" rel="noopener noreferrer">' +
+                '<span class="track-m-portal-btn-icon" aria-hidden="true">🔗</span>' +
+                '<span>Открыть портал клиента</span></a>')
+            : ('<button type="button" class="track-m-portal-btn portal-open" data-doc="' + escAttr(portalDocId) + '" data-oid="' + escAttr(portalOrderId) + '" data-url="' + escAttr(portalUrl) + '" data-token="' + escAttr(clientToken) + '">' +
+                '<span class="track-m-portal-btn-icon" aria-hidden="true">🔗</span>' +
+                '<span>Открыть портал клиента</span></button>');
 
         hero.innerHTML = `
             <div class="track-m-hero-top">
@@ -340,10 +363,7 @@
                 </div>
                 <div class="track-m-client-badges">${badges}</div>
             </div>
-            <button type="button" class="track-m-portal-btn portal-open" data-doc="${esc(portalDocId)}" data-oid="${esc(portalOrderId)}" data-url="${esc(portalUrl)}" data-token="${esc(clientToken)}">
-                <span class="track-m-portal-btn-icon" aria-hidden="true">🔗</span>
-                <span>Открыть портал клиента</span>
-            </button>
+            ${portalBtnHtml}
             <div class="track-m-quick">
                 <a class="track-m-quick-btn${phone ? '' : ' is-disabled'}" href="${esc(tel)}" ${phone ? '' : ' tabindex="-1"'}><span>📞</span><span>Звонок</span></a>
                 <a class="track-m-quick-btn${wa ? '' : ' is-disabled'}" href="${esc(wa)}" target="_blank" rel="noopener noreferrer"><span>💬</span><span>WhatsApp</span></a>

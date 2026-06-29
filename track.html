@@ -106,9 +106,9 @@
     <link rel="stylesheet" href="css/fixarivan-theme.css">
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625mobile">
     <link rel="stylesheet" href="css/track-modern.css?v=20250625trackcompact">
-    <link rel="stylesheet" href="css/track-mobile-app.css?v=20250625trackfix">
+    <link rel="stylesheet" href="css/track-mobile-app.css?v=20250625trackportal">
     <script src="js/track_ui.js?v=20250625polish"></script>
-    <script src="js/track_mobile_app.js?v=20250625trackfix"></script>
+    <script src="js/track_mobile_app.js?v=20250625trackportal"></script>
 </head>
 <body class="fv-page track-page">
     <div class="top">
@@ -1805,9 +1805,31 @@
             });
         }
 
-        async function resolvePortalUrl(docId, orderId, existingUrl) {
+        function portalHrefFromParts(existingUrl, existingToken) {
             let u = String(existingUrl || '').trim();
             if (u !== '') return u;
+            const t = String(existingToken || '').trim();
+            if (t !== '') return 'client_portal.php?token=' + encodeURIComponent(t);
+            return '';
+        }
+
+        function openPortalUrl(url) {
+            const u = String(url || '').trim();
+            if (!u) return false;
+            const isMobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+            if (isMobile) {
+                const w = window.open(u, '_blank', 'noopener,noreferrer');
+                if (!w) window.location.assign(u);
+                return true;
+            }
+            const w = window.open(u, '_blank', 'noopener,noreferrer');
+            if (!w) window.location.assign(u);
+            return true;
+        }
+
+        async function resolvePortalUrl(docId, orderId, existingUrl, existingToken) {
+            const direct = portalHrefFromParts(existingUrl, existingToken);
+            if (direct) return direct;
             if (!docId && !orderId) return '';
             const res = await fetch('./api/order_ensure_token.php', {
                 method: 'POST',
@@ -1818,21 +1840,31 @@
             const json = await res.json();
             if (!json || json.success !== true) return '';
             const d = json.data && typeof json.data === 'object' ? json.data : json;
-            return String((d && d.portal_url) ? d.portal_url : '').trim();
+            const fromApi = String((d && d.portal_url) ? d.portal_url : '').trim();
+            if (fromApi) return fromApi;
+            const tok = String((d && d.client_token) ? d.client_token : '').trim();
+            return portalHrefFromParts('', tok);
         }
 
         function bindPortalButtons(root) {
             root.querySelectorAll('.portal-open').forEach((btn) => {
                 if (btn.dataset.portalBound === '1') return;
                 btn.dataset.portalBound = '1';
-                btn.addEventListener('click', async () => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
                     const docId = btn.getAttribute('data-doc') || '';
                     const oid = btn.getAttribute('data-oid') || '';
                     const url = btn.getAttribute('data-url') || '';
+                    const token = btn.getAttribute('data-token') || '';
+                    const syncHref = portalHrefFromParts(url, token);
+                    if (syncHref) {
+                        openPortalUrl(syncHref);
+                        return;
+                    }
                     btn.disabled = true;
                     try {
-                        const u = await resolvePortalUrl(docId, oid, url);
-                        if (u) window.open(u, '_blank', 'noopener');
+                        const u = await resolvePortalUrl(docId, oid, url, token);
+                        if (u) openPortalUrl(u);
                         else alert('Не удалось получить ссылку портала');
                     } finally {
                         btn.disabled = false;
@@ -1846,9 +1878,10 @@
                     const docId = btn.getAttribute('data-doc') || '';
                     const oid = btn.getAttribute('data-oid') || '';
                     const url = btn.getAttribute('data-url') || '';
+                    const token = btn.getAttribute('data-token') || '';
                     btn.disabled = true;
                     try {
-                        const u = await resolvePortalUrl(docId, oid, url);
+                        const u = await resolvePortalUrl(docId, oid, url, token);
                         if (!u) {
                             alert('Не удалось получить ссылку');
                             return;
@@ -1867,6 +1900,8 @@
         }
         window.bindPortalButtons = bindPortalButtons;
         window.resolvePortalUrl = resolvePortalUrl;
+        window.openPortalUrl = openPortalUrl;
+        window.portalHrefFromParts = portalHrefFromParts;
 
         function parseOrderLinesFromDoc(doc) {
             const raw = doc.order_lines_json;
