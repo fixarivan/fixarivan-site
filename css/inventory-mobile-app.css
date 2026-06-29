@@ -271,9 +271,13 @@
 
     .inv-m-card-inner {
         display: grid;
-        grid-template-columns: 72px 1fr 20px;
+        grid-template-columns: 72px 1fr 16px;
         gap: 12px;
-        align-items: center;
+        align-items: start;
+    }
+
+    .inv-m-card-tap {
+        cursor: pointer;
     }
 
     .inv-m-card-media {
@@ -305,14 +309,17 @@
 
     .inv-m-stock-badge {
         position: absolute;
-        top: 4px;
+        bottom: 4px;
         left: 4px;
-        padding: 2px 6px;
-        border-radius: 999px;
-        font-size: 0.55rem;
+        right: 4px;
+        padding: 2px 4px;
+        border-radius: 6px;
+        font-size: 0.52rem;
         font-weight: 800;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.01em;
         border: 1px solid transparent;
+        text-align: center;
+        line-height: 1.15;
     }
 
     .inv-m-stock-badge.status-in-stock {
@@ -403,8 +410,110 @@
         display: none !important;
     }
 
-    body.inventory-page.inventory-mobile-app .item-actions,
-    body.inventory-page.inventory-mobile-app .inv-m-card-actions-desktop {
+    .inv-m-card-loc {
+        font-size: 0.66rem;
+        opacity: 0.58;
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .inv-m-card-qty strong {
+        color: #e9d5ff;
+        font-weight: 800;
+    }
+
+    .inv-m-status-pill {
+        flex-shrink: 0;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 0.62rem;
+        font-weight: 750;
+    }
+
+    .inv-m-status-pill.status-in-stock {
+        background: rgba(16, 185, 129, 0.18);
+        color: #6ee7b7;
+    }
+
+    .inv-m-status-pill.status-low-stock {
+        background: rgba(245, 158, 11, 0.18);
+        color: #fcd34d;
+    }
+
+    .inv-m-status-pill.status-out-of-stock {
+        background: rgba(239, 68, 68, 0.18);
+        color: #fca5a5;
+    }
+
+    .inv-m-card-prices {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        margin-top: 4px;
+        font-size: 0.68rem;
+        opacity: 0.78;
+    }
+
+    .inv-m-price-sell {
+        font-weight: 700;
+        color: #c4b5fd;
+    }
+
+    .inv-m-card-actions {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .inv-m-act-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-height: 48px;
+        padding: 4px 2px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.04);
+        color: inherit;
+        font-size: 0.52rem;
+        font-weight: 650;
+        cursor: pointer;
+    }
+
+    .inv-m-act-btn span:first-child {
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    .inv-m-act-btn.is-in {
+        border-color: rgba(16, 185, 129, 0.35);
+        background: rgba(16, 185, 129, 0.1);
+    }
+
+    .inv-m-act-btn.is-out {
+        border-color: rgba(239, 68, 68, 0.35);
+        background: rgba(239, 68, 68, 0.08);
+    }
+
+    .inv-m-act-btn.is-del {
+        border-color: rgba(239, 68, 68, 0.25);
+        color: #fca5a5;
+    }
+
+    .inv-m-empty {
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px dashed rgba(255, 255, 255, 0.1);
+    }
+
+    body.inventory-page.inventory-mobile-app .item-actions {
         display: none !important;
     }
 
@@ -721,6 +830,39 @@
 
     body.inventory-page.inventory-mobile-app .order-queue-card {
         max-width: none !important;
+    }
+
+    /* ── Add/edit form blocks ── */
+    body.inventory-page.inventory-mobile-app .inv-form-section {
+        margin-bottom: 18px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    body.inventory-page.inventory-mobile-app .inv-form-section:last-of-type {
+        border-bottom: none;
+        margin-bottom: 8px;
+    }
+
+    body.inventory-page.inventory-mobile-app .inv-form-section-title {
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #a78bfa;
+        margin-bottom: 12px;
+    }
+
+    body.inventory-page.inventory-mobile-app #itemModal .form-group input,
+    body.inventory-page.inventory-mobile-app #itemModal .form-group select,
+    body.inventory-page.inventory-mobile-app #itemModal .form-group textarea {
+        min-height: 44px;
+        font-size: 16px;
+    }
+
+    body.inventory-page.inventory-mobile-app #searchInput {
+        font-size: 16px;
+        min-height: 44px;
     }
 }
 

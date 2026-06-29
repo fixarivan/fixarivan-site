@@ -985,7 +985,7 @@
 
     </style>
     <link rel="stylesheet" href="mobile_fixes.css">
-    <link rel="stylesheet" href="css/inventory-mobile-app.css?v=20250625invapp">
+    <link rel="stylesheet" href="css/inventory-mobile-app.css?v=20250625invwork">
 </head>
 <body class="inventory-page fv-inventory">
     <div class="header">
@@ -1115,7 +1115,7 @@
             <div class="search-container">
                 <div class="search-bar">
                     <span style="font-size: 20px;">🔍</span>
-                    <input type="text" id="searchInput" placeholder="Поиск по названию, артикулу, совместимости...">
+                    <input type="text" id="searchInput" placeholder="Поиск: название, SKU, совместимость, примечание…">
                     <button class="voice-btn" id="voiceBtn" onclick="startVoiceSearch()">🎤</button>
                 </div>
             </div>
@@ -1161,6 +1161,8 @@
                 <button class="close-btn" onclick="closeModal()">×</button>
             </div>
             <form id="itemForm">
+                <div class="inv-form-section">
+                    <div class="inv-form-section-title">Основная информация</div>
                 <div class="form-group">
                     <label>📝 Название *</label>
                     <input type="text" id="itemName" required>
@@ -1208,7 +1210,10 @@
                     <label>📱 Совместимость</label>
                     <input type="text" id="itemCompatibility" placeholder="iPhone 14 Pro, Samsung S23...">
                 </div>
+                </div>
 
+                <div class="inv-form-section">
+                    <div class="inv-form-section-title">Остатки</div>
                 <div class="form-group">
                     <label>📊 Количество *</label>
                     <input type="number" id="itemQuantity" min="0" required>
@@ -1220,6 +1225,14 @@
                 </div>
 
                 <div class="form-group">
+                    <label>📍 Расположение на складе</label>
+                    <input type="text" id="itemLocation" placeholder="Полка A-12">
+                </div>
+                </div>
+
+                <div class="inv-form-section">
+                    <div class="inv-form-section-title">Финансы</div>
+                <div class="form-group">
                     <label>💵 Цена закупки (€)</label>
                     <input type="number" id="itemCostPrice" min="0" step="0.01">
                 </div>
@@ -1230,13 +1243,9 @@
                 </div>
 
                 <div class="form-group">
-                    <label>📍 Расположение на складе</label>
-                    <input type="text" id="itemLocation" placeholder="Полка A-12">
-                </div>
-
-                <div class="form-group">
                     <label>📝 Примечания</label>
                     <textarea id="itemNotes" rows="3"></textarea>
+                </div>
                 </div>
 
                 <div class="modal-actions">
@@ -1359,6 +1368,14 @@
         /** id карточек склада, привязанных к активной очереди закупки (ответ API queue_inventory_item_ids) */
         let queueInventoryItemIdsExtra = new Set();
         let currentFilter = 'all';
+        window.setInventoryFilter = function (f) {
+            currentFilter = String(f || 'all');
+            window.currentFilter = currentFilter;
+        };
+        window.getInventoryFilter = function () {
+            return currentFilter;
+        };
+        window.setInventoryFilter('all');
         let currentEditId = null;
         let currentAdjustId = null;
         let usageChart = null;
@@ -2107,7 +2124,7 @@
                 clearTimeout(inventorySearchDebounce);
                 inventorySearchDebounce = setTimeout(function() {
                     loadInventory();
-                }, 400);
+                }, 280);
             });
         }
 
@@ -2116,7 +2133,7 @@
                 chip.addEventListener('click', async function() {
                     document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
                     this.classList.add('active');
-                    currentFilter = this.getAttribute('data-filter');
+                    setInventoryFilter(this.getAttribute('data-filter'));
                     if (currentFilter === 'for-order') {
                         await reloadOrderPurchaseQueue();
                         renderInventory();
@@ -2720,7 +2737,7 @@
 
         // Auto popup disabled by request: low stock is visible in widgets/filters only.
     </script>
-    <script src="js/inventory_mobile_app.js?v=20250625invapp"></script>
+    <script src="js/inventory_mobile_app.js?v=20250625invwork"></script>
     <script src="js/inventory_sqlite_override.js"></script>
     <script src="js/brand_logo.js?v=20250625"></script>
 

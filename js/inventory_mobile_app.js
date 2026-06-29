@@ -91,53 +91,72 @@
         }).length;
     }
 
+    function getActiveFilter() {
+        if (typeof global.getInventoryFilter === 'function') return global.getInventoryFilter();
+        return global.currentFilter || 'all';
+    }
+
+    function statusLabel(status) {
+        if (status.class === 'out-of-stock') return 'Нет в наличии';
+        if (status.class === 'low-stock') return 'Мало';
+        return 'OK';
+    }
+
     function buildItemCardHtml(item, escapeFn) {
         const escFn = escapeFn || esc;
         const status = getStatus(item);
+        const statusText = statusLabel(status);
         const icon = catIcon(item.category);
         const bar = stockBarMeta(item);
+        const qty = Number(item.quantity) || 0;
         const sell = Number(item.sellPrice != null ? item.sellPrice : item.sale_price) || 0;
+        const cost = Number(item.costPrice != null ? item.costPrice : item.default_cost) || 0;
         const sku = item.sku && String(item.sku).trim()
             ? escFn(String(item.sku).trim())
             : '<span style="opacity:0.55">FV-…</span>';
         const compat = escFn(item.compatibility || '—');
         const name = escFn(item.name || '—');
+        const location = item.location && String(item.location).trim()
+            ? escFn(String(item.location).trim())
+            : '';
         const img = item.image
             ? '<img src="' + escFn(item.image) + '" class="item-image" alt="' + name + '">'
             : '<div class="inv-m-card-icon">' + icon + '</div>';
+        const id = Number(item.id);
 
         return (
-            '<article class="item-card inv-m-card" data-item-id="' + item.id + '" onclick="viewItem(' + item.id + ')">' +
+            '<article class="item-card inv-m-card" data-item-id="' + id + '">' +
+            '<div class="inv-m-card-tap" onclick="viewItem(' + id + ')">' +
             '<div class="inv-m-card-inner">' +
             '<div class="inv-m-card-media">' + img +
-            '<span class="inv-m-stock-badge status-' + status.class + '">' + status.text + '</span></div>' +
+            '<span class="inv-m-stock-badge status-' + status.class + '">' + esc(statusText) + '</span></div>' +
             '<div class="inv-m-card-main">' +
             '<div class="inv-m-card-title">' + name + '</div>' +
-            '<div class="inv-m-card-sku">Артикул: ' + sku + '</div>' +
-            '<div class="inv-m-card-compat">Совместимость: ' + compat + '</div>' +
+            '<div class="inv-m-card-sku">SKU: ' + sku + '</div>' +
+            '<div class="inv-m-card-compat">' + compat + '</div>' +
+            (location ? '<div class="inv-m-card-loc">📍 ' + location + '</div>' : '') +
             '<div class="inv-m-card-stock-row">' +
-            '<span>На складе: ' + (Number(item.quantity) || 0) + ' шт</span>' +
-            '<span class="inv-m-card-price">' + fmtMoney(sell) + '</span></div>' +
+            '<span class="inv-m-card-qty">Остаток: <strong>' + qty + '</strong></span>' +
+            '<span class="inv-m-status-pill status-' + status.class + '">' + esc(statusText) + '</span></div>' +
+            '<div class="inv-m-card-prices">' +
+            (cost > 0 ? '<span class="inv-m-price-cost">Закуп: ' + fmtMoney(cost) + '</span>' : '') +
+            '<span class="inv-m-price-sell">Продажа: ' + fmtMoney(sell) + '</span></div>' +
             '<div class="inv-m-stock-bar"><div class="inv-m-stock-bar-fill ' + bar.cls + '" style="width:' + bar.pct + '%"></div></div>' +
             '</div>' +
             '<div class="inv-m-card-chevron" aria-hidden="true">›</div>' +
-            '</div>' +
-            '<div class="item-header"><div class="item-icon-container">' +
-            (item.image ? img : '<div class="item-icon">' + icon + '</div>') +
-            '</div><div class="item-status status-' + status.class + '">' + status.text + '</div></div>' +
-            '<div class="item-name">' + name + '</div>' +
-            '<div class="item-actions inv-m-card-actions-desktop" onclick="event.stopPropagation()">' +
-            '<button type="button" class="btn-small" style="background:linear-gradient(135deg,#10b981,#059669);" onclick="openAdjustModal(' + item.id + ',\'in\')">Приход</button>' +
-            '<button type="button" class="btn-small" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="openAdjustModal(' + item.id + ',\'out\')">Списать</button>' +
-            '<button type="button" class="btn-small" onclick="openHistoryModal(' + item.id + ')">История</button>' +
-            '<button type="button" class="btn-small" onclick="editItem(' + item.id + ')">✏️</button>' +
-            '<button type="button" class="btn-small" style="background:rgba(239,68,68,0.2);border-color:#ef4444;color:#fecaca;" onclick="deleteInventoryItem(' + item.id + ')">🗑️</button>' +
+            '</div></div>' +
+            '<div class="inv-m-card-actions" onclick="event.stopPropagation()">' +
+            '<button type="button" class="inv-m-act-btn is-in" title="Приход" onclick="openAdjustModal(' + id + ',\'in\')"><span>➕</span><span>Приход</span></button>' +
+            '<button type="button" class="inv-m-act-btn is-out" title="Списание" onclick="openAdjustModal(' + id + ',\'out\')"><span>➖</span><span>Списание</span></button>' +
+            '<button type="button" class="inv-m-act-btn" title="Редактировать" onclick="editItem(' + id + ')"><span>📝</span><span>Изм.</span></button>' +
+            '<button type="button" class="inv-m-act-btn" title="История" onclick="openHistoryModal(' + id + ')"><span>🕒</span><span>История</span></button>' +
+            '<button type="button" class="inv-m-act-btn is-del" title="Удалить" onclick="deleteInventoryItem(' + id + ')"><span>🗑</span><span>Удал.</span></button>' +
             '</div></article>'
         );
     }
 
     function syncStockChips() {
-        const filter = global.currentFilter || 'all';
+        const filter = getActiveFilter();
         document.querySelectorAll('.inv-m-stock-chip').forEach(function (btn) {
             const f = btn.getAttribute('data-filter');
             btn.classList.toggle('is-active', isStockFilter(filter) ? f === filter : f === 'all');
@@ -145,7 +164,7 @@
     }
 
     function syncCategoryCards() {
-        const filter = global.currentFilter || 'all';
+        const filter = getActiveFilter();
         document.querySelectorAll('.inv-m-cat-card').forEach(function (btn) {
             const id = btn.getAttribute('data-category');
             btn.classList.toggle('is-active', !isStockFilter(filter) && filter === id);
@@ -189,7 +208,11 @@
     }
 
     async function applyFilter(filter) {
-        global.currentFilter = filter;
+        if (typeof global.setInventoryFilter === 'function') {
+            global.setInventoryFilter(filter);
+        } else {
+            global.currentFilter = filter;
+        }
         document.querySelectorAll('.filter-chips .chip').forEach(function (chip) {
             chip.classList.toggle('active', chip.getAttribute('data-filter') === filter);
         });
@@ -202,6 +225,12 @@
             await global.loadInventory();
         } else if (typeof global.renderInventory === 'function') {
             global.renderInventory();
+        }
+        if (isMobile() && filter !== 'all' && !isStockFilter(filter)) {
+            requestAnimationFrame(function () {
+                const grid = document.getElementById('inventoryGrid');
+                if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
         }
     }
 
@@ -217,6 +246,7 @@
             return;
         }
         const status = getStatus(item);
+        const statusText = statusLabel(status);
         const icon = catIcon(item.category);
         const cost = Number(item.costPrice != null ? item.costPrice : item.default_cost) || 0;
         const sell = Number(item.sellPrice != null ? item.sellPrice : item.sale_price) || 0;
@@ -231,7 +261,7 @@
                 : '<span class="inv-m-detail-photo-icon">' + icon + '</span>') +
             '</div>' +
             '<div class="inv-m-detail-name">' + esc(item.name) + '</div>' +
-            '<span class="inv-m-detail-badge status-' + status.class + '">' + esc(status.text) + '</span>' +
+            '<span class="inv-m-detail-badge status-' + status.class + '">' + esc(statusText) + '</span>' +
             '</div>' +
             '<div class="inv-m-detail-facts">' +
             factRow('Артикул', item.sku || '—') +

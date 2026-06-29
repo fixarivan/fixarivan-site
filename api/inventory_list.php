@@ -106,7 +106,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             i.name LIKE ?
             OR IFNULL(i.sku, \'\') LIKE ?
             OR IFNULL(i.compatibility, \'\') LIKE ?
+            OR IFNULL(i.notes, \'\') LIKE ?
         )';
+        $params[] = $like;
         $params[] = $like;
         $params[] = $like;
         $params[] = $like;

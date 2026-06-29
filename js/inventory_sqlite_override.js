@@ -8,10 +8,16 @@
     var STOCK_FILTERS = ['all', 'in-stock', 'low-stock', 'out-of-stock', 'for-order'];
     var sqliteInventoryWarnShown = false;
 
+    function getFilter() {
+        if (typeof getInventoryFilter === 'function') return getInventoryFilter();
+        if (typeof currentFilter !== 'undefined') return currentFilter;
+        return window.currentFilter || 'all';
+    }
+
     function apiCategoryFilter() {
-        if (typeof currentFilter === 'undefined') return '';
-        if (STOCK_FILTERS.indexOf(currentFilter) !== -1) return '';
-        return currentFilter;
+        var f = getFilter();
+        if (STOCK_FILTERS.indexOf(f) !== -1) return '';
+        return f;
     }
 
     window.normalizeInventoryItemFromApi = function (row) {
@@ -247,7 +253,7 @@
         if (!grid) return;
 
         // "Под заказ" всегда рендерится из order_purchase_queue.php (window.orderPurchaseQueueLines).
-        if (typeof currentFilter !== 'undefined' && currentFilter === 'for-order') {
+        if (getFilter() === 'for-order') {
             if (typeof renderOrderQueueCardsHtml === 'function') {
                 grid.innerHTML = renderOrderQueueCardsHtml();
             } else {
@@ -277,28 +283,38 @@
             return false;
         }
 
-        if (typeof currentFilter !== 'undefined') {
+        var activeFilter = getFilter();
+        if (activeFilter) {
             filtered = filtered.filter(function (item) {
-                if (currentFilter === 'all') return item.quantity > 0;
-                if (currentFilter === 'in-stock') return item.quantity > item.minStock;
-                if (currentFilter === 'low-stock') {
+                if (activeFilter === 'all') return item.quantity > 0;
+                if (activeFilter === 'in-stock') return item.quantity > item.minStock;
+                if (activeFilter === 'low-stock') {
                     if (queueItemIds.has(item.id) || linkedToQueueByReqTag(item)) return false;
                     return item.quantity > 0 && item.quantity <= item.minStock;
                 }
-                if (currentFilter === 'out-of-stock') {
+                if (activeFilter === 'out-of-stock') {
                     if (queueItemIds.has(item.id) || linkedToQueueByReqTag(item)) return false;
                     return item.quantity === 0;
                 }
-                return item.category === currentFilter && item.quantity > 0;
+                return item.category === activeFilter && item.quantity > 0;
             });
         }
 
         if (filtered.length === 0) {
+            var isCategory = activeFilter && STOCK_FILTERS.indexOf(activeFilter) === -1 && activeFilter !== 'all';
+            var isSearch = !!(document.getElementById('searchInput') && document.getElementById('searchInput').value.trim());
+            var emptyTitle = isCategory && !isSearch
+                ? 'В данной категории пока нет товаров.'
+                : 'Ничего не найдено';
+            var emptyHint = isCategory && !isSearch
+                ? 'Добавьте позицию или выберите другую категорию.'
+                : 'Попробуйте изменить фильтры или добавьте новую позицию';
             grid.innerHTML =
-                '<div style="grid-column: 1/-1; text-align: center; padding: 80px 20px;">' +
-                '<div style="font-size: 80px; margin-bottom: 20px; filter: drop-shadow(0 0 20px var(--glow));">🔍</div>' +
-                '<h3 style="font-size: 24px; color: var(--highlight); margin-bottom: 8px;">Ничего не найдено</h3>' +
-                '<p style="color: var(--text-secondary);">Попробуйте изменить фильтры или добавьте новую позицию</p>' +
+                '<div class="inv-m-empty" style="grid-column: 1/-1; text-align: center; padding: 64px 20px;">' +
+                '<div style="font-size: 64px; margin-bottom: 16px; filter: drop-shadow(0 0 16px var(--glow));">' +
+                (isCategory && !isSearch ? '📦' : '🔍') + '</div>' +
+                '<h3 style="font-size: 1.15rem; color: var(--highlight); margin-bottom: 8px; font-weight: 700;">' + emptyTitle + '</h3>' +
+                '<p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.45;">' + emptyHint + '</p>' +
                 '</div>';
             return;
         }
@@ -653,7 +669,7 @@
                 await reloadOrderPurchaseQueue();
             }
             await loadInventory();
-            if (typeof renderInventory === 'function' && window.currentFilter === 'for-order') {
+            if (typeof renderInventory === 'function' && getFilter() === 'for-order') {
                 renderInventory();
             }
             if (typeof closeAdjustModal === 'function') closeAdjustModal();
