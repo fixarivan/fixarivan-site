@@ -444,7 +444,223 @@
         margin-top: 2px;
     }
 
-    /* ── Pricing ── */
+    body.track-page.track-mobile-app .track-section[data-section="pricing"] {
+        display: none !important;
+    }
+
+    body.track-page.track-mobile-app .track-m-cost-card.track-m-tab-hidden,
+    body.track-page.track-mobile-app .track-m-hero.track-m-tab-hidden,
+    body.track-page.track-mobile-app .track-m-stepper.track-m-tab-hidden {
+        display: none !important;
+    }
+
+    /* ── Work stack ── */
+    .track-m-work-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    /* ── Compact cost card ── */
+    .track-m-cost-card {
+        background: rgba(18, 16, 28, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        padding: 14px;
+        margin-bottom: 12px;
+    }
+
+    .track-m-cost-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+
+    .track-m-cost-title {
+        font-size: 0.92rem;
+        font-weight: 800;
+        color: #e9d5ff;
+    }
+
+    body.track-page.track-mobile-app .track-m-cost-card .track-work-wrap {
+        margin: 0 0 10px;
+        padding: 0;
+        border: none;
+        background: transparent;
+    }
+
+    body.track-page.track-mobile-app .track-m-cost-card .track-work-head {
+        display: none;
+    }
+
+    body.track-page.track-mobile-app .track-m-cost-card .track-work-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+    }
+
+    body.track-page.track-mobile-app .track-m-cost-card .track-work-row::before {
+        content: 'Работа';
+        font-size: 0.82rem;
+        opacity: 0.72;
+    }
+
+    body.track-page.track-mobile-app .track-m-cost-card .track-work-input {
+        max-width: none;
+        min-height: 44px;
+        font-size: 16px;
+        font-weight: 700;
+        border-radius: 12px;
+        border: 1px solid rgba(59, 130, 246, 0.45);
+        background: rgba(59, 130, 246, 0.1);
+        text-align: right;
+        padding: 10px 12px;
+    }
+
+    body.track-page.track-mobile-app .track-m-cost-card .track-pricing-summary {
+        gap: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        padding-top: 6px;
+    }
+
+    body.track-page.track-mobile-app .track-m-cost-card .track-pricing-row:has([data-pricing-field="labour"]) {
+        display: none !important;
+    }
+
+    body.track-page.track-mobile-app .track-m-cost-card .track-pricing-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        font-size: 0.84rem;
+    }
+
+    body.track-page.track-mobile-app .track-m-cost-card .track-pricing-row.is-total {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #93c5fd;
+        border-top: 1px solid rgba(59, 130, 246, 0.25);
+        margin-top: 4px;
+        padding-top: 10px;
+    }
+
+    body.track-page.track-mobile-app .track-m-cost-card .track-pricing-row.is-total .track-pricing-val {
+        color: #93c5fd;
+    }
+
+    /* ── Parts toolbar ── */
+    .track-m-parts-toolbar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .track-m-parts-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        min-height: 56px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.05);
+        color: inherit;
+        font-size: 0.72rem;
+        font-weight: 650;
+        cursor: pointer;
+    }
+
+    .track-m-parts-btn span:first-child {
+        font-size: 1.15rem;
+    }
+
+    .track-m-parts-from-stock {
+        border-color: rgba(59, 130, 246, 0.35);
+        background: rgba(59, 130, 246, 0.12);
+    }
+
+    body.track-page.track-mobile-app .order-lines-box > .title {
+        font-size: 0.88rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    body.track-page.track-mobile-app .order-lines-actions {
+        position: sticky;
+        bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+        background: rgba(11, 10, 20, 0.92);
+        padding: 10px 0 4px;
+        margin-top: 8px;
+        z-index: 50;
+    }
+
+    body.track-page.track-mobile-app .order-lines-actions .track-order-lines-save {
+        min-height: 48px;
+        border-radius: 14px;
+        font-weight: 700;
+    }
+
+    body.track-page.track-mobile-app .order-lines-actions .track-order-line-add {
+        display: none;
+    }
+
+    /* ── Stock bottom sheet ── */
+    body.track-page.track-mobile-app .track-m-stock-sheet .track-stock-picker-dialog {
+        min-height: 72vh;
+    }
+
+    .track-m-stock-filters {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 0 16px 10px;
+        scrollbar-width: none;
+    }
+
+    .track-m-stock-filters::-webkit-scrollbar { display: none; }
+
+    .track-m-stock-filter {
+        flex: 0 0 auto;
+        padding: 7px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.05);
+        color: inherit;
+        font-size: 0.75rem;
+        font-weight: 650;
+        cursor: pointer;
+    }
+
+    .track-m-stock-filter.is-active {
+        background: rgba(59, 130, 246, 0.22);
+        border-color: rgba(96, 165, 250, 0.5);
+        color: #bfdbfe;
+    }
+
+    body.track-page.track-mobile-app .track-stock-picker-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        text-align: left;
+    }
+
+    body.track-page.track-mobile-app .track-stock-picker-item::after {
+        content: '+';
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #60a5fa;
+        flex-shrink: 0;
+    }
+
+    body.track-page.track-mobile-app .track-field-cell--status-parts {
+        opacity: 0.85;
+    }
+
+    /* ── Pricing (legacy section hidden) ── */
     body.track-page.track-mobile-app .track-pricing-summary {
         gap: 0;
     }
@@ -565,7 +781,10 @@
 @media (min-width: 769px) {
     .track-m-nav,
     .track-m-hero,
-    .track-m-stepper {
+    .track-m-stepper,
+    .track-m-cost-card,
+    .track-m-work-stack,
+    .track-m-parts-toolbar {
         display: none !important;
     }
 

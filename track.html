@@ -106,9 +106,9 @@
     <link rel="stylesheet" href="css/fixarivan-theme.css">
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625mobile">
     <link rel="stylesheet" href="css/track-modern.css?v=20250625trackcompact">
-    <link rel="stylesheet" href="css/track-mobile-app.css?v=20250625trackapp">
+    <link rel="stylesheet" href="css/track-mobile-app.css?v=20250625trackwork">
     <script src="js/track_ui.js?v=20250625polish"></script>
-    <script src="js/track_mobile_app.js?v=20250625trackapp"></script>
+    <script src="js/track_mobile_app.js?v=20250625trackwork"></script>
 </head>
 <body class="fv-page track-page">
     <div class="top">
@@ -1999,7 +1999,7 @@
             if (fromCb && !fromCb.disabled) fromCb.checked = true;
         }
 
-        function openTrackStockPicker(tr) {
+        window.openTrackStockPicker = function openTrackStockPicker(tr) {
             trackStockPickerTargetRow = tr;
             const bd = document.getElementById('trackStockPickerBackdrop');
             if (!bd) return;
@@ -2012,7 +2012,7 @@
                 inp.focus();
             }
             loadTrackStockPickerResults('');
-        }
+        };
 
         function closeTrackStockPicker() {
             const bd = document.getElementById('trackStockPickerBackdrop');
