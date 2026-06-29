@@ -1,0 +1,579 @@
+/**
+ * Track — мобильное приложение (≤768px). Десктоп не затрагивается.
+ */
+@media (max-width: 768px) {
+    body.track-page.track-mobile-app {
+        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    }
+
+    body.track-page.track-mobile-app .track-workspace-rail {
+        display: none !important;
+    }
+
+    body.track-page.track-mobile-app .track-m-header-legacy {
+        display: none !important;
+    }
+
+    body.track-page.track-mobile-app .track-section-toggle {
+        display: none;
+    }
+
+    body.track-page.track-mobile-app .track-section {
+        border: none;
+        background: transparent;
+        padding: 0;
+        margin: 0 0 12px;
+    }
+
+    body.track-page.track-mobile-app .track-section.is-collapsed .track-section-body {
+        display: block !important;
+    }
+
+    body.track-page.track-mobile-app .track-section.track-m-tab-hidden {
+        display: none !important;
+    }
+
+    body.track-page.track-mobile-app .track-section[data-section="history"] {
+        display: none;
+    }
+
+    body.track-page.track-mobile-app .track-section[data-section="history"]:not(.track-m-tab-hidden) {
+        display: block !important;
+    }
+
+    /* ── Hero ── */
+    .track-m-hero {
+        background: linear-gradient(165deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        padding: 14px 14px 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .track-m-hero-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .track-m-hero-order-id {
+        font-size: 0.78rem;
+        font-weight: 700;
+        opacity: 0.85;
+        letter-spacing: 0.02em;
+        text-align: center;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .track-m-back,
+    .track-m-more {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: inherit;
+        font-size: 1.1rem;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .track-m-device-row {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+        margin-bottom: 14px;
+    }
+
+    .track-m-device-img {
+        width: 72px;
+        height: 72px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        flex-shrink: 0;
+    }
+
+    .track-m-device-model {
+        font-size: 1.15rem;
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+    }
+
+    .track-m-device-problem {
+        margin-top: 4px;
+        font-size: 0.82rem;
+        opacity: 0.72;
+        line-height: 1.35;
+    }
+
+    .track-m-device-meta {
+        margin-top: 8px;
+        font-size: 0.68rem;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.35);
+        display: inline-block;
+        opacity: 0.8;
+    }
+
+    .track-m-client-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 12px;
+        border-radius: 14px;
+        background: rgba(0, 0, 0, 0.22);
+        margin-bottom: 12px;
+    }
+
+    .track-m-client-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.85rem;
+        color: #fff;
+        background: #6366f1;
+    }
+
+    .track-avatar-h0 { background: #6366f1; }
+    .track-avatar-h1 { background: #8b5cf6; }
+    .track-avatar-h2 { background: #ec4899; }
+    .track-avatar-h3 { background: #f59e0b; }
+    .track-avatar-h4 { background: #10b981; }
+    .track-avatar-h5 { background: #06b6d4; }
+    .track-avatar-h6 { background: #3b82f6; }
+    .track-avatar-h7 { background: #64748b; }
+
+    .track-m-client-name {
+        font-size: 0.92rem;
+        font-weight: 700;
+    }
+
+    .track-m-client-phone {
+        font-size: 0.76rem;
+        opacity: 0.65;
+        margin-top: 2px;
+    }
+
+    .track-m-client-badges .badge {
+        font-size: 0.62rem;
+    }
+
+    .track-m-quick {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+
+    .track-m-quick-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        min-height: 64px;
+        padding: 8px 4px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.05);
+        color: inherit;
+        text-decoration: none;
+        font-size: 0.62rem;
+        cursor: pointer;
+    }
+
+    .track-m-quick-btn span:first-child {
+        font-size: 1.2rem;
+    }
+
+    .track-m-quick-btn.is-disabled {
+        opacity: 0.35;
+        pointer-events: none;
+    }
+
+    /* ── Stepper ── */
+    .track-m-stepper {
+        margin-bottom: 14px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: 4px;
+    }
+
+    .track-m-stepper::-webkit-scrollbar { display: none; }
+
+    .track-m-stepper-track {
+        display: flex;
+        gap: 0;
+        min-width: max-content;
+        padding: 4px 2px;
+    }
+
+    .track-m-step {
+        flex: 0 0 auto;
+        width: 72px;
+        text-align: center;
+        position: relative;
+    }
+
+    .track-m-step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 14px;
+        left: calc(50% + 14px);
+        width: calc(100% - 28px);
+        height: 2px;
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    .track-m-step.is-done:not(:last-child)::after,
+    .track-m-step.is-current:not(:last-child)::after {
+        background: rgba(59, 130, 246, 0.55);
+    }
+
+    .track-m-step-dot {
+        width: 28px;
+        height: 28px;
+        margin: 0 auto 6px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.68rem;
+        font-weight: 700;
+        position: relative;
+        z-index: 1;
+    }
+
+    .track-m-step.is-done .track-m-step-dot {
+        background: rgba(59, 130, 246, 0.25);
+        border-color: rgba(96, 165, 250, 0.6);
+        color: #93c5fd;
+    }
+
+    .track-m-step.is-current .track-m-step-dot {
+        background: #2563eb;
+        border-color: #60a5fa;
+        color: #fff;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.25);
+    }
+
+    .track-m-step-label {
+        font-size: 0.58rem;
+        opacity: 0.65;
+        line-height: 1.2;
+    }
+
+    .track-m-step.is-current .track-m-step-label {
+        opacity: 1;
+        font-weight: 650;
+        color: #93c5fd;
+    }
+
+    /* ── Section bodies as cards ── */
+    body.track-page.track-mobile-app .track-section-body {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        padding: 14px;
+    }
+
+    /* ── Parts: table → cards ── */
+    body.track-page.track-mobile-app .order-lines-table thead {
+        display: none;
+    }
+
+    body.track-page.track-mobile-app .order-lines-table,
+    body.track-page.track-mobile-app .order-lines-table tbody {
+        display: block;
+        width: 100%;
+    }
+
+    body.track-page.track-mobile-app .order-lines-table tr {
+        display: block;
+        background: rgba(0, 0, 0, 0.28);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+
+    body.track-page.track-mobile-app .order-lines-table td {
+        display: block;
+        border: none;
+        padding: 0 0 10px;
+        width: 100% !important;
+    }
+
+    body.track-page.track-mobile-app .order-lines-table td:last-child {
+        padding-bottom: 0;
+        text-align: right;
+    }
+
+    body.track-page.track-mobile-app .order-lines-table td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        opacity: 0.55;
+        margin-bottom: 4px;
+    }
+
+    body.track-page.track-mobile-app .order-lines-table td:nth-child(1)::before { content: 'Название'; }
+    body.track-page.track-mobile-app .order-lines-table td:nth-child(2)::before { content: 'Кол-во'; }
+    body.track-page.track-mobile-app .order-lines-table td:nth-child(3)::before { content: 'Закуп €'; }
+    body.track-page.track-mobile-app .order-lines-table td:nth-child(4)::before { content: 'Продажа €'; }
+    body.track-page.track-mobile-app .order-lines-table td:nth-child(5)::before { content: 'SKU / склад'; }
+    body.track-page.track-mobile-app .order-lines-table td:nth-child(6)::before { content: 'Со склада'; }
+    body.track-page.track-mobile-app .order-lines-table td:nth-child(7)::before { content: 'Сразу'; }
+    body.track-page.track-mobile-app .order-lines-table td:nth-child(8)::before { content: ''; display: none; }
+
+    body.track-page.track-mobile-app .order-lines-table .track-order-line-del {
+        min-height: 44px;
+        min-width: 44px;
+        border-radius: 10px;
+    }
+
+    body.track-page.track-mobile-app .order-lines-table input {
+        min-height: 44px;
+        font-size: 16px !important;
+    }
+
+    body.track-page.track-mobile-app .order-lines-table .ol-qty {
+        max-width: none;
+    }
+
+    body.track-page.track-mobile-app .order-lines-actions {
+        flex-direction: column;
+    }
+
+    body.track-page.track-mobile-app .order-lines-actions button {
+        width: 100%;
+        min-height: 48px;
+    }
+
+    body.track-page.track-mobile-app .ol-sku-cell {
+        min-width: 0;
+    }
+
+    /* ── Documents ── */
+    body.track-page.track-mobile-app .track-doc-row {
+        border-radius: 14px;
+        padding: 12px;
+        margin-bottom: 8px;
+        background: rgba(0, 0, 0, 0.22);
+    }
+
+    body.track-page.track-mobile-app .track-doc-row-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    body.track-page.track-mobile-app .track-doc-row-actions a,
+    body.track-page.track-mobile-app .track-doc-row-actions button {
+        min-height: 44px;
+        justify-content: center;
+    }
+
+    /* ── History ── */
+    .track-m-history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .track-m-history-item {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        gap: 12px;
+        padding: 10px 0;
+        position: relative;
+    }
+
+    .track-m-history-item:not(:last-child)::before {
+        content: '';
+        position: absolute;
+        left: 13px;
+        top: 32px;
+        bottom: -2px;
+        width: 2px;
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .track-m-history-dot {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: rgba(59, 130, 246, 0.2);
+        border: 1px solid rgba(96, 165, 250, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+    }
+
+    .track-m-history-title {
+        font-size: 0.85rem;
+        font-weight: 650;
+    }
+
+    .track-m-history-meta {
+        font-size: 0.72rem;
+        opacity: 0.6;
+        margin-top: 2px;
+    }
+
+    /* ── Pricing ── */
+    body.track-page.track-mobile-app .track-pricing-summary {
+        gap: 0;
+    }
+
+    body.track-page.track-mobile-app .track-pricing-row {
+        padding: 10px 0;
+        font-size: 0.88rem;
+    }
+
+    /* ── Bottom nav ── */
+    .track-m-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 900;
+        display: flex;
+        justify-content: space-around;
+        gap: 2px;
+        padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0px));
+        background: rgba(15, 23, 42, 0.96);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    .track-m-nav[hidden] {
+        display: none !important;
+    }
+
+    .track-m-nav-btn {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: 80px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        padding: 6px 4px;
+        border: none;
+        border-radius: 12px;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.55);
+        font-size: 0.58rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+    }
+
+    .track-m-nav-btn span:first-child {
+        font-size: 1.15rem;
+        line-height: 1;
+    }
+
+    .track-m-nav-btn.is-active {
+        background: rgba(59, 130, 246, 0.18);
+        color: #93c5fd;
+    }
+
+    /* ── Stock picker ── */
+    body.track-page.track-mobile-app .track-stock-picker-dialog {
+        width: 100%;
+        max-width: none;
+        max-height: 92vh;
+        border-radius: 20px 20px 0 0;
+        margin-top: auto;
+    }
+
+    body.track-page.track-mobile-app .track-stock-picker-backdrop {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    body.track-page.track-mobile-app .track-stock-picker-list button {
+        min-height: 56px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        margin-bottom: 6px;
+    }
+
+    body.track-page.track-mobile-app .track-workspace-main {
+        padding-bottom: 8px;
+    }
+
+    body.track-page.track-mobile-app .track-other-orders {
+        margin-top: 12px;
+    }
+
+    body.track-page.track-mobile-app .track-m-edit-order {
+        display: block;
+        width: 100%;
+        margin-top: 14px;
+        min-height: 50px;
+        border-radius: 14px;
+        font-size: 0.95rem;
+        font-weight: 650;
+    }
+
+    body.track-page.track-mobile-app .track-info-grid {
+        gap: 12px;
+    }
+
+    body.track-page.track-mobile-app .track-field-cell .track-select,
+    body.track-page.track-mobile-app .track-field-cell .track-expected-date {
+        max-width: none;
+        width: 100%;
+        min-height: 44px;
+        font-size: 16px;
+    }
+
+    body.track-page.track-mobile-app .track-comment-grid textarea {
+        min-height: 88px;
+        font-size: 16px;
+    }
+}
+
+@media (min-width: 769px) {
+    .track-m-nav,
+    .track-m-hero,
+    .track-m-stepper {
+        display: none !important;
+    }
+
+    .track-m-edit-order {
+        display: none !important;
+    }
+
+    body.track-page .track-section[data-section="history"] {
+        display: none !important;
+    }
+}

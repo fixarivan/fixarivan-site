@@ -106,7 +106,9 @@
     <link rel="stylesheet" href="css/fixarivan-theme.css">
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625mobile">
     <link rel="stylesheet" href="css/track-modern.css?v=20250625trackcompact">
+    <link rel="stylesheet" href="css/track-mobile-app.css?v=20250625trackapp">
     <script src="js/track_ui.js?v=20250625polish"></script>
+    <script src="js/track_mobile_app.js?v=20250625trackapp"></script>
 </head>
 <body class="fv-page track-page">
     <div class="top">
@@ -1108,6 +1110,88 @@
             }).join('')}</div>`;
         }
 
+        function trackMobileHistoryIcon(title, docType) {
+            const t = String(title || '').toLowerCase();
+            const dt = String(docType || '').toLowerCase();
+            if (t.includes('выдан')) return '🎁';
+            if (t.includes('заверш') || t.includes('готов')) return '✅';
+            if (t.includes('ремонт')) return '🔧';
+            if (t.includes('запчаст')) return '📦';
+            if (t.includes('диагност')) return '🔍';
+            if (t.includes('создан') || dt === 'order') return '📝';
+            if (dt === 'invoice') return '📄';
+            if (dt === 'receipt') return '🧾';
+            if (dt === 'report') return '📱';
+            return '•';
+        }
+
+        function trackMobileHistoryHtml(o, T) {
+            const docs = o.documents || [];
+            const events = [];
+            const fmt = window.TrackUi ? (d) => TrackUi.formatDateShort(d) : (d) => String(d || '—');
+            const created = window.TrackUi ? TrackUi.orderCreatedDate(o) : '';
+            if (created) {
+                events.push({ ts: Date.parse(created) || 0, title: 'Заказ создан', meta: fmt(created), type: 'order' });
+            }
+            const reportDoc = docs.find((d) => String(d.type || '').toLowerCase() === 'report');
+            if (reportDoc) {
+                events.push({
+                    ts: Date.parse(reportDoc.date_created) || 0,
+                    title: 'Диагностика',
+                    meta: fmt(reportDoc.date_created),
+                    type: 'report',
+                });
+            }
+            const pst = String(o.parts_status || '').toLowerCase().trim();
+            const updated = window.TrackUi ? TrackUi.orderUpdatedDate(o) : '';
+            const updTs = Date.parse(updated) || Date.parse(created) || 0;
+            if (pst === 'ordered' || pst === 'waiting' || pst === 'in_transit') {
+                events.push({ ts: updTs, title: 'Запчасти заказаны', meta: fmt(updated || created), type: 'parts' });
+            }
+            if (pst === 'partial' || pst === 'ready') {
+                events.push({ ts: updTs + 1, title: 'Запчасти получены', meta: fmt(updated || created), type: 'parts' });
+            }
+            const pub = pubStatusNorm(o) || '';
+            if (pub === 'in_progress' && !isPartsWait(o)) {
+                events.push({ ts: updTs + 2, title: 'Начат ремонт', meta: fmt(updated || created), type: 'status' });
+            }
+            if (pub === 'done' || pub === 'in_transit') {
+                events.push({ ts: updTs + 3, title: 'Заказ завершён', meta: fmt(updated || created), type: 'status' });
+            }
+            if (pub === 'delivered') {
+                events.push({ ts: updTs + 4, title: 'Выдан клиенту', meta: fmt(updated || created), type: 'status' });
+            }
+            (window.TrackUi ? TrackUi.buildTimelineItems(docs, T) : docs).forEach((d) => {
+                const label = window.TrackUi ? TrackUi.timelineEventLabel(d, T) : typeLabel(d.type);
+                if (label === 'Заказ создан') return;
+                events.push({
+                    ts: Date.parse(d.date_created) || 0,
+                    title: label,
+                    meta: fmt(d.date_created) + (d.status ? ' · ' + d.status : ''),
+                    type: String(d.type || ''),
+                });
+            });
+            events.sort((a, b) => b.ts - a.ts);
+            const seen = new Set();
+            const unique = events.filter((ev) => {
+                const key = ev.title + '|' + ev.meta;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+            if (!unique.length) return '<div class="track-rail-muted">История пока пуста</div>';
+            return '<div class="track-m-history-list">' + unique.map((ev) => {
+                const icon = trackMobileHistoryIcon(ev.title, ev.type);
+                return `<div class="track-m-history-item">
+                    <div class="track-m-history-dot" aria-hidden="true">${icon}</div>
+                    <div>
+                        <div class="track-m-history-title">${esc(ev.title)}</div>
+                        <div class="track-m-history-meta">${esc(ev.meta || '—')}</div>
+                    </div>
+                </div>`;
+            }).join('') + '</div>';
+        }
+
         function trackRailTimelineHtml(docs, T) {
             const items = window.TrackUi ? TrackUi.buildTimelineItems(docs, T) : (docs || []);
             if (!items.length) return '<div class="track-rail-muted">—</div>';
@@ -1345,6 +1429,7 @@
                                 <textarea class="track-internal track-internal-comment" data-doc="${esc(orderDocId)}" placeholder="${esc(T.internalPh)}" rows="3">${esc(ic)}</textarea>
                             </div>
                         </div>
+                        <button type="button" class="primary track-m-edit-order" onclick="editDoc('${esc(orderDocId)}','order')">Редактировать заказ</button>
                     `) +
                     trackSectionHtml('pricing', '💰', 'Стоимость', 'Работа и итог', `
                         ${trackPricingSummaryInnerHtml()}
@@ -1394,7 +1479,8 @@
                             </div>
                         </div>
                         <div class="track-doc-list">${docCardsHtml || '<div class="track-rail-muted">—</div>'}</div>
-                    `)
+                    `) +
+                    trackSectionHtml('history', '🕒', 'История', 'События заказа', trackMobileHistoryHtml(o, T))
                 ) : `<div class="muted" style="margin:8px 0;">${esc(T.noOrderDoc)}</div>`;
                 return `
                 <div class="order-card ${orderClass(o)}" data-order-doc-id="${esc(orderDocId)}">
@@ -1441,6 +1527,7 @@
             const quickBar = document.getElementById('clientQuickActions');
             if (!g){
                 window.__trackClientDocIds = [];
+                window.__trackMobileMeta = {};
                 if (window.TrackUi) TrackUi.clearPricingCache();
                 document.getElementById('clientTitle').textContent = T.clientTitle;
                 document.getElementById('clientMetaShort').textContent = T.clientPick;
@@ -1448,6 +1535,7 @@
                 if (quickBar) { quickBar.style.display = 'none'; quickBar.innerHTML = ''; }
                 tree.innerHTML = '<div class="muted">—</div>';
                 renderWorkspaceRail(null, null, T);
+                if (window.TrackMobileApp) TrackMobileApp.refresh(tree, {});
                 return;
             }
             if (window.TrackUi) TrackUi.clearPricingCache();
@@ -1497,6 +1585,14 @@
                 docIds.forEach((id) => TrackUi.updatePricingSummary(document, id, docIds));
                 TrackUi.updateClientRailFinance(docIds);
             }
+            window.__trackMobileMeta = {
+                clientName: g.client_name,
+                phone: g.client_phone,
+                email: g.client_email,
+                serial: primary.device_serial || '',
+                deviceType: primary.device_type || '',
+            };
+            if (window.TrackMobileApp) TrackMobileApp.refresh(tree, window.__trackMobileMeta);
         }
 
         function bindTrackOrderControls(root) {
@@ -2429,5 +2525,13 @@
             });
         });
     </script>
+
+    <nav class="track-m-nav" id="trackMobileNav" hidden aria-label="Разделы заказа">
+        <button type="button" class="track-m-nav-btn is-active" data-tab="details"><span>📋</span><span>Детали</span></button>
+        <button type="button" class="track-m-nav-btn" data-tab="parts"><span>🔧</span><span>Запчасти</span></button>
+        <button type="button" class="track-m-nav-btn" data-tab="finance"><span>💶</span><span>Финансы</span></button>
+        <button type="button" class="track-m-nav-btn" data-tab="documents"><span>📄</span><span>Документы</span></button>
+        <button type="button" class="track-m-nav-btn" data-tab="history"><span>🕒</span><span>История</span></button>
+    </nav>
 </body>
 </html>
