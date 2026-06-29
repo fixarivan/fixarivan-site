@@ -985,7 +985,7 @@
 
     </style>
     <link rel="stylesheet" href="mobile_fixes.css">
-    <link rel="stylesheet" href="css/inventory-mobile-app.css?v=20250625invdata">
+    <link rel="stylesheet" href="css/inventory-mobile-app.css?v=20250625invadd">
 </head>
 <body class="inventory-page fv-inventory">
     <div class="header">
@@ -1190,7 +1190,7 @@
                     </select>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group inv-m-form-hide">
                     <label>📸 Фото товара</label>
                     <div class="image-upload-container" onclick="document.getElementById('itemImageInput').click()">
                         <div style="font-size: 48px; margin-bottom: 8px;">📷</div>
@@ -1200,7 +1200,7 @@
                     <input type="file" id="itemImageInput" accept="image/*" style="display: none;" onchange="previewImage(event)">
                 </div>
 
-                <div class="form-group">
+                <div class="form-group inv-m-form-hide">
                     <label>🔢 Артикул</label>
                     <small style="display:block;color:var(--text-secondary);font-size:12px;margin:0 0 6px;line-height:1.35;">При сохранении в базу можно оставить пустым — присвоится автоматически (формат FV‑номер).</small>
                     <input type="text" id="itemSku" placeholder="" autocomplete="off">
@@ -1224,7 +1224,7 @@
                     <input type="number" id="itemMinStock" min="0" value="5">
                 </div>
 
-                <div class="form-group">
+                <div class="form-group inv-m-form-hide">
                     <label>📍 Расположение на складе</label>
                     <input type="text" id="itemLocation" placeholder="Полка A-12">
                 </div>
@@ -2748,8 +2748,8 @@
 
         // Auto popup disabled by request: low stock is visible in widgets/filters only.
     </script>
-    <script src="js/inventory_mobile_app.js?v=20250625invdata"></script>
-    <script src="js/inventory_sqlite_override.js?v=20250625invdata"></script>
+    <script src="js/inventory_mobile_app.js?v=20250625invadd"></script>
+    <script src="js/inventory_sqlite_override.js?v=20250625invadd"></script>
     <script src="js/brand_logo.js?v=20250625"></script>
 
     <div id="invMobileDetail" class="inv-m-detail" hidden>

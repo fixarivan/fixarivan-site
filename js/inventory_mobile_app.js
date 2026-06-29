@@ -167,30 +167,20 @@
         const qty = Number(item.quantity) || 0;
         const sell = Number(item.sellPrice != null ? item.sellPrice : item.sale_price) || 0;
         const cost = Number(item.costPrice != null ? item.costPrice : item.default_cost) || 0;
-        const sku = item.sku && String(item.sku).trim()
-            ? escFn(String(item.sku).trim())
-            : '<span style="opacity:0.55">присвоится FV-…</span>';
         const compat = escFn(item.compatibility || 'Универсальное');
         const name = escFn(item.name || '—');
-        const location = item.location && String(item.location).trim()
-            ? escFn(String(item.location).trim())
-            : '';
-        const img = item.image
-            ? '<img src="' + escFn(item.image) + '" class="item-image" alt="' + name + '">'
-            : '<div class="inv-m-card-icon">' + icon + '</div>';
+        const iconHtml = '<div class="inv-m-card-icon">' + icon + '</div>';
         const id = Number(item.id);
 
         return (
             '<article class="item-card inv-m-card" data-item-id="' + id + '">' +
             '<div class="inv-m-card-tap" onclick="viewItem(' + id + ')">' +
             '<div class="inv-m-card-inner">' +
-            '<div class="inv-m-card-media">' + img +
+            '<div class="inv-m-card-media">' + iconHtml +
             '<span class="inv-m-stock-badge status-' + status.class + '">' + esc(statusText) + '</span></div>' +
             '<div class="inv-m-card-main">' +
             '<div class="inv-m-card-title">' + name + '</div>' +
-            '<div class="inv-m-card-sku"><strong>Артикул:</strong> ' + sku + '</div>' +
             '<div class="inv-m-card-compat"><strong>Совместимость:</strong> ' + compat + '</div>' +
-            (location ? '<div class="inv-m-card-loc"><strong>Место:</strong> ' + location + '</div>' : '') +
             '<div class="inv-m-card-stock-row">' +
             '<span class="inv-m-card-qty">На складе:</span>' +
             '<span class="inv-m-card-qty-val">' + qty + '</span>' +
@@ -357,21 +347,17 @@
         body.innerHTML =
             '<div class="inv-m-detail-hero">' +
             '<div class="inv-m-detail-photo">' +
-            (item.image
-                ? '<img src="' + esc(item.image) + '" alt="">'
-                : '<span class="inv-m-detail-photo-icon">' + icon + '</span>') +
+            '<span class="inv-m-detail-photo-icon">' + icon + '</span>' +
             '</div>' +
             '<div class="inv-m-detail-name">' + esc(item.name) + '</div>' +
             '<span class="inv-m-detail-badge status-' + status.class + '">' + esc(statusText) + '</span>' +
             '</div>' +
             '<div class="inv-m-detail-facts">' +
-            factRow('Артикул', item.sku || '—') +
             factRow('Совместимость', item.compatibility || '—') +
             factRow('Категория', catLabel(item.category)) +
             factRow('Остаток', String(item.quantity) + ' шт') +
             factRow('Закупочная цена', fmtMoney(cost)) +
             factRow('Цена продажи', fmtMoney(sell)) +
-            (item.location ? factRow('Место', item.location) : '') +
             '</div>';
 
         actions.innerHTML =

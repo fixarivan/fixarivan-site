@@ -501,6 +501,15 @@
     };
 
     window.saveItem = async function () {
+        var locationEl = document.getElementById('itemLocation');
+        var locationVal = locationEl ? String(locationEl.value || '').trim() : '';
+        if (!locationVal && currentEditId && typeof inventory !== 'undefined') {
+            var existingLoc = inventory.find(function (i) { return Number(i.id) === Number(currentEditId); });
+            if (existingLoc && existingLoc.location) {
+                locationVal = String(existingLoc.location).trim();
+            }
+        }
+
         var itemData = {
             name: document.getElementById('itemName').value,
             category: document.getElementById('itemCategory').value,
@@ -510,7 +519,7 @@
             minStock: parseFloat(document.getElementById('itemMinStock').value) || 0,
             costPrice: parseFloat(document.getElementById('itemCostPrice').value) || 0,
             sellPrice: parseFloat(document.getElementById('itemSellPrice').value) || 0,
-            location: document.getElementById('itemLocation').value,
+            location: locationVal,
             notes: document.getElementById('itemNotes').value
         };
 
