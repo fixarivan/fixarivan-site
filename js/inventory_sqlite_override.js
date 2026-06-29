@@ -8,6 +8,14 @@
     var STOCK_FILTERS = ['all', 'in-stock', 'low-stock', 'out-of-stock', 'for-order'];
     var sqliteInventoryWarnShown = false;
 
+    function shouldUseMobileInventoryCards() {
+        var app = window.InventoryMobileApp;
+        if (!app || typeof app.buildItemCardHtml !== 'function') return false;
+        if (typeof app.useMobileCards === 'function') return app.useMobileCards();
+        if (typeof app.isMobile === 'function') return app.isMobile();
+        return window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+    }
+
     function getFilter() {
         if (typeof getInventoryFilter === 'function') return getInventoryFilter();
         if (typeof currentFilter !== 'undefined') return currentFilter;
@@ -321,16 +329,13 @@
         }
 
         grid.innerHTML = filtered.map(function (item) {
-            if (
-                window.InventoryMobileApp
-                && typeof InventoryMobileApp.useMobileCards === 'function'
-                && InventoryMobileApp.useMobileCards()
-                && typeof InventoryMobileApp.buildItemCardHtml === 'function'
-            ) {
+            if (shouldUseMobileInventoryCards()) {
                 return InventoryMobileApp.buildItemCardHtml(item, escapeHtml);
             }
             var status = getStatus(item);
-            var icon = (typeof categoryIcons !== 'undefined' && categoryIcons[item.category]) ? categoryIcons[item.category] : '📦';
+            var icon = (typeof categoryIcons !== 'undefined' && categoryIcons[item.category])
+                ? categoryIcons[item.category]
+                : ((window.categoryIcons && window.categoryIcons[item.category]) || '📦');
             return (
                 '<div class="item-card" onclick="viewItem(' + item.id + ')">' +
                 '<div class="item-content">' +

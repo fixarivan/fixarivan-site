@@ -13,6 +13,34 @@
         'technology', 'protective_glass', 'screens', 'batteries', 'charging',
     ];
 
+    const CATEGORY_ICONS_FALLBACK = {
+        screens: '📱',
+        batteries: '🔋',
+        charging: '⚡',
+        protective_glass: '🛡️',
+        cables: '🔌',
+        accessories: '🎧',
+        consumables: '🧪',
+        tools: '🔧',
+        parts: '📦',
+        technology: '💻',
+        other: '🔹',
+    };
+
+    const CATEGORY_LABELS_FALLBACK = {
+        screens: 'Экраны',
+        batteries: 'Батареи',
+        charging: 'Разъёмы',
+        protective_glass: 'Защитные стёкла',
+        cables: 'Кабели',
+        accessories: 'Аксессуары',
+        consumables: 'Расходники',
+        tools: 'Инструменты',
+        parts: 'Запчасти',
+        technology: 'Техника',
+        other: 'Другое',
+    };
+
     const NON_CATEGORY_FILTERS = ['all', 'in-stock', 'low-stock', 'out-of-stock', 'for-order'];
 
     let patchedViewItem = false;
@@ -48,15 +76,11 @@
     }
 
     function catIcon(cat) {
-        if (global.categoryIcons && global.categoryIcons[cat]) return global.categoryIcons[cat];
-        return '📦';
+        return getCategoryMeta(cat).icon;
     }
 
     function catLabel(cat) {
-        if (global.translations && global.translations.ru && global.translations.ru[cat]) {
-            return global.translations.ru[cat];
-        }
-        return cat;
+        return getCategoryMeta(cat).label;
     }
 
     function getCategoryIds() {
@@ -105,9 +129,33 @@
     }
 
     function statusLabel(status) {
-        if (status.class === 'out-of-stock') return 'Нет в наличии';
-        if (status.class === 'low-stock') return 'Мало';
-        return 'OK';
+        if (status && status.text) return status.text;
+        if (status.class === 'out-of-stock') return '❌ Нет';
+        if (status.class === 'low-stock') return '⚠️ Мало';
+        return '✅ OK';
+    }
+
+    function getCategoryMeta(catId) {
+        const id = String(catId || '');
+        const chip = document.querySelector('.filter-chips .chip[data-filter="' + id + '"]');
+        if (chip) {
+            const text = (chip.textContent || '').trim();
+            const sp = text.indexOf(' ');
+            if (sp > 0) {
+                return { icon: text.slice(0, sp), label: text.slice(sp + 1).trim() };
+            }
+            if (text) return { icon: '📦', label: text };
+        }
+        if (global.categoryIcons && global.categoryIcons[id]) {
+            return {
+                icon: global.categoryIcons[id],
+                label: (global.translations && global.translations.ru && global.translations.ru[id]) || CATEGORY_LABELS_FALLBACK[id] || id,
+            };
+        }
+        return {
+            icon: CATEGORY_ICONS_FALLBACK[id] || '📦',
+            label: CATEGORY_LABELS_FALLBACK[id] || id,
+        };
     }
 
     function buildItemCardHtml(item, escapeFn) {
@@ -121,8 +169,8 @@
         const cost = Number(item.costPrice != null ? item.costPrice : item.default_cost) || 0;
         const sku = item.sku && String(item.sku).trim()
             ? escFn(String(item.sku).trim())
-            : '<span style="opacity:0.55">FV-…</span>';
-        const compat = escFn(item.compatibility || '—');
+            : '<span style="opacity:0.55">присвоится FV-…</span>';
+        const compat = escFn(item.compatibility || 'Универсальное');
         const name = escFn(item.name || '—');
         const location = item.location && String(item.location).trim()
             ? escFn(String(item.location).trim())
@@ -140,11 +188,12 @@
             '<span class="inv-m-stock-badge status-' + status.class + '">' + esc(statusText) + '</span></div>' +
             '<div class="inv-m-card-main">' +
             '<div class="inv-m-card-title">' + name + '</div>' +
-            '<div class="inv-m-card-sku">SKU: ' + sku + '</div>' +
-            '<div class="inv-m-card-compat">' + compat + '</div>' +
-            (location ? '<div class="inv-m-card-loc">📍 ' + location + '</div>' : '') +
+            '<div class="inv-m-card-sku"><strong>Артикул:</strong> ' + sku + '</div>' +
+            '<div class="inv-m-card-compat"><strong>Совместимость:</strong> ' + compat + '</div>' +
+            (location ? '<div class="inv-m-card-loc"><strong>Место:</strong> ' + location + '</div>' : '') +
             '<div class="inv-m-card-stock-row">' +
-            '<span class="inv-m-card-qty">Остаток: <strong>' + qty + '</strong></span>' +
+            '<span class="inv-m-card-qty">На складе:</span>' +
+            '<span class="inv-m-card-qty-val">' + qty + '</span>' +
             '<span class="inv-m-status-pill status-' + status.class + '">' + esc(statusText) + '</span></div>' +
             '<div class="inv-m-card-prices">' +
             (cost > 0 ? '<span class="inv-m-price-cost">Закуп: ' + fmtMoney(cost) + '</span>' : '') +

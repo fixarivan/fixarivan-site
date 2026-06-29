@@ -985,7 +985,7 @@
 
     </style>
     <link rel="stylesheet" href="mobile_fixes.css">
-    <link rel="stylesheet" href="css/inventory-mobile-app.css?v=20250625invcards">
+    <link rel="stylesheet" href="css/inventory-mobile-app.css?v=20250625invdata">
 </head>
 <body class="inventory-page fv-inventory">
     <div class="header">
@@ -1384,7 +1384,7 @@
             showCategoryAnalytics: false
         };
 
-        // Category Icons
+        // Category Icons (общие для десктопа и mobile app)
         const categoryIcons = {
             screens: '📱',
             batteries: '🔋',
@@ -1398,6 +1398,7 @@
             technology: '💻',
             other: '🔹'
         };
+        window.categoryIcons = categoryIcons;
 
         // Translations
         const translations = {
@@ -1418,6 +1419,7 @@
                 'out-of-stock': 'Нет в наличии'
             }
         };
+        window.translations = translations;
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async function() {
@@ -2041,6 +2043,9 @@
 
             grid.innerHTML = filtered.map(item => {
                 if (window.InventoryMobileApp && typeof InventoryMobileApp.useMobileCards === 'function' && InventoryMobileApp.useMobileCards() && typeof InventoryMobileApp.buildItemCardHtml === 'function') {
+                    return InventoryMobileApp.buildItemCardHtml(item, escHtmlInv);
+                }
+                if (window.InventoryMobileApp && typeof InventoryMobileApp.isMobile === 'function' && InventoryMobileApp.isMobile() && typeof InventoryMobileApp.buildItemCardHtml === 'function') {
                     return InventoryMobileApp.buildItemCardHtml(item, escHtmlInv);
                 }
                 const status = getStatus(item);
@@ -2743,8 +2748,8 @@
 
         // Auto popup disabled by request: low stock is visible in widgets/filters only.
     </script>
-    <script src="js/inventory_mobile_app.js?v=20250625invcards"></script>
-    <script src="js/inventory_sqlite_override.js"></script>
+    <script src="js/inventory_mobile_app.js?v=20250625invdata"></script>
+    <script src="js/inventory_sqlite_override.js?v=20250625invdata"></script>
     <script src="js/brand_logo.js?v=20250625"></script>
 
     <div id="invMobileDetail" class="inv-m-detail" hidden>

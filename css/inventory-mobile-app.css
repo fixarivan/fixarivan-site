@@ -368,6 +368,7 @@
         font-weight: 700;
         line-height: 1.25;
         margin-bottom: 3px;
+        color: #e9d5ff;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
@@ -377,7 +378,8 @@
     .inv-m-card-sku,
     .inv-m-card-compat {
         font-size: 0.68rem;
-        opacity: 0.62;
+        color: rgba(255, 255, 255, 0.72);
+        opacity: 1;
         line-height: 1.3;
         white-space: nowrap;
         overflow: hidden;
@@ -424,16 +426,6 @@
         text-align: center;
     }
 
-    body.inventory-page.inventory-mobile-app .item-header,
-    body.inventory-page.inventory-mobile-app .item-name,
-    body.inventory-page.inventory-mobile-app .item-sku-inline,
-    body.inventory-page.inventory-mobile-app .item-details,
-    body.inventory-page.inventory-mobile-app .item-quantity,
-    body.inventory-page.inventory-mobile-app .item-prices,
-    body.inventory-page.inventory-mobile-app .item-status {
-        display: none !important;
-    }
-
     .inv-m-card-loc {
         font-size: 0.66rem;
         opacity: 0.58;
@@ -446,6 +438,14 @@
     .inv-m-card-qty strong {
         color: #e9d5ff;
         font-weight: 800;
+    }
+
+    .inv-m-card-qty-val {
+        margin-left: auto;
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: #e879f9;
+        line-height: 1;
     }
 
     .inv-m-status-pill {
@@ -541,9 +541,15 @@
         display: none !important;
     }
 
-    /* Desktop card markup hidden on mobile — only when not using inv-m-card */
-    body.inventory-page.inventory-mobile-app .item-card:not(.inv-m-card) .item-content {
-        display: none !important;
+    body.inventory-page.inventory-mobile-app .item-card:not(.inv-m-card) .item-actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    body.inventory-page.inventory-mobile-app .item-card:not(.inv-m-card) {
+        grid-column: 1 / -1;
+        width: 100%;
     }
 
     /* ── Detail screen ── */
