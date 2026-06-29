@@ -314,6 +314,73 @@
 
     body.fv-finance .drill-table-wrap {
         max-height: 55vh;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    body.fv-finance .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    body.fv-finance .custom-range {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    body.fv-finance .custom-range input[type="date"] {
+        width: 100%;
+        font-size: 16px;
+    }
+
+    body.fv-finance .kpi-hero {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    body.fv-finance .kpi-cell {
+        padding: 10px 8px;
+    }
+
+    body.fv-finance .kpi-num {
+        font-size: 1.05rem;
+    }
+
+    body.fv-finance .chart-wrap {
+        height: 180px;
+    }
+
+    body.fv-finance .tools {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    body.fv-finance .tools a,
+    body.fv-finance .tools button {
+        width: 100%;
+        text-align: center;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    body.fv-finance section.block {
+        padding: 12px;
+    }
+
+    body.fv-finance .drill-table {
+        font-size: 0.76rem;
+    }
+
+    body.fv-finance .drill-table th,
+    body.fv-finance .drill-table td {
+        padding: 6px 7px;
+    }
+
+    body.fv-finance .info-banner,
+    body.fv-finance .warn-banner {
+        font-size: 0.8rem;
+        padding: 10px 12px;
     }
 }
 
@@ -456,6 +523,25 @@
     .track-page .track-expected-row .track-expected-clear {
         width: auto;
         flex: 0 0 auto;
+        min-height: 40px;
+    }
+
+    .track-page .track-info-grid .track-field-label {
+        font-size: 0.62rem;
+    }
+
+    .track-prepay-drawer .track-prepay-summary {
+        min-height: 44px;
+        align-items: center;
+        padding: 10px 12px;
+    }
+
+    .track-prepay-btn {
+        min-height: 52px;
+    }
+
+    .track-page .track-section-toggle {
+        min-height: 44px;
     }
 }
 
@@ -472,6 +558,20 @@
 
     .track-page .track-top-hint {
         display: none;
+    }
+
+    .track-info-grid {
+        gap: 6px 8px;
+    }
+
+    .track-info-grid .track-field-cell--status-parts .badge {
+        font-size: 0.58rem;
+        padding: 3px 4px;
+    }
+
+    .track-expected-row .track-expected-clear {
+        padding: 0 8px;
+        font-size: 0.68rem;
     }
 }
 
@@ -956,8 +1056,8 @@
 @media (max-width: 768px) {
     body.clients-page {
         overflow-x: hidden;
-        padding: max(10px, env(safe-area-inset-left, 0px)) max(10px, env(safe-area-inset-right, 0px))
-            max(12px, env(safe-area-inset-bottom, 0px));
+        padding: max(10px, env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px))
+            max(12px, env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px));
     }
 
     .clients-page .crm-topbar {
@@ -965,12 +1065,146 @@
         gap: 8px;
     }
 
+    .clients-page .crm-topbar h1 {
+        font-size: 1.15rem;
+    }
+
+    .clients-page .crm-workspace {
+        gap: 10px;
+    }
+
+    .clients-page .crm-search {
+        flex-wrap: nowrap;
+    }
+
     .clients-page .crm-search input {
         font-size: 16px !important;
+        min-width: 0;
+    }
+
+    .clients-page .crm-toolbar button {
+        min-height: 40px;
+    }
+
+    .clients-page .crm-filters {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+        scrollbar-width: none;
+    }
+
+    .clients-page .crm-filters::-webkit-scrollbar {
+        display: none;
+    }
+
+    .clients-page .crm-filter-btn {
+        flex: 0 0 auto;
+        min-height: 32px;
     }
 
     .clients-page .crm-list {
-        max-height: 38vh;
+        max-height: min(36vh, 300px);
+    }
+
+    .clients-page .crm-list-card {
+        grid-template-columns: 36px minmax(0, 1fr) auto;
+        gap: 8px;
+        padding: 8px;
+    }
+
+    .clients-page .crm-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 0.72rem;
+    }
+
+    .clients-page .crm-panel {
+        padding: 12px 14px;
+        border-radius: 14px;
+    }
+
+    .clients-page .crm-hero {
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .clients-page .crm-hero-avatar {
+        width: 56px;
+        height: 56px;
+        font-size: 1.1rem;
+    }
+
+    .clients-page .crm-hero-name {
+        font-size: 1.25rem;
+    }
+
+    .clients-page .crm-hero-edit {
+        grid-column: 1 / -1;
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .clients-page .crm-contact-chip {
+        font-size: 0.72rem;
+        padding: 6px 9px;
+    }
+
+    .clients-page .crm-kpi-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .clients-page .crm-kpi {
+        padding: 8px 6px;
+    }
+
+    .clients-page .crm-kpi-val {
+        font-size: 0.92rem;
+    }
+
+    .clients-page .crm-kpi-label {
+        font-size: 0.58rem;
+    }
+
+    .clients-page .crm-star-btn {
+        min-height: 40px;
+        padding: 6px 8px;
+        font-size: 0.72rem;
+    }
+
+    .clients-page .crm-check {
+        font-size: 0.74rem;
+        min-height: 32px;
+    }
+
+    .clients-page .crm-rail {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .clients-page .crm-device-card {
+        flex: 0 0 160px;
+    }
+
+    .clients-page .crm-timeline {
+        max-height: 240px;
+    }
+
+    .clients-page .crm-note-add input {
+        font-size: 16px;
+        min-height: 44px;
+    }
+
+    .clients-page .crm-note-add button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .clients-page .crm-form-grid input {
+        font-size: 16px;
+        min-height: 44px;
     }
 
     .clients-page .crm-order-actions {
@@ -991,11 +1225,30 @@
     .clients-page .crm-action-btn {
         min-height: 56px;
     }
+
+    .clients-page .crm-action-link {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
 }
 
 @media (max-width: 420px) {
+    .clients-page .crm-kpi-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .clients-page .crm-order-actions {
         grid-template-columns: 1fr;
+    }
+
+    .clients-page .crm-list {
+        max-height: 32vh;
+    }
+
+    .clients-page .crm-list-badge {
+        font-size: 0.58rem;
+        padding: 2px 5px;
     }
 }
 
@@ -1003,10 +1256,68 @@
 /* Новый заказ — order_new.html (.order-new-page) */
 /* -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
+    body.order-new-page {
+        overflow-x: hidden;
+    }
+
+    body.order-new-page .container {
+        padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px))
+            max(20px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+    }
+
+    body.order-new-page .card {
+        padding: 16px 14px;
+        border-radius: 14px;
+    }
+
+    body.order-new-page .form-group input,
+    body.order-new-page .form-group textarea,
+    body.order-new-page .form-group select {
+        font-size: 16px !important;
+    }
+
+    body.order-new-page button,
+    body.order-new-page .btn {
+        min-height: 44px;
+    }
+
+    body.order-new-page .problem-template-bar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 6px;
+        padding-bottom: 4px;
+        margin-bottom: 10px;
+        scrollbar-width: none;
+    }
+
+    body.order-new-page .problem-template-bar::-webkit-scrollbar {
+        display: none;
+    }
+
+    body.order-new-page .problem-template-chip {
+        flex: 0 0 auto;
+        min-height: 40px;
+        padding: 8px 12px;
+        font-size: 0.76rem;
+    }
+
     body.order-new-page .lines-table-wrap {
         margin-left: -4px;
         margin-right: -4px;
         border-radius: 12px;
+    }
+
+    body.order-new-page #orderMode,
+    body.order-new-page .portal-cost-input {
+        font-size: 16px !important;
+    }
+}
+
+@media (max-width: 420px) {
+    body.order-new-page .problem-template-chip {
+        font-size: 0.72rem;
+        padding: 7px 10px;
     }
 }
 

@@ -460,4 +460,21 @@
     .crm-kpi-row { grid-template-columns: repeat(2, 1fr); }
     .crm-grid-2 { grid-template-columns: 1fr; }
     .crm-form-grid { grid-template-columns: 1fr; }
+    .crm-rail {
+        grid-column: auto;
+        display: flex;
+        flex-direction: column;
+        grid-template-columns: none;
+    }
+    .crm-hero {
+        grid-template-columns: auto 1fr;
+    }
+    .crm-hero-edit {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+    .crm-devices-scroll {
+        margin: 0 -4px;
+        padding: 0 4px 6px;
+    }
 }

@@ -10,10 +10,33 @@
         return d.innerHTML;
     }
 
+    function splitDescriptionParts(value) {
+        return String(value || '')
+            .split(/\s*;\s*/)
+            .map((p) => p.trim())
+            .filter(Boolean);
+    }
+
+    function joinDescriptionParts(parts) {
+        return parts.filter(Boolean).join('; ');
+    }
+
+    function syncChipActiveState(container, textarea) {
+        if (!container || !textarea) return;
+        const parts = splitDescriptionParts(textarea.value);
+        container.querySelectorAll('.problem-template-chip').forEach((btn) => {
+            const text = String(btn.getAttribute('data-text') || '').trim();
+            btn.classList.toggle('is-active', text !== '' && parts.indexOf(text) !== -1);
+        });
+    }
+
     function insertTemplateText(textarea, text) {
         if (!textarea || text == null) return;
         const insert = String(text).trim();
         if (!insert) return;
+
+        const parts = splitDescriptionParts(textarea.value);
+        if (parts.indexOf(insert) !== -1) return;
 
         const start = textarea.selectionStart ?? textarea.value.length;
         const end = textarea.selectionEnd ?? start;
@@ -21,23 +44,56 @@
         const before = val.slice(0, start);
         const after = val.slice(end);
 
-        let prefix = '';
-        if (before.length > 0) {
-            const tail = before.slice(-1);
-            if (tail !== '\n' && tail !== ';') {
-                prefix = before.endsWith(' ') || before.endsWith(';') ? ' ' : '; ';
-            } else if (tail === ';') {
-                prefix = ' ';
+        if (parts.length === 0 && before.trim() === '' && after.trim() === '') {
+            textarea.value = insert;
+        } else if (parts.length > 0 && before.trim() === '' && after.trim() === '') {
+            textarea.value = joinDescriptionParts(parts.concat([insert]));
+        } else {
+            let prefix = '';
+            if (before.length > 0) {
+                const tail = before.slice(-1);
+                if (tail !== '\n' && tail !== ';') {
+                    prefix = before.endsWith(' ') || before.endsWith(';') ? ' ' : '; ';
+                } else if (tail === ';') {
+                    prefix = ' ';
+                }
             }
+            const chunk = prefix + insert;
+            textarea.value = before + chunk + after;
         }
 
-        const chunk = prefix + insert;
-        textarea.value = before + chunk + after;
-        const pos = before.length + chunk.length;
+        const pos = textarea.value.length;
         textarea.selectionStart = pos;
         textarea.selectionEnd = pos;
         textarea.focus();
         textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function removeTemplateText(textarea, text) {
+        if (!textarea || text == null) return false;
+        const insert = String(text).trim();
+        if (!insert) return false;
+
+        const parts = splitDescriptionParts(textarea.value);
+        const idx = parts.indexOf(insert);
+        if (idx === -1) return false;
+
+        parts.splice(idx, 1);
+        textarea.value = joinDescriptionParts(parts);
+        textarea.focus();
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+    }
+
+    function toggleTemplateText(textarea, text) {
+        const insert = String(text || '').trim();
+        if (!insert) return;
+        const parts = splitDescriptionParts(textarea.value);
+        if (parts.indexOf(insert) !== -1) {
+            removeTemplateText(textarea, insert);
+        } else {
+            insertTemplateText(textarea, insert);
+        }
     }
 
     function renderChips(container, textarea, templates) {
@@ -55,10 +111,19 @@
         }).join('');
 
         container.querySelectorAll('.problem-template-chip').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                insertTemplateText(textarea, btn.getAttribute('data-text') || '');
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleTemplateText(textarea, btn.getAttribute('data-text') || '');
+                syncChipActiveState(container, textarea);
             });
         });
+
+        if (textarea && !textarea.dataset.tplSyncBound) {
+            textarea.dataset.tplSyncBound = '1';
+            textarea.addEventListener('input', () => syncChipActiveState(container, textarea));
+        }
+
+        syncChipActiveState(container, textarea);
     }
 
     async function loadAndRender(options) {
@@ -83,6 +148,8 @@
     global.FixariVanProblemTemplates = {
         esc,
         insertTemplateText,
+        removeTemplateText,
+        toggleTemplateText,
         renderChips,
         loadAndRender,
     };

@@ -78,8 +78,18 @@
             transform: translateY(-1px);
         }
         .problem-template-chip:active { transform: translateY(0); }
+        .problem-template-chip.is-active {
+            background: #6366f1;
+            border-color: #4f46e5;
+            color: #fff;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35);
+        }
         @media (max-width: 640px) {
-            .problem-template-chip { font-size: 0.72rem; padding: 4px 9px; }
+            .problem-template-chip {
+                font-size: 0.76rem;
+                padding: 8px 12px;
+                min-height: 40px;
+            }
         }
         .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
         @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
@@ -653,7 +663,7 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="mobile_fixes.css">
+    <link rel="stylesheet" href="mobile_fixes.css?v=20250625mobile">
 </head>
 <body class="order-new-page order-mode-repair">
     <div class="container">
@@ -1051,6 +1061,9 @@
             }
             if (hasLines && !hasProblem) {
                 return 'sale';
+            }
+            if (hasProblem && !hasDevice && !hasLines) {
+                return 'repair';
             }
             return 'custom';
         }
@@ -1603,7 +1616,7 @@
         });
 
     </script>
-    <script src="js/order_problem_templates.js?v=20250625tpl"></script>
+    <script src="js/order_problem_templates.js?v=20250625tpl2"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             if (window.FixariVanProblemTemplates) {
