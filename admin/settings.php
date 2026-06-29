@@ -16,6 +16,7 @@ require_once dirname(__DIR__) . '/config.php';
 require_once dirname(__DIR__) . '/api/lib/admin_auth.php';
 require_once dirname(__DIR__) . '/api/lib/company_profile.php';
 require_once dirname(__DIR__) . '/api/lib/security_settings.php';
+require_once dirname(__DIR__) . '/api/lib/order_problem_templates.php';
 
 $adminNavActive = 'settings';
 $message = '';
@@ -85,6 +86,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Ошибка сохранения реквизитов: ' . $e->getMessage();
             $messageType = 'err';
         }
+    } elseif ($formType === 'problem_templates') {
+        $raw = (string)($_POST['templates_json'] ?? '[]');
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            $message = 'Некорректные данные шаблонов.';
+            $messageType = 'err';
+        } else {
+            try {
+                fixarivan_order_problem_templates_save($decoded);
+                $message = 'Шаблоны неисправностей для нового заказа сохранены.';
+                $messageType = 'ok';
+            } catch (Throwable $e) {
+                $message = 'Ошибка сохранения шаблонов: ' . $e->getMessage();
+                $messageType = 'err';
+            }
+        }
     } elseif ($formType === 'delete_security') {
         $newDeletePassword = (string)($_POST['delete_password'] ?? '');
         $newDeletePassword2 = (string)($_POST['delete_password_confirm'] ?? '');
@@ -143,6 +160,7 @@ if ($displayUser === '' && isset($_SESSION['admin_username'])) {
     $displayUser = (string) $_SESSION['admin_username'];
 }
 $companyProfile = fixarivan_company_profile_load();
+$problemTemplates = fixarivan_order_problem_templates_load();
 
 ?>
 <!DOCTYPE html>
@@ -211,6 +229,24 @@ $companyProfile = fixarivan_company_profile_load();
         .msg { padding: 12px 14px; border-radius: 10px; margin-bottom: 16px; font-size: 0.95rem; }
         .msg.ok { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; }
         .msg.err { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .tpl-table-wrap { overflow-x: auto; margin-bottom: 12px; }
+        .tpl-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .tpl-table th, .tpl-table td { border-bottom: 1px solid #e2e8f0; padding: 8px 6px; vertical-align: top; }
+        .tpl-table th { text-align: left; color: #64748b; font-size: 0.75rem; }
+        .tpl-table input[type="text"], .tpl-table input[type="number"] {
+            width: 100%; padding: 8px 10px; margin: 0; font-size: 0.85rem;
+        }
+        .tpl-table .col-emoji input { max-width: 56px; text-align: center; }
+        .tpl-table .col-sort input { max-width: 72px; }
+        .tpl-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .tpl-actions button {
+            padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0;
+            background: #f8fafc; cursor: pointer; font-weight: 600;
+        }
+        .tpl-actions button.primary {
+            background: linear-gradient(45deg, #667eea, #764ba2); color: #fff; border: none;
+        }
+        .tpl-del { color: #b91c1c; background: #fef2f2; border-color: #fecaca; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -329,6 +365,34 @@ $companyProfile = fixarivan_company_profile_load();
         </div>
 
         <div class="card" style="margin-top: 20px;">
+            <p style="font-weight: 600; margin-bottom: 8px;">Шаблоны неисправностей (новый заказ)</p>
+            <p class="hint">Кнопки над полем «Описание / неисправность» в форме нового заказа. Эмодзи и название — на кнопке; «Текст» вставляется в поле (не заменяет уже введённое).</p>
+            <form method="post" id="problemTemplatesForm">
+                <input type="hidden" name="form_type" value="problem_templates">
+                <input type="hidden" name="templates_json" id="templates_json" value="">
+                <div class="tpl-table-wrap">
+                    <table class="tpl-table">
+                        <thead>
+                            <tr>
+                                <th class="col-emoji">Эмодзи</th>
+                                <th>Название</th>
+                                <th>Текст вставки</th>
+                                <th class="col-sort">Порядок</th>
+                                <th>Вкл.</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tplRows"></tbody>
+                    </table>
+                </div>
+                <div class="tpl-actions">
+                    <button type="button" id="tplAddRow">+ Добавить шаблон</button>
+                    <button type="submit" class="primary">Сохранить шаблоны</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
             <p style="font-weight: 600; margin-bottom: 8px;">Резервная копия каталога storage</p>
             <p class="hint">Скачивается ZIP с SQLite (<code>fixarivan.sqlite</code>), токенами и прочими файлами из каталога storage — по смыслу как бэкап перед деплоем. Храните копию вне сервера.</p>
             <p style="margin-top: 12px;"><a href="../api/backup_storage.php" style="display:inline-block;padding:12px 18px;border-radius:12px;background:linear-gradient(45deg,#667eea,#764ba2);color:#fff;text-decoration:none;font-weight:600;">Скачать ZIP (storage)</a></p>
@@ -347,6 +411,71 @@ $companyProfile = fixarivan_company_profile_load();
             <p id="clearDocsResult" class="hint" style="margin-top: 12px; display: none;"></p>
         </div>
     </div>
+    <script>
+    (function () {
+        var initialTemplates = <?= json_encode($problemTemplates, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+        var tbody = document.getElementById('tplRows');
+        var hidden = document.getElementById('templates_json');
+        var form = document.getElementById('problemTemplatesForm');
+        if (!tbody || !hidden || !form) return;
+
+        function escAttr(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;');
+        }
+
+        function rowHtml(t, idx) {
+            t = t || {};
+            return '<tr data-id="' + escAttr(t.id || '') + '">' +
+                '<td class="col-emoji"><input type="text" class="tpl-emoji" value="' + escAttr(t.emoji || '') + '" maxlength="8"></td>' +
+                '<td><input type="text" class="tpl-label" value="' + escAttr(t.label || '') + '"></td>' +
+                '<td><input type="text" class="tpl-text" value="' + escAttr(t.text || '') + '"></td>' +
+                '<td class="col-sort"><input type="number" class="tpl-sort" value="' + escAttr(t.sort != null ? t.sort : ((idx + 1) * 10)) + '" min="0" step="10"></td>' +
+                '<td><input type="checkbox" class="tpl-enabled"' + (t.enabled === false ? '' : ' checked') + '></td>' +
+                '<td><button type="button" class="tpl-del">✕</button></td>' +
+                '</tr>';
+        }
+
+        function renderRows(rows) {
+            tbody.innerHTML = (rows || []).map(function (t, i) { return rowHtml(t, i); }).join('');
+        }
+
+        function collectRows() {
+            return Array.prototype.map.call(tbody.querySelectorAll('tr'), function (tr, i) {
+                return {
+                    id: tr.getAttribute('data-id') || '',
+                    emoji: (tr.querySelector('.tpl-emoji') || {}).value || '',
+                    label: (tr.querySelector('.tpl-label') || {}).value || '',
+                    text: (tr.querySelector('.tpl-text') || {}).value || '',
+                    sort: parseInt((tr.querySelector('.tpl-sort') || {}).value, 10) || ((i + 1) * 10),
+                    enabled: !!(tr.querySelector('.tpl-enabled') && tr.querySelector('.tpl-enabled').checked),
+                };
+            });
+        }
+
+        renderRows(initialTemplates);
+
+        document.getElementById('tplAddRow').addEventListener('click', function () {
+            var rows = collectRows();
+            rows.push({ emoji: '🔧', label: 'Новый', text: 'Описание неисправности', sort: (rows.length + 1) * 10, enabled: true });
+            initialTemplates = rows;
+            renderRows(rows);
+        });
+
+        tbody.addEventListener('click', function (e) {
+            if (!e.target.classList.contains('tpl-del')) return;
+            var tr = e.target.closest('tr');
+            if (!tr) return;
+            tr.remove();
+        });
+
+        form.addEventListener('submit', function () {
+            hidden.value = JSON.stringify(collectRows());
+        });
+    })();
+    </script>
     <script>
     (function () {
         var btn = document.getElementById('btnClearAllDocuments');

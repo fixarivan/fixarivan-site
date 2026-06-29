@@ -53,6 +53,34 @@
         .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
             outline: none; border-color: #6366f1;
         }
+        .problem-template-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .problem-template-bar[hidden] { display: none !important; }
+        .problem-template-chip {
+            padding: 5px 11px;
+            border-radius: 999px;
+            border: 1px solid #c7d2fe;
+            background: #eef2ff;
+            color: #3730a3;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            line-height: 1.2;
+            white-space: nowrap;
+            transition: background 0.15s, transform 0.1s;
+        }
+        .problem-template-chip:hover {
+            background: #e0e7ff;
+            transform: translateY(-1px);
+        }
+        .problem-template-chip:active { transform: translateY(0); }
+        @media (max-width: 640px) {
+            .problem-template-chip { font-size: 0.72rem; padding: 4px 9px; }
+        }
         .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
         @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
         .client-suggest-wrap { position: relative; }
@@ -698,6 +726,7 @@
                     <span class="show-sale-only">Комментарий к сделке</span>
                     <span class="show-custom-only">Описание заказа / комментарий</span>
                 </label>
+                <div id="problemTemplateBar" class="problem-template-bar show-repair-only" hidden aria-label="Быстрые шаблоны неисправности"></div>
                 <textarea id="problemDescription" rows="3" placeholder="" data-ph-repair="Что случилось, что делали" data-ph-sale="Кратко по сделке, условиям или заказу" data-ph-custom="Опишите задачу, заказ или состав работ"></textarea>
             </div>
             </div>
@@ -1573,6 +1602,17 @@
             }
         });
 
+    </script>
+    <script src="js/order_problem_templates.js?v=20250625tpl"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.FixariVanProblemTemplates) {
+                FixariVanProblemTemplates.loadAndRender({
+                    container: document.getElementById('problemTemplateBar'),
+                    textarea: document.getElementById('problemDescription'),
+                });
+            }
+        });
     </script>
     <script src="js/client_order_suggest.js"></script>
 </body>
