@@ -985,6 +985,7 @@
 
     </style>
     <link rel="stylesheet" href="mobile_fixes.css">
+    <link rel="stylesheet" href="css/inventory-mobile-app.css?v=20250625invapp">
 </head>
 <body class="inventory-page fv-inventory">
     <div class="header">
@@ -1404,6 +1405,7 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', async function() {
             loadInventorySettings();
+            if (window.InventoryMobileApp) InventoryMobileApp.refresh();
             await loadInventory();
             setupSearch();
             setupFilters();
@@ -2015,6 +2017,9 @@
             }
 
             grid.innerHTML = filtered.map(item => {
+                if (window.InventoryMobileApp && typeof InventoryMobileApp.buildItemCardHtml === 'function') {
+                    return InventoryMobileApp.buildItemCardHtml(item, escHtmlInv);
+                }
                 const status = getStatus(item);
                 const icon = categoryIcons[item.category] || '📦';
                 
@@ -2715,8 +2720,37 @@
 
         // Auto popup disabled by request: low stock is visible in widgets/filters only.
     </script>
+    <script src="js/inventory_mobile_app.js?v=20250625invapp"></script>
     <script src="js/inventory_sqlite_override.js"></script>
     <script src="js/brand_logo.js?v=20250625"></script>
+
+    <div id="invMobileDetail" class="inv-m-detail" hidden>
+        <header class="inv-m-detail-header">
+            <button type="button" class="inv-m-detail-back" id="invMobileDetailBack" aria-label="Назад">←</button>
+            <span class="inv-m-detail-header-title" id="invMobileDetailHeaderTitle">Товар</span>
+            <span aria-hidden="true"></span>
+        </header>
+        <div id="invMobileDetailBody" class="inv-m-detail-body"></div>
+        <div id="invMobileDetailActions" class="inv-m-detail-actions"></div>
+    </div>
+
+    <div id="invMobileSheetBackdrop" class="inv-m-sheet-backdrop" aria-hidden="true"></div>
+    <div id="invMobileFilterSheet" class="inv-m-sheet">
+        <div class="inv-m-sheet-title">Категории и фильтры</div>
+        <div class="inv-m-sheet-grid" id="invMobileFilterSheetGrid"></div>
+    </div>
+    <div id="invMobileMoreSheet" class="inv-m-sheet">
+        <div class="inv-m-sheet-title">Ещё</div>
+        <div class="inv-m-sheet-grid" id="invMobileMoreSheetGrid"></div>
+    </div>
+
+    <nav class="inv-m-nav" id="inventoryMobileNav" hidden aria-label="Навигация">
+        <a href="index.php" class="inv-m-nav-btn"><span>🏠</span><span>Главная</span></a>
+        <a href="order_new.html" class="inv-m-nav-btn is-add"><span>➕</span><span>Новый</span></a>
+        <a href="track.html" class="inv-m-nav-btn"><span>📋</span><span>Заказы</span></a>
+        <a href="inventory.html" class="inv-m-nav-btn is-active"><span>🚀</span><span>Склад</span></a>
+        <button type="button" class="inv-m-nav-btn" id="invMobileMoreBtn"><span>•••</span><span>Ещё</span></button>
+    </nav>
 </body>
 </html>
 
