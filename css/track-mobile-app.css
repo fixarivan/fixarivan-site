@@ -332,6 +332,20 @@
         color: #93c5fd;
     }
 
+    .track-m-step--receipt-shortcut {
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .track-m-step--receipt-shortcut:active {
+        opacity: 0.82;
+        transform: scale(0.98);
+    }
+
+    .track-m-step--receipt-shortcut .track-m-step-dot {
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
+    }
+
     /* ── Section bodies as cards ── */
     body.track-page.track-mobile-app .track-section-body {
         background: rgba(255, 255, 255, 0.04);

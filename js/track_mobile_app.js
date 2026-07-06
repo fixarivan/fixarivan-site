@@ -84,6 +84,47 @@
         return p === 'in_progress' || p === 'in_transit' ? 1 : 0;
     }
 
+    /** Тот же переход, что кнопка «+ Квитанция» в разделе Документы. */
+    function openReceiptFromCard(card) {
+        if (!card) return false;
+        const docsSec = card.querySelector('.track-section[data-section="documents"]');
+        let link = docsSec && docsSec.querySelector('a[href*="receipt.html"]');
+        if (!link) {
+            link = card.querySelector('a[href*="receipt.html"]');
+        }
+        if (!link) {
+            const root = document.getElementById('ordersTree');
+            if (root) {
+                saveTab('documents');
+                applyTab('documents', root);
+                link = card.querySelector('.track-section[data-section="documents"] a[href*="receipt.html"]')
+                    || card.querySelector('a[href*="receipt.html"]');
+            }
+        }
+        if (!link || !link.href) return false;
+        link.click();
+        return true;
+    }
+
+    function bindReadyStepReceiptShortcut(stepper, card) {
+        if (!stepper || stepper.dataset.receiptShortcutBound === '1') return;
+        stepper.dataset.receiptShortcutBound = '1';
+        const ready = stepper.querySelector('.track-m-step[data-step-id="ready"]');
+        if (!ready) return;
+        ready.setAttribute('role', 'button');
+        ready.setAttribute('tabindex', '0');
+        ready.setAttribute('title', 'Создать квитанцию');
+        ready.setAttribute('aria-label', 'Готово — создать квитанцию');
+        const go = () => { openReceiptFromCard(card); };
+        ready.addEventListener('click', go);
+        ready.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                go();
+            }
+        });
+    }
+
     function tabForSection(sectionId) {
         const id = String(sectionId || '');
         return Object.keys(TAB_SECTIONS).find((tab) => TAB_SECTIONS[tab].indexOf(id) !== -1) || null;
@@ -403,8 +444,11 @@
         const idx = pubStatusStep(pub, partsBadge, hasReport);
         stepper.innerHTML = '<div class="track-m-stepper-track">' + STEPS.map((step, i) => {
             const cls = i < idx ? ' is-done' : (i === idx ? ' is-current' : '');
-            return `<div class="track-m-step${cls}"><div class="track-m-step-dot">${i < idx ? '✓' : (i + 1)}</div><div class="track-m-step-label">${esc(step.label)}</div></div>`;
+            const actionCls = step.id === 'ready' ? ' track-m-step--receipt-shortcut' : '';
+            return `<div class="track-m-step${cls}${actionCls}" data-step-id="${esc(step.id)}"><div class="track-m-step-dot">${i < idx ? '✓' : (i + 1)}</div><div class="track-m-step-label">${esc(step.label)}</div></div>`;
         }).join('') + '</div>';
+        stepper.dataset.receiptShortcutBound = '';
+        bindReadyStepReceiptShortcut(stepper, card);
     }
 
     function bindNav(root) {
