@@ -106,9 +106,11 @@
     <link rel="stylesheet" href="css/fixarivan-theme.css">
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625mobile">
     <link rel="stylesheet" href="css/track-modern.css?v=20250625trackcompact">
-    <link rel="stylesheet" href="css/track-mobile-app.css?v=20250625trackportal">
+    <link rel="stylesheet" href="css/track-mobile-app.css?v=20250706lines">
+    <link rel="stylesheet" href="css/order-lines-mobile.css?v=20250706lines">
     <script src="js/track_ui.js?v=20250625polish"></script>
-    <script src="js/track_mobile_app.js?v=20250625trackportal"></script>
+    <script src="js/order_lines_mobile_ui.js?v=20250706lines"></script>
+    <script src="js/track_mobile_app.js?v=20250706lines"></script>
 </head>
 <body class="fv-page track-page">
     <div class="top">
@@ -2074,6 +2076,9 @@
             const bd = document.getElementById('trackStockPickerBackdrop');
             if (bd) bd.hidden = true;
             trackStockPickerTargetRow = null;
+            if (window.FixariVanOrderLinesMobile) {
+                FixariVanOrderLinesMobile.refreshTrack(document.getElementById('ordersTree'));
+            }
         }
 
         async function loadTrackStockPickerResults(q) {

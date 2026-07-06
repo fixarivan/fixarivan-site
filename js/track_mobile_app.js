@@ -500,6 +500,9 @@
         if (typeof global.bindPortalButtons === 'function') {
             global.bindPortalButtons(card);
         }
+        if (global.FixariVanOrderLinesMobile) {
+            FixariVanOrderLinesMobile.refreshTrack(root);
+        }
     }
 
     function initMediaListener() {

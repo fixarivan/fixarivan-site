@@ -1,0 +1,490 @@
+/* ── Компактные позиции заказа (мобильный UI) ── */
+
+.olm-table-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.olm-mobile-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.olm-title-hidden {
+    display: none !important;
+}
+
+/* Summary */
+.olm-summary {
+    background: rgba(0, 0, 0, 0.32);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    padding: 10px 12px;
+}
+
+body.order-new-page .olm-summary {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+}
+
+.olm-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px 12px;
+}
+
+@media (min-width: 380px) {
+    .olm-summary-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.olm-sum-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.olm-sum-label {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.6;
+}
+
+.olm-sum-val {
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.olm-sum-val small {
+    font-size: 0.68rem;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+.olm-sum-item.is-pos .olm-sum-val { color: #4ade80; }
+.olm-sum-item.is-neg .olm-sum-val { color: #f87171; }
+
+body.order-new-page .olm-sum-item.is-pos .olm-sum-val { color: #15803d; }
+body.order-new-page .olm-sum-item.is-neg .olm-sum-val { color: #dc2626; }
+
+/* Cards */
+.olm-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.olm-card {
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+body.order-new-page .olm-card,
+body.order-new-mobile-wizard .olm-card {
+    background: #fff;
+    border-color: #e2e8f0;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.olm-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.olm-card-num {
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #2563eb;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.olm-card-name {
+    flex: 1;
+    font-size: 0.88rem;
+    font-weight: 650;
+    line-height: 1.25;
+    min-width: 0;
+    word-break: break-word;
+}
+
+body.order-new-page .olm-card-name { color: #0f172a; }
+
+.olm-card-del {
+    flex: 0 0 auto;
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 2px 4px;
+}
+
+.olm-card-meta {
+    font-size: 0.72rem;
+    opacity: 0.75;
+    margin-bottom: 8px;
+    line-height: 1.35;
+}
+
+.olm-stock.is-ok { color: #4ade80; }
+.olm-stock.is-low { color: #fbbf24; }
+.olm-stock.is-out { color: #f87171; }
+
+body.order-new-page .olm-stock.is-ok { color: #15803d; }
+body.order-new-page .olm-stock.is-low { color: #b45309; }
+body.order-new-page .olm-stock.is-out { color: #dc2626; }
+
+.olm-card-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.olm-stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+body.order-new-page .olm-stepper {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.olm-stepper button {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 1.1rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.olm-step-val {
+    min-width: 28px;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 650;
+}
+
+.olm-card-prices {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+}
+
+.olm-price-sep { opacity: 0.35; }
+
+.olm-src-badge {
+    font-size: 0.68rem;
+    font-weight: 650;
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.olm-src-badge.is-stock { background: rgba(37, 99, 235, 0.25); color: #93c5fd; }
+.olm-src-badge.is-now { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+.olm-src-badge.is-order { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
+.olm-src-badge.is-done { background: rgba(34, 197, 94, 0.2); color: #86efac; }
+
+body.order-new-page .olm-src-badge.is-stock { background: #dbeafe; color: #1d4ed8; }
+body.order-new-page .olm-src-badge.is-now { background: #fef3c7; color: #b45309; }
+
+.olm-card-edit {
+    width: 100%;
+    margin-top: 2px;
+    padding: 6px 0;
+    border: none;
+    background: transparent;
+    color: #93c5fd;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+}
+
+body.order-new-page .olm-card-edit { color: #2563eb; }
+
+.olm-add-btn {
+    width: 100%;
+    min-height: 44px;
+    border: 1px dashed rgba(255, 255, 255, 0.25);
+    border-radius: 12px;
+    background: transparent;
+    color: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+body.order-new-page .olm-add-btn {
+    border-color: #94a3b8;
+    color: #334155;
+}
+
+/* Hide legacy add on mobile */
+@media (max-width: 768px) {
+    .olm-mobile-active #addLine,
+    .olm-mobile-active .track-order-line-add {
+        display: none !important;
+    }
+}
+
+/* Bottom sheet */
+body.olm-sheet-open {
+    overflow: hidden;
+}
+
+.olm-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.olm-sheet[hidden] {
+    display: none !important;
+}
+
+.olm-sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.olm-sheet-panel {
+    position: relative;
+    max-height: 92vh;
+    overflow-y: auto;
+    background: #1e293b;
+    border-radius: 20px 20px 0 0;
+    padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+    color: #f1f5f9;
+}
+
+body.order-new-page .olm-sheet-panel {
+    background: #fff;
+    color: #0f172a;
+}
+
+.olm-sheet-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 0 10px;
+    position: sticky;
+    top: 0;
+    background: inherit;
+    z-index: 1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.order-new-page .olm-sheet-head {
+    border-bottom-color: #e2e8f0;
+}
+
+.olm-sheet-back,
+.olm-sheet-del {
+    border: none;
+    background: transparent;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: inherit;
+    padding: 4px 8px;
+}
+
+.olm-sheet-title {
+    flex: 1;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.olm-sheet-body {
+    padding: 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.olm-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.olm-field > span {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.65;
+}
+
+.olm-field input,
+.olm-field textarea {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.25);
+    color: inherit;
+    font-size: 16px;
+}
+
+body.order-new-page .olm-field input {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.olm-sku-row {
+    display: flex;
+    gap: 8px;
+}
+
+.olm-sku-row input { flex: 1; }
+
+.olm-btn-stock {
+    flex: 0 0 44px;
+    height: 44px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(37, 99, 235, 0.2);
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+
+.olm-sku-stock {
+    font-size: 0.75rem;
+    margin-top: 2px;
+}
+
+.olm-field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.olm-stepper-lg {
+    align-self: flex-start;
+}
+
+.olm-stepper-lg .olm-step-minus,
+.olm-stepper-lg .olm-step-plus {
+    width: 44px;
+    height: 44px;
+}
+
+.olm-stepper-lg .olm-step-val {
+    min-width: 48px;
+    font-size: 1rem;
+}
+
+.olm-source-seg {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.olm-source-seg button {
+    min-height: 44px;
+    padding: 6px 4px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.2);
+    color: inherit;
+    font-size: 0.68rem;
+    font-weight: 600;
+    cursor: pointer;
+    line-height: 1.2;
+}
+
+.olm-source-seg button.is-active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+
+.olm-source-seg button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+body.order-new-page .olm-source-seg button {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.olm-sheet-save {
+    width: 100%;
+    min-height: 48px;
+    margin-top: 8px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    background: #2563eb;
+    color: #fff;
+}
+
+/* Track: отключить старые «карточки-таблицы» */
+@media (max-width: 768px) {
+    body.track-page.track-mobile-app .order-lines-box.olm-mobile-active .order-lines-table tr {
+        display: none !important;
+    }
+
+    body.track-page.track-mobile-app .order-lines-box.olm-mobile-active .order-lines-actions {
+        margin-top: 8px;
+    }
+
+    body.track-page.track-mobile-app .order-lines-box.olm-mobile-active .order-lines-actions .track-order-lines-save {
+        min-height: 48px;
+        border-radius: 12px;
+        font-weight: 700;
+    }
+}
+
+@media (max-width: 768px) {
+    body.order-new-mobile-wizard .olm-mobile-active .lines-table-wrap {
+        display: none !important;
+    }
+}

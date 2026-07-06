@@ -86,6 +86,9 @@
             summary.hidden = currentStep !== 4;
             if (currentStep === 4) renderSummary(summary, mode);
         }
+        if (global.FixariVanOrderLinesMobile && isMobile()) {
+            global.FixariVanOrderLinesMobile.refreshOrderNew();
+        }
     }
 
     function fmtMoney(v) {

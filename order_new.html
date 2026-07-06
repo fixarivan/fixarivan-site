@@ -715,7 +715,8 @@
         }
     </style>
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625mobile">
-    <link rel="stylesheet" href="css/order-new-mobile-wizard.css?v=20250706i18n">
+    <link rel="stylesheet" href="css/order-new-mobile-wizard.css?v=20250706lines">
+    <link rel="stylesheet" href="css/order-lines-mobile.css?v=20250706lines">
 </head>
 <body class="order-new-page order-mode-repair">
     <div class="container">
@@ -1707,7 +1708,8 @@
 
     </script>
     <script src="js/client_order_i18n.js?v=20250706i18n"></script>
-    <script src="js/order_new_mobile_wizard.js?v=20250706i18n"></script>
+    <script src="js/order_lines_mobile_ui.js?v=20250706lines"></script>
+    <script src="js/order_new_mobile_wizard.js?v=20250706lines"></script>
     <script src="js/order_problem_templates.js?v=20250706i18n"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -1722,6 +1724,9 @@
             if (window.FixariVanProblemTemplates) {
                 FixariVanProblemTemplates.bindLanguageReload(tplOpts);
                 FixariVanProblemTemplates.loadAndRender(tplOpts);
+            }
+            if (window.FixariVanOrderLinesMobile) {
+                FixariVanOrderLinesMobile.initOrderNew();
             }
         });
     </script>
