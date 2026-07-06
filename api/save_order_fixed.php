@@ -23,6 +23,7 @@ require_once __DIR__ . '/lib/order_warehouse_sync.php';
 require_once __DIR__ . '/lib/order_json_storage.php';
 require_once __DIR__ . '/lib/order_track_lines.php';
 require_once __DIR__ . '/lib/order_line_stock_deduct.php';
+require_once __DIR__ . '/lib/client_order_i18n.php';
 
 /** @return float|null */
 function fixarivan_optional_float(mixed $v) {
@@ -138,7 +139,7 @@ function normalizeOrderRecord(array $data, ?array $existing = null): array {
         'place_of_acceptance' => (string)($data['placeOfAcceptance'] ?? $data['location'] ?? ($existing['place_of_acceptance'] ?? 'Turku, Finland')),
         'date_of_acceptance' => (string)($data['dateOfAcceptance'] ?? $data['acceptDate'] ?? ($data['workDate'] ?? ($existing['date_of_acceptance'] ?? date('Y-m-d')))),
         'unique_code' => isset($data['uniqueCode']) && $data['uniqueCode'] !== '' ? (string)$data['uniqueCode'] : (string)($existing['unique_code'] ?? ''),
-        'language' => (string)($data['language'] ?? ($existing['language'] ?? 'ru')),
+        'language' => fixarivan_client_order_normalize_lang((string)($data['language'] ?? ($existing['language'] ?? 'ru'))),
 
         'client_name' => trim((string)($data['clientName'] ?? $existing['client_name'] ?? '')),
         'client_phone' => trim((string)($data['clientPhone'] ?? $existing['client_phone'] ?? '')),

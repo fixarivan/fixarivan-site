@@ -108,6 +108,23 @@
         color: #fff;
     }
 
+    body.order-new-mobile-wizard .problem-template-variant-bar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    body.order-new-mobile-wizard .problem-template-variant-chip {
+        flex: 0 0 auto;
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(148, 163, 184, 0.45);
+        color: #e2e8f0;
+    }
+
+    body.order-new-mobile-wizard .client-language-hint {
+        font-size: 0.78rem;
+    }
+
     /* Lines — горизонтальная таблица как на десктопе (без card-layout) */
     body.order-new-mobile-wizard .lines-table-wrap {
         overflow-x: auto;

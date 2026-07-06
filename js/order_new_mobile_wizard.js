@@ -45,7 +45,7 @@
     }
 
     function stepBlocks(step, mode) {
-        if (step === 1) return ['client'];
+        if (step === 1) return ['language', 'client'];
         if (step === 2) {
             if (mode === 'repair') return ['device', 'description'];
             return ['description'];

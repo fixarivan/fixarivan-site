@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/order_track_lines.php';
+require_once __DIR__ . '/client_order_i18n.php';
 
 /**
  * TZ P2 блок 8: единая структура «клиент → заказы → документы → позиции» и общие хелперы с api/clients.php.
@@ -116,7 +117,9 @@ function fixarivan_portal_order_display_name(array $order): string
         return $deviceModel;
     }
     if ($deviceType !== '') {
-        return $deviceType;
+        $lang = fixarivan_client_order_normalize_lang((string) ($order['language'] ?? 'ru'));
+
+        return fixarivan_client_device_type_label($deviceType, $lang) ?: $deviceType;
     }
 
     return 'Заказ';

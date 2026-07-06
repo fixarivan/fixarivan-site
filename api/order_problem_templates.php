@@ -18,7 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 require_once __DIR__ . '/lib/require_admin_session.php';
 require_once __DIR__ . '/lib/order_problem_templates.php';
 
+$lang = isset($_GET['lang']) ? (string) $_GET['lang'] : 'ru';
+
 echo json_encode([
     'success' => true,
-    'templates' => fixarivan_order_problem_templates_for_ui(),
+    'lang' => fixarivan_client_order_normalize_lang($lang),
+    'templates' => fixarivan_order_problem_templates_for_ui($lang),
 ], JSON_UNESCAPED_UNICODE);

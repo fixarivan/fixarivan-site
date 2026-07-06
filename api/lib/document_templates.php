@@ -6,6 +6,7 @@ require_once __DIR__ . '/company_profile.php';
 require_once __DIR__ . '/format_money.php';
 require_once __DIR__ . '/invoice_center.php';
 require_once __DIR__ . '/invoice_i18n.php';
+require_once __DIR__ . '/client_order_i18n.php';
 
 function dt_project_root_path(): string {
     return dirname(__DIR__, 2);
@@ -1119,7 +1120,7 @@ function dt_section_order(array $data, array $dict, string $lang): string
 
     $deviceModel = dt_has_meaningful_value($data['device_model'] ?? null) ? (string)$data['device_model'] : $no;
     $deviceBody = '<div class="dt-order-main-value">' . dt_sanitize($deviceModel, $no) . '</div>';
-    $deviceBody .= dt_order_detail_line((string)($dict['labels']['device_type'] ?? 'Type'), (string)($data['device_type'] ?? ''));
+    $deviceBody .= dt_order_detail_line((string)($dict['labels']['device_type'] ?? 'Type'), fixarivan_client_device_type_label((string)($data['device_type'] ?? ''), $lang));
     $deviceBody .= dt_order_detail_line((string)($dict['labels']['device_serial'] ?? 'Serial'), (string)($data['device_serial'] ?? ''));
     $deviceBody .= dt_order_detail_line((string)($dict['labels']['device_condition'] ?? 'Condition'), (string)($data['device_condition'] ?? ''));
     $deviceBody .= dt_order_detail_line((string)($dict['labels']['accessories'] ?? 'Accessories'), (string)($data['accessories'] ?? ''));
@@ -1604,7 +1605,7 @@ function dt_section_report(array $data, array $dict, string $lang): string
 
     $html .= '<div class="dt-section"><div class="dt-section-title">' . dt_sanitize($S['device']) . '</div>';
     $html .= dt_render_field($L['device_model'], dt_sanitize($data['device_model'] ?? $no, $no));
-    $html .= dt_render_field($L['device_type'], dt_sanitize($data['device_type'] ?? $no, $no));
+    $html .= dt_render_field($L['device_type'], dt_sanitize(fixarivan_client_device_type_label((string)($data['device_type'] ?? ''), $lang) ?: $no, $no));
     $html .= dt_render_field($L['device_serial'], dt_sanitize($data['device_serial'] ?? $no, $no));
     $html .= '</div>';
 
