@@ -1,0 +1,106 @@
+/* Общие улучшения UX для отчётов диагностики (mobile + PC) */
+
+.diag-extra-block {
+    margin-bottom: 20px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 0 14px;
+    background: #f8fafc;
+}
+
+.diag-extra-block summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #475569;
+    padding: 12px 0;
+    list-style: none;
+}
+
+.diag-extra-block summary::-webkit-details-marker { display: none; }
+
+.diag-extra-block[open] summary {
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 12px;
+}
+
+.diag-template-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.diag-template-chip {
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid #c7d2fe;
+    background: #eef2ff;
+    color: #3730a3;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    line-height: 1.25;
+    transition: background 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+
+.diag-template-chip:hover {
+    background: #e0e7ff;
+    transform: translateY(-1px);
+}
+
+.diag-template-chip.is-active {
+    background: #6366f1;
+    border-color: #4f46e5;
+    color: #fff;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.28);
+}
+
+.diag-template-chip:active {
+    transform: scale(0.97);
+}
+
+.button-group {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.test-btn {
+    min-height: 48px;
+    padding: 12px 14px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    touch-action: manipulation;
+    user-select: none;
+}
+
+.test-btn.good {
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.35);
+    transform: scale(1.02);
+}
+
+.test-btn.bad {
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.35);
+    transform: scale(1.02);
+}
+
+@keyframes diag-test-pick {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.06); }
+    100% { transform: scale(1.02); }
+}
+
+.test-btn.is-picking.good,
+.test-btn.is-picking.bad {
+    animation: diag-test-pick 0.26s ease;
+}
+
+@media (max-width: 640px) {
+    .diag-template-chip {
+        font-size: 0.78rem;
+        padding: 8px 12px;
+        min-height: 40px;
+    }
+
+    .test-btn {
+        min-height: 52px;
+    }
+}

@@ -167,6 +167,8 @@
         }
     </style>
     <link rel="stylesheet" href="css/report_forms_ui.css">
+    <link rel="stylesheet" href="css/diagnostic-report-shared.css">
+    <script src="js/diagnostic_report_templates.js"></script>
 </head>
 <body class="report-form-page">
     <div class="container">
@@ -224,10 +226,13 @@
                         <label for="computerModel" data-lang="computer_model">Модель *</label>
                         <input type="text" id="computerModel" name="computerModel" required>
                     </div>
-                    <div class="form-group">
-                        <label for="computerSerial" data-lang="computer_serial">Серийный номер</label>
-                        <input type="text" id="computerSerial" name="computerSerial">
-                    </div>
+                    <details class="diag-extra-block">
+                        <summary data-lang="extra_details">Дополнительно</summary>
+                        <div class="form-group">
+                            <label for="computerSerial" data-lang="computer_serial">Серийный номер</label>
+                            <input type="text" id="computerSerial" name="computerSerial">
+                        </div>
+                    </details>
                     <div class="form-group">
                         <label for="operatingSystem" data-lang="os">ОС</label>
                         <input type="text" id="operatingSystem" name="operatingSystem" placeholder="Windows 11, macOS...">
@@ -344,11 +349,13 @@
                     <h2 class="section-title" data-lang="diagnosis_results">📋 Результаты диагностики</h2>
                     <div class="form-group">
                         <label for="diagnosis" data-lang="diagnosis">Диагноз *</label>
-                        <textarea id="diagnosis" name="diagnosis" rows="4" required></textarea>
+                        <div id="diagnosisTemplateBar" class="diag-template-bar" aria-label="Шаблоны диагноза"></div>
+                        <textarea id="diagnosis" name="diagnosis" rows="4" required placeholder="Выберите шаблоны или допишите свой текст"></textarea>
                     </div>
                     <div class="form-group">
                         <label for="recommendations" data-lang="recommendations">Рекомендации</label>
-                        <textarea id="recommendations" name="recommendations" rows="3"></textarea>
+                        <div id="recommendationsTemplateBar" class="diag-template-bar" aria-label="Шаблоны рекомендаций"></div>
+                        <textarea id="recommendations" name="recommendations" rows="3" placeholder="Выберите шаблоны или допишите свой текст"></textarea>
                     </div>
                     <div class="form-group">
                         <label for="estimatedCost" data-lang="estimated_cost">Примерная стоимость</label>
@@ -438,7 +445,7 @@
                 optimization: "Оптимизация", diagnosis_results: "📋 Результаты диагностики",
                 diagnosis: "Диагноз *", recommendations: "Рекомендации", estimated_cost: "Примерная стоимость",
                 technician_info: "👨‍🔧 Информация о мастере", technician_name: "ФИО мастера *",
-                work_date: "Дата *", submit_report: "Отправить отчёт"
+                work_date: "Дата *", submit_report: "Отправить отчёт", extra_details: "Дополнительно"
             },
             en: {
                 document_id: "Report Number", client_info: "👤 Client Information", client_name: "Client Name *",
@@ -452,7 +459,7 @@
                 optimization: "Optimization", diagnosis_results: "📋 Diagnosis Results",
                 diagnosis: "Diagnosis *", recommendations: "Recommendations", estimated_cost: "Estimated Cost",
                 technician_info: "👨‍🔧 Technician Information", technician_name: "Technician Name *",
-                work_date: "Date *", submit_report: "Submit Report"
+                work_date: "Date *", submit_report: "Submit Report", extra_details: "Additional details"
             },
             fi: {
                 document_id: "Raportin numero", client_info: "👤 Asiakkaan tiedot", client_name: "Asiakkaan nimi *",
@@ -466,7 +473,7 @@
                 optimization: "Optimointi", diagnosis_results: "📋 Diagnoosiohjauksen tulokset",
                 diagnosis: "Diagnoosi *", recommendations: "Suositukset", estimated_cost: "Arvioitu hinta",
                 technician_info: "👨‍🔧 Teknikon tiedot", technician_name: "Teknikon nimi *",
-                work_date: "Päivämäärä *", submit_report: "Lähetä raportti"
+                work_date: "Päivämäärä *", submit_report: "Lähetä raportti", extra_details: "Lisätiedot"
             }
         };
 
@@ -524,7 +531,17 @@
             document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
             generateUniqueCode();
             initializeLanguageSwitcher();
-            initializeTestButtons();
+            if (window.FixariVanDiagnosticTemplates) {
+                FixariVanDiagnosticTemplates.init({
+                    diagnosisBar: '#diagnosisTemplateBar',
+                    diagnosisField: '#diagnosis',
+                    recommendationsBar: '#recommendationsTemplateBar',
+                    recommendationsField: '#recommendations',
+                    getLang: () => currentLanguage,
+                    setLang: (lang) => applyReportLanguage(lang),
+                });
+            }
+            if (window.FixariVanDiagnosticTests) FixariVanDiagnosticTests.init('#testButtons');
             initializeComputerTypeHandler();
             initializeBatteryWearCalculation();
             initializeStarRating();
@@ -567,37 +584,30 @@
             document.getElementById('uniqueCode').textContent = uniqueCode;
         }
 
-        function initializeLanguageSwitcher() {
-            document.querySelectorAll('.lang-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    currentLanguage = this.getAttribute('data-lang');
-                    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    Object.keys(translations[currentLanguage]).forEach(key => {
-                        document.querySelectorAll(`[data-lang="${key}"]`).forEach(el => {
-                            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-                                el.placeholder = translations[currentLanguage][key];
-                            } else {
-                                el.textContent = translations[currentLanguage][key];
-                            }
-                        });
-                    });
+        function applyReportLanguage(lang) {
+            const code = window.FixariVanDiagnosticTemplates
+                ? FixariVanDiagnosticTemplates.normalizeLang(lang)
+                : (lang || 'ru');
+            currentLanguage = code;
+            document.querySelectorAll('.lang-btn').forEach((b) => {
+                b.classList.toggle('active', b.getAttribute('data-lang') === code);
+            });
+            Object.keys(translations[code] || translations.ru).forEach((key) => {
+                document.querySelectorAll(`[data-lang="${key}"]`).forEach((el) => {
+                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                        el.placeholder = translations[code][key];
+                    } else {
+                        el.textContent = translations[code][key];
+                    }
                 });
             });
+            if (window.FixariVanDiagnosticTemplates) FixariVanDiagnosticTemplates.refreshAll();
         }
 
-        function initializeTestButtons() {
-            document.querySelectorAll('.test-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    this.classList.toggle('good');
-                    this.classList.remove('bad');
-                    updateTestSelection();
-                });
-                btn.addEventListener('dblclick', function(e) {
-                    e.preventDefault();
-                    this.classList.toggle('bad');
-                    this.classList.remove('good');
-                    updateTestSelection();
+        function initializeLanguageSwitcher() {
+            document.querySelectorAll('.lang-btn').forEach((btn) => {
+                btn.addEventListener('click', function () {
+                    applyReportLanguage(this.getAttribute('data-lang'));
                 });
             });
         }
