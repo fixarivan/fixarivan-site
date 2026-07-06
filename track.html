@@ -735,6 +735,7 @@
             p.set('device_model', o.device_model || '');
             p.set('problem_description', o.problem_description || '');
             p.set('problem', o.problem_description || '');
+            p.set('lang', normalizePortalLang(o.language || 'ru'));
             return p.toString();
         }
 

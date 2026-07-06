@@ -409,6 +409,10 @@
                 clear_signature: "Очистить", signature_required: "Подпись обязательна",
                 signature_completed: "Подпись готова", submit_receipt: "Отправить квитанцию",
                 remove_service: "Удалить",
+                repair_service: "Работа по ремонту",
+                prefill_qty: "Кол-во",
+                sale_type: "Продажа",
+                custom_order: "Нестандартный заказ",
                 default_warranty_terms: "🛠️ Условия / гарантия:\nГарантия 30 дней на выполненные работы.\nНе распространяется на механические повреждения."
             },
             en: {
@@ -433,6 +437,10 @@
                 clear_signature: "Clear", signature_required: "Signature required",
                 signature_completed: "Signature completed", submit_receipt: "Submit Receipt",
                 remove_service: "Remove",
+                repair_service: "Repair work",
+                prefill_qty: "Qty",
+                sale_type: "Sale",
+                custom_order: "Custom order",
                 default_warranty_terms: "🛠️ Terms / warranty:\n30-day warranty on completed work.\nDoes not cover mechanical damage."
             },
             fi: {
@@ -457,6 +465,10 @@
                 clear_signature: "Tyhjennä", signature_required: "Allekirjoitus vaaditaan",
                 signature_completed: "Allekirjoitus valmis", submit_receipt: "Lähetä kuitti",
                 remove_service: "Poista",
+                repair_service: "Korjaustyö",
+                prefill_qty: "Määrä",
+                sale_type: "Myynti",
+                custom_order: "Erikoistilaus",
                 default_warranty_terms: "🛠️ Ehdot / takuu:\n30 päivän takuu suoritetulle työlle.\nEi koske mekaanisia vaurioita."
             }
         };
@@ -466,6 +478,58 @@
         let serviceCounter = 0;
         let currentReceiptToken = '';
         let autoFilledWarrantyText = '';
+
+        const DEVICE_TYPE_LABELS = {
+            phone: { ru: 'Телефон', fi: 'Puhelin', en: 'Phone' },
+            laptop: { ru: 'Ноутбук', fi: 'Kannettava tietokone', en: 'Laptop' },
+            tablet: { ru: 'Планшет', fi: 'Tabletti', en: 'Tablet' },
+            console: { ru: 'Консоль', fi: 'Pelikonsoli', en: 'Game console' },
+            other: { ru: 'Другое', fi: 'Muu', en: 'Other' },
+        };
+
+        function normalizeReceiptLang(raw) {
+            const l = String(raw || 'ru').toLowerCase().trim();
+            return (l === 'en' || l === 'fi') ? l : 'ru';
+        }
+
+        function clientDeviceTypeLabel(code, lang) {
+            const key = String(code || '').toLowerCase().trim();
+            const row = DEVICE_TYPE_LABELS[key];
+            const l = normalizeReceiptLang(lang);
+            if (row && row[l]) return row[l];
+            return String(code || '').trim();
+        }
+
+        function receiptDict(lang) {
+            return translations[normalizeReceiptLang(lang)] || translations.ru;
+        }
+
+        function setReceiptLanguage(lang, opts) {
+            const l = normalizeReceiptLang(lang);
+            currentLanguage = l;
+            document.documentElement.setAttribute('lang', l);
+            document.querySelectorAll('.lang-btn').forEach((b) => {
+                b.classList.toggle('active', b.getAttribute('data-lang') === l);
+            });
+            if (opts && opts.applyUi === false) return;
+            const dict = receiptDict(l);
+            Object.keys(dict).forEach((key) => {
+                document.querySelectorAll(`[data-lang="${key}"]`).forEach((el) => {
+                    if (el.tagName === 'BUTTON' || el.tagName === 'LABEL' || el.tagName === 'OPTION' || el.tagName === 'DIV' || el.tagName === 'H2' || el.tagName === 'H3' || el.tagName === 'SPAN' || el.tagName === 'SMALL') {
+                        el.textContent = dict[key];
+                    }
+                });
+            });
+            applyDefaultWarrantyTerms(true);
+            updateSignatureStatus();
+            updateTotal();
+        }
+
+        function applyLanguageFromQuery() {
+            const params = new URLSearchParams(window.location.search || '');
+            const raw = (params.get('lang') || params.get('language') || '').trim();
+            if (raw) setReceiptLanguage(raw);
+        }
 
         const fetchJson = window.FixariVan?.http?.fetchJson ?? (async function(url, options = {}) {
             const response = await fetch(url, options);
@@ -495,22 +559,24 @@
             }
             return '';
         };
-        const resolveReceiptOrderDisplayName = (order, lines) => {
+        const resolveReceiptOrderDisplayName = (order, lines, lang) => {
             const d = order || {};
+            const l = normalizeReceiptLang(lang || currentLanguage);
+            const dict = receiptDict(l);
             const type = String(d.order_type || d.orderType || 'repair').toLowerCase().trim();
             const deviceModel = String(d.device_model || d.deviceModel || '').trim();
-            const deviceType = String(d.device_type || d.deviceType || '').trim();
+            const deviceType = clientDeviceTypeLabel(d.device_type || d.deviceType || '', l);
             const description = String(d.problem_description || d.problemDescription || '').trim();
             const comment = String(d.public_comment || d.publicComment || '').trim();
             const firstLine = firstOrderLineName(lines);
             if (type === 'sale') {
-                return description || firstLine || 'Продажа';
+                return description || firstLine || dict.sale_type || 'Sale';
             }
             if (type === 'custom') {
                 if (description && comment) return `${description} — ${comment}`;
-                return description || comment || firstLine || 'Нестандартный заказ';
+                return description || comment || firstLine || dict.custom_order || 'Custom';
             }
-            return deviceModel || deviceType || 'Заказ';
+            return deviceModel || deviceType || dict.custom_order || '—';
         };
 
         function applyModeFromQuery() {
@@ -579,6 +645,11 @@
             try {
                 const res = await fetchJson(`./api/get_document.php?id=${encodeURIComponent(ctx.documentId)}&type=order`);
                 const d = res && res.data ? res.data : {};
+                const urlLang = (params.get('lang') || params.get('language') || '').trim();
+                if (!urlLang && d.language) {
+                    setReceiptLanguage(d.language);
+                }
+                const dict = receiptDict(currentLanguage);
                 const rawSt = String(d.public_status || d.order_status || '').toLowerCase().trim();
                 const legacyDone = { 'готово': 1, 'выдано': 1, 'готово.': 1, 'выдан.': 1 };
                 const pubNorm = rawSt.replace(/\s+/g, '');
@@ -604,7 +675,7 @@
                 if (!Array.isArray(lines)) {
                     lines = [];
                 }
-                const resolvedReceiptTitle = resolveReceiptOrderDisplayName(d, lines);
+                const resolvedReceiptTitle = resolveReceiptOrderDisplayName(d, lines, currentLanguage);
                 const deviceModelEl = document.getElementById('deviceModel');
                 if (deviceModelEl && resolvedReceiptTitle) {
                     deviceModelEl.value = resolvedReceiptTitle;
@@ -627,7 +698,7 @@
                     const priceLine = sale * qty;
                     const parts = [];
                     if (qty !== 1) {
-                        parts.push(`Кол-во: ${qty}`);
+                        parts.push(`${dict.prefill_qty || 'Qty'}: ${qty}`);
                     }
                     if (ln.sku) {
                         parts.push(`SKU: ${ln.sku}`);
@@ -638,7 +709,7 @@
                 }
                 // Для заказов типа repair добавляем отдельную строку работ.
                 if (isRepairOrder) {
-                    addService('Repair service', '', estimatedLaborCost);
+                    addService(dict.repair_service || 'Repair work', '', estimatedLaborCost);
                     added++;
                 }
                 if (added === 0) {
@@ -791,6 +862,7 @@
             document.getElementById('paymentDate').value = today;
             document.getElementById('receiptDate').value = today;
             initializeLanguageSwitcher();
+            applyLanguageFromQuery();
             initializeSignatureCanvas();
             initializeFormSubmission();
             applyModeFromQuery();
@@ -817,19 +889,7 @@
         function initializeLanguageSwitcher() {
             document.querySelectorAll('.lang-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    currentLanguage = this.getAttribute('data-lang');
-                    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    Object.keys(translations[currentLanguage]).forEach(key => {
-                        document.querySelectorAll(`[data-lang="${key}"]`).forEach(el => {
-                            if (el.tagName === 'BUTTON' || el.tagName === 'LABEL' || el.tagName === 'OPTION' || el.tagName === 'DIV' || el.tagName === 'H2' || el.tagName === 'H3' || el.tagName === 'SPAN' || el.tagName === 'SMALL') {
-                                el.textContent = translations[currentLanguage][key];
-                            }
-                        });
-                    });
-                    applyDefaultWarrantyTerms(true);
-                    updateSignatureStatus();
-                    updateTotal();
+                    setReceiptLanguage(this.getAttribute('data-lang'));
                 });
             });
         }

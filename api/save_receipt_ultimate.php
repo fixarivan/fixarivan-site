@@ -18,6 +18,7 @@ require_once __DIR__ . '/sqlite.php';
 require_once __DIR__ . '/lib/client_token.php';
 require_once __DIR__ . '/lib/order_center.php';
 require_once __DIR__ . '/lib/order_supply.php';
+require_once __DIR__ . '/lib/client_order_i18n.php';
 
 function helsinki_now(): DateTimeImmutable {
     return new DateTimeImmutable('now', new DateTimeZone('Europe/Helsinki'));
@@ -123,7 +124,7 @@ function normalizeReceiptRecord(array $data, ?array $existing = null): array {
         'place_of_acceptance' => (string)($data['placeOfAcceptance'] ?? $data['location'] ?? $existing['place_of_acceptance'] ?? 'Turku, Finland'),
         'date_of_acceptance' => (string)($data['dateOfAcceptance'] ?? $data['receiptDate'] ?? $data['paymentDate'] ?? $existing['date_of_acceptance'] ?? helsinki_now()->format('Y-m-d')),
         'unique_code' => isset($data['uniqueCode']) && $data['uniqueCode'] !== '' ? (string)$data['uniqueCode'] : (string)($existing['unique_code'] ?? ''),
-        'language' => (string)($data['language'] ?? $existing['language'] ?? 'ru'),
+        'language' => fixarivan_client_order_normalize_lang((string)($data['language'] ?? $existing['language'] ?? 'ru')),
 
         'client_name' => trim((string)($data['clientName'] ?? $data['client_name'] ?? $existing['client_name'] ?? '')),
         'client_phone' => trim((string)($data['clientPhone'] ?? $data['client_phone'] ?? $existing['client_phone'] ?? '')),

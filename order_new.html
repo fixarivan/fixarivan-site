@@ -1277,7 +1277,7 @@
             return out;
         }
 
-        function buildQuickDocUrls(orderDocumentId, orderId, clientToken, clientName, clientPhone, clientEmail, deviceModel, problem) {
+        function buildQuickDocUrls(orderDocumentId, orderId, clientToken, clientName, clientPhone, clientEmail, deviceModel, problem, language) {
             var p = new URLSearchParams();
             p.set('document_id', orderDocumentId || '');
             p.set('order_id', orderId || '');
@@ -1290,6 +1290,10 @@
             p.set('device_model', deviceModel || '');
             p.set('problem_description', problem || '');
             p.set('problem', problem || '');
+            var lang = String(language || 'ru').toLowerCase().trim();
+            if (lang === 'en' || lang === 'fi' || lang === 'ru') {
+                p.set('lang', lang);
+            }
             var q = p.toString();
             return {
                 receipt: 'receipt.html?' + q,
@@ -1666,7 +1670,8 @@
                     payload.clientPhone,
                     payload.clientEmail,
                     payload.deviceModel,
-                    payload.problemDescription
+                    payload.problemDescription,
+                    payload.language
                 );
                 document.getElementById('qdReceipt').href = qu.receipt;
                 document.getElementById('qdInvoice').href = qu.invoice;
