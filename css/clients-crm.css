@@ -478,3 +478,25 @@
         padding: 0 4px 6px;
     }
 }
+
+.crm-ai-lead {
+    border-color: rgba(139, 92, 246, 0.35);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(59, 130, 246, 0.06));
+}
+.crm-ai-lead-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px 14px;
+    margin-bottom: 10px;
+}
+.crm-ai-lead-label {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-secondary, #94a3b8);
+    margin-bottom: 2px;
+}
+.crm-ai-lead-text {
+    margin: 0 0 8px;
+    line-height: 1.45;
+    color: var(--text-primary, #e2e8f0);
+}

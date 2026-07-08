@@ -37,6 +37,11 @@
         .order-card.done { border-color: rgba(100,116,139,0.5); background: rgba(100,116,139,0.08); }
         .order-card.wait { border-color: rgba(245,158,11,0.45); background: rgba(245,158,11,0.08); }
         .order-card.issue { border-color: rgba(220,38,38,0.55); background: rgba(220,38,38,0.08); }
+        .order-card.review { border-color: rgba(139,92,246,0.55); background: rgba(139,92,246,0.08); }
+        .track-lead-panel { margin: 10px 0 14px; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(139,92,246,0.35); background: rgba(139,92,246,0.10); }
+        .track-lead-panel-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+        .track-lead-score { font-weight:700; color:#c4b5fd; }
+        .track-lead-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
         .track-select { max-width: 240px; font-size: .86rem; background: rgba(0,0,0,0.35); color: inherit; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 8px 10px; }
         .track-expected-date { max-width: 200px; font-size: .86rem; background: rgba(0,0,0,0.35); color: inherit; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 8px 10px; }
         .track-internal { width: 100%; min-height: 56px; font-size: .86rem; margin-top: 8px; }
@@ -57,7 +62,13 @@
         .badge { padding:3px 8px; border-radius:999px; font-size:.75rem; border:1px solid rgba(255,255,255,0.15); margin-left:4px; }
         .badge.active { background:rgba(59,130,246,0.18); border-color:rgba(59,130,246,0.5);}
         .badge.ready { background:rgba(34,197,94,0.16); border-color:rgba(74,222,128,0.45);}
-        .badge.done { background:rgba(100,116,139,0.22); border-color:rgba(148,163,184,0.45);}
+        .badge.review { background: rgba(139,92,246,0.28); border-color: rgba(167,139,250,0.55); color: #ede9fe; }
+        .badge.priority-normal { background: rgba(100,116,139,0.22); border-color: rgba(148,163,184,0.45); color: #e2e8f0; }
+        .badge.priority-high { background: rgba(245,158,11,0.28); border-color: rgba(251,191,36,0.55); color: #fef3c7; font-weight: 700; }
+        .badge.priority-urgent { background: rgba(220,38,38,0.32); border-color: rgba(248,113,113,0.6); color: #fee2e2; font-weight: 700; }
+        .order-card.review.priority-high { border-color: rgba(245,158,11,0.55); }
+        .order-card.review.priority-urgent { border-color: rgba(220,38,38,0.6); box-shadow: 0 0 0 1px rgba(248,113,113,0.25); }
+        .track-lead-priority { font-weight: 800; letter-spacing: 0.02em; }
         .badge.wait { background:rgba(245,158,11,0.20); border-color:rgba(245,158,11,0.45);}
         .badge.parts-partial { background:rgba(249,115,22,0.22); border-color:rgba(253,186,116,0.45); color:#ffedd5;}
         .docs { list-style:none; margin:8px 0 0 0; padding:0; }
@@ -139,6 +150,7 @@
                 <div class="quick-filters track-filter-chips">
                     <button id="fAll" class="active" type="button">Все</button>
                     <button id="fActive" type="button">Активные</button>
+                    <button id="fReview" type="button">🤖 Требуют проверки</button>
                     <button id="fWait" type="button">Ожидание</button>
                     <button id="fReady" type="button">К выдаче</button>
                     <button id="fTransit" type="button">В пути</button>
@@ -208,8 +220,9 @@
             clientQuickStock: 'Склад',
             searchPh: 'Поиск: ФИО, тел. (любой формат), email, заказ, код, серийник, модель, тип, проблема, комментарии, дата, статус запчастей, позиции/SKU, № квитанции/счёта, отчёт (токен), примечание оплаты',
             find: 'Найти',
-            fAll: 'Все', fActive: 'Активные', fWait: 'Ожидание', fReady: 'К выдаче', fTransit: 'В пути', fDone: 'Завершённые',
-            filterLegend: '«Активные» — не выдан и не отменён. «Ожидание» — ожидание запчастей (по статусу и текстам). «К выдаче» — у клиента «Готово», техника ещё у вас. «В пути» — статус «В пути». «Завершённые» — выдан или отменён; если в карточке только счёт(а) без акта — когда все счета «Оплачен» или «Отменён».',
+            fAll: 'Все', fActive: 'Активные', fReview: '🤖 Требуют проверки', fWait: 'Ожидание', fReady: 'К выдаче', fTransit: 'В пути', fDone: 'Завершённые',
+            filterLegend: '«Активные» — не выдан и не отменён (без обращений на проверку). «Требуют проверки» — предварительные обращения от AI/каналов. «Ожидание» — ожидание запчастей (по статусу и текстам). «К выдаче» — у клиента «Готово», техника ещё у вас. «В пути» — статус «В пути». «Завершённые» — выдан или отменён; если в карточке только счёт(а) без акта — когда все счета «Оплачен» или «Отменён».',
+            st_pending_review: 'Требует проверки',
             sClients: 'Клиентов', sOrders: 'Заказов', sDocs: 'Документов',
             clientTitle: 'Карточка клиента', clientPick: 'Выберите клиента слева',
             noneFound: 'Ничего не найдено',
@@ -542,6 +555,30 @@
         function pubStatusNorm(o) {
             return String(o.order_status || o.public_status || '').toLowerCase().trim();
         }
+        function isPendingReview(o) {
+            return pubStatusNorm(o) === 'pending_review';
+        }
+        function trackNormalizePriority(o) {
+            const p = String(o?.priority || 'normal').toLowerCase().trim();
+            if (p === 'urgent' || p === 'high') return p;
+            return 'normal';
+        }
+        function trackPriorityLabel(p) {
+            if (p === 'urgent') return 'Urgent';
+            if (p === 'high') return 'High';
+            return 'Normal';
+        }
+        function trackPriorityBadgeHtml(o, lg) {
+            if (!isPendingReview(o)) return '';
+            const p = trackNormalizePriority(o);
+            const cls = p === 'urgent' ? 'priority-urgent' : (p === 'high' ? 'priority-high' : 'priority-normal');
+            const size = lg ? ' badge-lg' : '';
+            return `<span class="badge ${cls}${size} track-lead-priority">Priority: ${esc(trackPriorityLabel(p))}</span>`;
+        }
+        function trackLeadSourceLabel(src) {
+            const map = { whatsapp: 'WhatsApp', telegram: 'Telegram', website: 'Сайт', phone: 'Телефон', manual: 'Вручную', import: 'Импорт' };
+            return map[String(src || '').toLowerCase()] || (src ? String(src) : '—');
+        }
         /** Есть акт заказа — публичный статус и фильтры ведутся по нему. */
         function trackOrderHasAct(o) {
             return !!(o.documents && o.documents.some((d) => d.type === 'order'));
@@ -570,10 +607,15 @@
             return isTrackClosed(o);
         }
         function isPublicActive(o) {
+            if (isPendingReview(o)) return false;
             return !isTrackClosed(o);
         }
         function trackOrderBadgeHtml(o) {
             const T = trackT();
+            if (isPendingReview(o)) {
+                return '<span class="badge review">' + esc(T.st_pending_review || 'Требует проверки') + '</span>'
+                    + trackPriorityBadgeHtml(o, false);
+            }
             if (isTrackClosed(o)) {
                 return '<span class="badge done">' + esc(T.closedBadge) + '</span>';
             }
@@ -611,7 +653,7 @@
                 const p = JSON.parse(raw);
                 if (p && typeof p === 'object') {
                     if (p.qGlobal) document.getElementById('qGlobal').value = String(p.qGlobal);
-                    if (['all','active','wait','ready','transit','done'].includes(String(p.mode))) state.mode = String(p.mode);
+                    if (['all','active','review','wait','ready','transit','done'].includes(String(p.mode))) state.mode = String(p.mode);
                 }
             } catch (_) {}
         }
@@ -638,12 +680,14 @@
             if (bs) bs.textContent = T.find;
             const fa = document.getElementById('fAll');
             const fac = document.getElementById('fActive');
+            const frev = document.getElementById('fReview');
             const fw = document.getElementById('fWait');
             const fr = document.getElementById('fReady');
             const ft = document.getElementById('fTransit');
             const fd = document.getElementById('fDone');
             if (fa) fa.textContent = T.fAll;
             if (fac) fac.textContent = T.fActive;
+            if (frev) frev.textContent = T.fReview;
             if (fw) fw.textContent = T.fWait;
             if (fr) fr.textContent = T.fReady;
             if (ft) ft.textContent = T.fTransit;
@@ -657,6 +701,7 @@
             const map = {
                 all: T.fAll,
                 active: T.fActive,
+                review: T.fReview,
                 wait: T.fWait,
                 ready: T.fReady,
                 transit: T.fTransit,
@@ -672,11 +717,12 @@
 
         function setMode(mode) {
             state.mode = mode;
-            ['fAll','fActive','fWait','fReady','fTransit','fDone'].forEach((id) => {
+            ['fAll','fActive','fReview','fWait','fReady','fTransit','fDone'].forEach((id) => {
                 const el = document.getElementById(id);
                 if (el) el.classList.remove('active');
             });
             if (mode === 'active') document.getElementById('fActive').classList.add('active');
+            else if (mode === 'review') document.getElementById('fReview').classList.add('active');
             else if (mode === 'wait') document.getElementById('fWait').classList.add('active');
             else if (mode === 'ready') document.getElementById('fReady').classList.add('active');
             else if (mode === 'transit') document.getElementById('fTransit').classList.add('active');
@@ -708,6 +754,12 @@
             return '📄 ' + (L.typeDoc || 'Документ');
         }
         function orderClass(o){
+            if (isPendingReview(o)) {
+                const p = trackNormalizePriority(o);
+                if (p === 'urgent') return 'review priority-urgent';
+                if (p === 'high') return 'review priority-high';
+                return 'review';
+            }
             if (isOrderIssue(o)) return 'issue';
             if (isPartsWait(o) && !isTrackClosed(o)) return 'wait';
             if (isTrackClosed(o) || isDone(o.status)) return 'done';
@@ -758,6 +810,7 @@
         function publicStatusSelectHtml(orderDocId, current) {
             const T = trackT();
             const optsList = [
+                { v: 'pending_review', label: T.st_pending_review || 'Требует проверки' },
                 { v: 'in_progress', label: T.st_in_progress },
                 { v: 'waiting_parts', label: T.st_waiting_parts },
                 { v: 'in_transit', label: T.st_in_transit },
@@ -945,6 +998,15 @@
                     o.client_token = r.client_token || o.client_token || '';
                     o.portal_url = r.portal_url || o.portal_url || '';
                     o.language = normalizePortalLang(r.language);
+                    if (r.lead_source != null) o.lead_source = String(r.lead_source || '');
+                    if (r.lead_service_type != null) o.lead_service_type = String(r.lead_service_type || '');
+                    if (r.lead_parts_required != null) o.lead_parts_required = !!r.lead_parts_required;
+                    if (r.lead_completion_score != null && r.lead_completion_score !== '') o.lead_completion_score = Number(r.lead_completion_score);
+                    if (r.lead_summary != null) o.lead_summary = String(r.lead_summary || '');
+                    if (r.lead_notes != null) o.lead_notes = String(r.lead_notes || '');
+                    if (r.lead_next_action != null) o.lead_next_action = String(r.lead_next_action || '');
+                    if (r.priority != null && String(r.priority).trim() !== '') o.priority = String(r.priority).toLowerCase();
+                    if (r.lead_pipeline_status != null) o.lead_pipeline_status = String(r.lead_pipeline_status || '');
                 }
                 if (r.type === 'invoice') {
                     o.client_token = r.client_token || o.client_token || '';
@@ -968,6 +1030,7 @@
 
         function applyModeToOrders(orders){
             if (state.mode === 'active') return orders.filter((o) => isPublicActive(o));
+            if (state.mode === 'review') return orders.filter((o) => isPendingReview(o));
             if (state.mode === 'wait') return orders.filter((o) => isPartsWait(o) && !isTrackClosed(o));
             if (state.mode === 'ready') return orders.filter((o) => isPublicActive(o) && pubStatusNorm(o) === 'done');
             if (state.mode === 'transit') return orders.filter((o) => isPublicActive(o) && pubStatusNorm(o) === 'in_transit');
@@ -1336,6 +1399,37 @@
             if (!state.activeKey && groups.length){ state.activeKey = groups[0].key; renderSidebar(); renderDetails(); }
         }
 
+        function trackLeadReviewPanelHtml(o, orderDocId) {
+            if (!isPendingReview(o) || !orderDocId) return '';
+            const score = (o.lead_completion_score != null && !Number.isNaN(Number(o.lead_completion_score)))
+                ? `${Math.round(Number(o.lead_completion_score))}%`
+                : '—';
+            const reviewUrl = `order_new.html?from_lead=1&document_id=${encodeURIComponent(orderDocId)}`;
+            const partsLbl = o.lead_parts_required ? 'Да' : 'Нет';
+            return `<div class="track-lead-panel">
+                <div class="track-lead-panel-head">
+                    <strong>🤖 Предварительное обращение</strong>
+                    <span style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;">
+                        ${trackPriorityBadgeHtml(o, true)}
+                        <span class="track-lead-score">Заполнено: ${esc(score)}</span>
+                    </span>
+                </div>
+                <div class="muted" style="font-size:.88rem;line-height:1.45;">
+                    ${o.lead_summary ? esc(o.lead_summary) : esc(o.problem_description || '—')}
+                </div>
+                <div class="track-order-kv" style="margin-top:8px;">
+                    <span><strong>Источник</strong> ${esc(trackLeadSourceLabel(o.lead_source))}</span>
+                    <span><strong>Тип</strong> ${esc(o.lead_service_type || o.order_type || '—')}</span>
+                    <span><strong>Запчасти</strong> ${esc(partsLbl)}</span>
+                    ${o.lead_next_action ? `<span><strong>Дальше</strong> ${esc(o.lead_next_action)}</span>` : ''}
+                </div>
+                <div class="track-lead-actions">
+                    <a class="btn-secondary" href="${esc(reviewUrl)}">Проверить и дополнить</a>
+                    <button type="button" class="primary track-lead-confirm" data-doc="${esc(orderDocId)}">Подтвердить в работу</button>
+                </div>
+            </div>`;
+        }
+
         function orderDocIdFromOrder(o) {
             const d = (o && o.documents) ? o.documents.find((x) => x.type === 'order') : null;
             return d ? String(d.document_id || '') : '';
@@ -1401,6 +1495,7 @@
                 const docCardsHtml = (window.TrackUi ? TrackUi.buildTimelineItems(o.documents, T) : o.documents).map((d) => trackDocCardHtml(d, T)).join('');
                 const techName = trackTechnicianName();
                 const orderBody = orderDocId ? (
+                    trackLeadReviewPanelHtml(o, orderDocId) +
                     trackSectionHtml('info', '📋', 'Информация о заказе', 'Статус и сроки', `
                         <div class="track-info-grid">
                             <div class="track-field-cell track-field-cell--status-pub">
@@ -1614,6 +1709,22 @@
         }
 
         function bindTrackOrderControls(root) {
+            root.querySelectorAll('.track-lead-confirm').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const docId = btn.getAttribute('data-doc') || '';
+                    if (!docId) return;
+                    if (!confirm('Подтвердить обращение и перевести заказ в работу?')) return;
+                    btn.disabled = true;
+                    try {
+                        await patchOrderTrack(docId, { publicStatus: 'in_progress' });
+                        await loadAll();
+                    } catch (e) {
+                        alert(fvErr(e) || 'Ошибка');
+                    } finally {
+                        btn.disabled = false;
+                    }
+                });
+            });
             root.querySelectorAll('.track-pub-status').forEach((sel) => {
                 sel.addEventListener('change', async () => {
                     const docId = sel.getAttribute('data-doc') || '';
@@ -2539,6 +2650,7 @@
         });
         document.getElementById('fAll').addEventListener('click', () => setMode('all'));
         document.getElementById('fActive').addEventListener('click', () => setMode('active'));
+        document.getElementById('fReview').addEventListener('click', () => setMode('review'));
         document.getElementById('fWait').addEventListener('click', () => setMode('wait'));
         document.getElementById('fReady').addEventListener('click', () => setMode('ready'));
         document.getElementById('fTransit').addEventListener('click', () => setMode('transit'));

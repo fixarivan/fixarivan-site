@@ -102,8 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $emailNorm = fixarivan_safe_lower((string)($client['email'] ?? ''));
 
         $stmt = $pdo->prepare(
-            'SELECT document_id, order_id, status, device_model, client_token, order_status, problem_description,
-                    public_status, parts_status, order_lines_json,
+            'SELECT document_id, order_id, status, device_model, client_token, order_status, public_status, problem_description,
+                    lead_source, lead_service_type, lead_parts_required, lead_completion_score, lead_summary, lead_notes, lead_next_action,
+                    parts_status, order_lines_json,
                     COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS updated_at
              FROM orders
              WHERE client_id = :id

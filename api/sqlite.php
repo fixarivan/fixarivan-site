@@ -381,6 +381,39 @@ function ensureSqliteSchema(PDO $pdo): void {
         $pdo->exec('ALTER TABLE orders ADD COLUMN parts_prepayment_amount REAL');
     }
 
+    $orderColsLead = $pdo->query("PRAGMA table_info('orders')")->fetchAll(PDO::FETCH_ASSOC);
+    $orderColNamesLead = array_map(static function ($c) {
+        return $c['name'] ?? '';
+    }, $orderColsLead);
+    $leadCols = [
+        'lead_external_ref' => 'TEXT',
+        'lead_chat_id' => 'TEXT',
+        'lead_idempotency_key' => 'TEXT',
+        'lead_source' => 'TEXT',
+        'lead_service_type' => 'TEXT',
+        'lead_parts_required' => 'INTEGER DEFAULT 0',
+        'lead_completion_score' => 'INTEGER',
+        'lead_summary' => 'TEXT',
+        'lead_notes' => 'TEXT',
+        'lead_next_action' => 'TEXT',
+        'lead_confirmed_at' => 'TEXT',
+        'lead_pipeline_status' => 'TEXT',
+    ];
+    foreach ($leadCols as $col => $type) {
+        if (!in_array($col, $orderColNamesLead, true)) {
+            $pdo->exec('ALTER TABLE orders ADD COLUMN ' . $col . ' ' . $type);
+        }
+    }
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_orders_lead_chat_id ON orders(lead_chat_id)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_orders_lead_external_ref ON orders(lead_external_ref)');
+    $pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_lead_idempotency ON orders(lead_idempotency_key) WHERE lead_idempotency_key IS NOT NULL AND lead_idempotency_key != \'\'');
+    $pdo->exec('DROP INDEX IF EXISTS idx_orders_lead_chat_draft');
+    $pdo->exec(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_lead_chat_open ON orders(lead_chat_id) '
+        . "WHERE lead_chat_id IS NOT NULL AND lead_chat_id != '' "
+        . "AND order_status IN ('lead_collecting', 'pending_review')"
+    );
+
     $cols = $pdo->query("PRAGMA table_info('mobile_reports')")->fetchAll(PDO::FETCH_ASSOC);
     $mobileColNames = array_map(static function ($c) {
         return $c['name'] ?? '';

@@ -3,10 +3,12 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/site_url.php';
 require_once __DIR__ . '/order_center.php';
+require_once __DIR__ . '/bot_lead.php';
 
 function order_status_label_ru(?string $status): string {
     $s = trim((string)$status);
     $map = [
+        'pending_review' => 'Требует проверки',
         'pending' => 'Черновик',
         'draft' => 'Черновик',
         'sent_to_client' => 'Отправлен клиенту',
@@ -90,12 +92,16 @@ function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): a
     if ($typeFilter === 'all' || $typeFilter === 'order') {
         $stmt = $pdo->query(
             'SELECT document_id, order_id, client_id, client_name, client_phone, client_email, device_model, device_type, device_serial, problem_description, status, public_status, order_status, parts_status, public_expected_date, public_comment, public_estimated_cost, internal_comment, client_token, language, order_type, unique_code, order_lines_json, parts_sale_total, parts_prepayment_status, parts_prepayment_amount,
+                    lead_source, lead_service_type, lead_parts_required, lead_completion_score, lead_summary, lead_notes, lead_next_action, lead_chat_id, lead_external_ref, lead_pipeline_status, priority,
                     COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS sort_date
              FROM orders
              ORDER BY sort_date DESC
              LIMIT ' . (int)$limit
         );
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            if (fixarivan_bot_order_hidden_from_track($row)) {
+                continue;
+            }
             $token = trim((string)($row['client_token'] ?? ''));
             $pubRaw = trim((string)($row['public_status'] ?? ''));
             $pubNorm = $pubRaw !== '' ? fixarivan_normalize_public_status($pubRaw) : fixarivan_normalize_public_status($row['order_status'] ?? null);
@@ -145,6 +151,20 @@ function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): a
                 'portal_url' => $portal,
                 'viewer_url' => $viewer,
                 'has_viewer_link' => $viewer !== null,
+                'lead_source' => trim((string)($row['lead_source'] ?? '')),
+                'lead_service_type' => trim((string)($row['lead_service_type'] ?? '')),
+                'lead_parts_required' => !empty($row['lead_parts_required']),
+                'lead_completion_score' => isset($row['lead_completion_score']) && $row['lead_completion_score'] !== null && $row['lead_completion_score'] !== ''
+                    ? (int)$row['lead_completion_score']
+                    : null,
+                'lead_summary' => trim((string)($row['lead_summary'] ?? '')),
+                'lead_notes' => trim((string)($row['lead_notes'] ?? '')),
+                'lead_next_action' => trim((string)($row['lead_next_action'] ?? '')),
+                'lead_chat_id' => trim((string)($row['lead_chat_id'] ?? '')),
+                'lead_external_ref' => trim((string)($row['lead_external_ref'] ?? '')),
+                'lead_pipeline_status' => trim((string)($row['lead_pipeline_status'] ?? '')),
+                'priority' => fixarivan_bot_normalize_priority((string)($row['priority'] ?? 'normal')),
+                'pending_review' => $pubNorm === 'pending_review',
             ];
         }
     }

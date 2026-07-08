@@ -1557,6 +1557,58 @@
         initFvHints();
         addLineRow({ name: '', qty: 1, purchase: '', sale: '' });
 
+        window.__leadReviewMode = false;
+
+        (async function initLeadPrefill() {
+            try {
+                var u = new URLSearchParams(window.location.search || '');
+                var fromLead = u.get('from_lead') === '1' || u.get('from_lead') === 'true';
+                var docId = (u.get('document_id') || u.get('order_id') || '').trim();
+                var set = function (id, val) {
+                    var el = document.getElementById(id);
+                    if (el && val != null && String(val).trim() !== '') el.value = String(val).trim();
+                };
+                if (docId) {
+                    var res = await fetch('./api/get_document.php?id=' + encodeURIComponent(docId) + '&type=order', { credentials: 'same-origin', cache: 'no-store' });
+                    var json = await res.json();
+                    var d = json && json.data ? json.data : (json.document || json);
+                    if (d && (d.document_id || d.documentId)) {
+                        window.__leadReviewMode = fromLead || String(d.order_status || d.public_status || '').toLowerCase() === 'pending_review';
+                        document.getElementById('documentId').value = d.document_id || d.documentId || docId;
+                        set('clientName', d.client_name || d.clientName);
+                        set('clientPhone', d.client_phone || d.clientPhone);
+                        set('clientEmail', d.client_email || d.clientEmail);
+                        set('deviceModel', d.device_model || d.deviceModel);
+                        set('deviceType', d.device_type || d.deviceType);
+                        set('problemDescription', d.problem_description || d.problemDescription);
+                        set('clientLanguage', d.language || 'ru');
+                        if (d.date_of_acceptance || d.dateOfAcceptance) {
+                            set('dateOfAcceptance', String(d.date_of_acceptance || d.dateOfAcceptance).slice(0, 10));
+                        }
+                        if (window.__leadReviewMode) {
+                            var banner = document.createElement('div');
+                            banner.className = 'lead-review-banner';
+                            banner.style.cssText = 'margin-bottom:16px;padding:12px 14px;border-radius:10px;border:1px solid rgba(139,92,246,0.4);background:rgba(139,92,246,0.12);color:#ede9fe;line-height:1.45;';
+                            var score = d.lead_completion_score != null ? (Math.round(Number(d.lead_completion_score)) + '%') : '—';
+                            banner.innerHTML = '<strong>🤖 Предварительное обращение</strong> — проверьте данные, дополните при необходимости и нажмите «Сохранить». Заполненность: ' + score +
+                                (d.lead_summary ? '<br><span style="opacity:.92">' + String(d.lead_summary).replace(/</g, '&lt;') + '</span>' : '');
+                            var form = document.getElementById('orderForm');
+                            if (form && form.parentNode) form.parentNode.insertBefore(banner, form);
+                        }
+                        applyAutoOrderMode();
+                        return;
+                    }
+                }
+                set('clientName', u.get('client_name'));
+                set('clientPhone', u.get('client_phone'));
+                set('clientEmail', u.get('client_email'));
+                set('deviceModel', u.get('device_model'));
+                set('deviceType', u.get('device_type'));
+                set('problemDescription', u.get('problem_description') || u.get('problem'));
+                set('clientLanguage', u.get('language') || u.get('lang'));
+            } catch (e) {}
+        })();
+
         (function bindAutoOrderModeFields() {
             var form = document.getElementById('orderForm');
             if (!form) return;
@@ -1575,18 +1627,6 @@
             }
             form.addEventListener('input', onField);
             form.addEventListener('change', onField);
-        })();
-
-        (function prefillFromQuery() {
-            try {
-                var u = new URLSearchParams(window.location.search || '');
-                var n = u.get('client_name');
-                var ph = u.get('client_phone');
-                var em = u.get('client_email');
-                if (n) document.getElementById('clientName').value = n;
-                if (ph) document.getElementById('clientPhone').value = ph;
-                if (em) document.getElementById('clientEmail').value = em;
-            } catch (e) {}
         })();
 
         document.getElementById('addLine').addEventListener('click', function () {
@@ -1634,6 +1674,9 @@
                 language: (document.getElementById('clientLanguage') && document.getElementById('clientLanguage').value) || 'ru',
                 priority: 'normal'
             };
+            if (window.__leadReviewMode) {
+                payload.publicStatus = 'in_progress';
+            }
 
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;

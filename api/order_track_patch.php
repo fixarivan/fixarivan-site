@@ -220,14 +220,27 @@ try {
         $prepayAmountVal = $partsSaleTotalVal;
     }
 
+    $oldPub = fixarivan_normalize_public_status($row['public_status'] ?? $row['order_status'] ?? null);
+    $legacyStatusVal = trim((string)($row['status'] ?? ''));
+    $leadConfirmedAt = null;
+    if ($hasPublic && $oldPub === 'pending_review' && $pubNorm !== 'pending_review') {
+        $leadConfirmedAt = $now;
+        if ($pubNorm === 'in_progress' && ($legacyStatusVal === '' || $legacyStatusVal === 'pending_review')) {
+            $legacyStatusVal = 'pending';
+        }
+    }
+
     $upd = $pdo->prepare(
-        'UPDATE orders SET public_status = :p, order_status = :p2, public_comment = :pc, internal_comment = :ic, language = :lang,
+        'UPDATE orders SET public_status = :p, order_status = :p2, status = :st, public_comment = :pc, internal_comment = :ic, language = :lang,
                 public_expected_date = :exp, public_estimated_cost = :pec, estimated_labor_cost = :elc,
-                parts_prepayment_status = :pps, parts_prepayment_amount = :ppa, date_updated = :u WHERE document_id = :d'
+                parts_prepayment_status = :pps, parts_prepayment_amount = :ppa,
+                lead_confirmed_at = COALESCE(lead_confirmed_at, :lca),
+                date_updated = :u WHERE document_id = :d'
     );
     $upd->execute([
         ':p' => $pubNorm,
         ':p2' => $pubNorm,
+        ':st' => $legacyStatusVal !== '' ? $legacyStatusVal : ($row['status'] ?? 'pending'),
         ':pc' => $pcVal,
         ':ic' => $icVal,
         ':lang' => $langVal,
@@ -236,6 +249,7 @@ try {
         ':elc' => $estimatedLaborCostVal,
         ':pps' => $prepayStatusVal,
         ':ppa' => $prepayAmountVal > 0.0 ? $prepayAmountVal : null,
+        ':lca' => $leadConfirmedAt,
         ':u' => $now,
         ':d' => $documentId,
     ]);

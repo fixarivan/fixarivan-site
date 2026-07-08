@@ -435,6 +435,49 @@
         return { label: 'Новый', cls: 'is-new' };
     }
 
+    function buildAiLeadSummary(detail) {
+        const groups = (detail && detail.orders_with_docs) ? detail.orders_with_docs : [];
+        let best = null;
+        groups.forEach((g) => {
+            const o = g.order || {};
+            const st = String(o.order_status || o.public_status || '').toLowerCase();
+            if (st !== 'pending_review') return;
+            const ts = String(o.updated_at || '');
+            if (!best || ts > String(best.order.updated_at || '')) best = g;
+        });
+        if (!best) return null;
+        const o = best.order || {};
+        const srcMap = { whatsapp: 'WhatsApp', telegram: 'Telegram', website: 'Сайт', phone: 'Телефон', manual: 'Вручную', import: 'Импорт' };
+        return {
+            score: o.lead_completion_score != null && o.lead_completion_score !== ''
+                ? `${Math.round(Number(o.lead_completion_score))}%`
+                : '—',
+            source: srcMap[String(o.lead_source || '').toLowerCase()] || (o.lead_source || '—'),
+            summary: String(o.lead_summary || o.problem_description || '—'),
+            nextAction: String(o.lead_next_action || 'Проверить обращение'),
+            topic: String(o.problem_description || '—'),
+            updated: formatDateShort(o.updated_at),
+            reviewUrl: `order_new.html?from_lead=1&document_id=${encodeURIComponent(String(o.document_id || ''))}`,
+        };
+    }
+
+    function renderAiLeadSummaryHtml(detail) {
+        const lead = buildAiLeadSummary(detail);
+        if (!lead) return '';
+        return `<section class="crm-panel crm-ai-lead">
+            <div class="crm-section-title">🤖 AI Summary</div>
+            <div class="crm-ai-lead-grid">
+                <div><span class="crm-ai-lead-label">Заполненность</span><strong>${esc(lead.score)}</strong></div>
+                <div><span class="crm-ai-lead-label">Источник</span><strong>${esc(lead.source)}</strong></div>
+                <div><span class="crm-ai-lead-label">Последний контакт</span><strong>${esc(lead.updated)}</strong></div>
+                <div><span class="crm-ai-lead-label">Тема</span><strong>${esc(lead.topic)}</strong></div>
+            </div>
+            <p class="crm-ai-lead-text">${esc(lead.summary)}</p>
+            <p class="crm-muted" style="margin:0;">Следующее действие: ${esc(lead.nextAction)}</p>
+            <div style="margin-top:10px;"><a class="crm-action-btn" href="${esc(lead.reviewUrl)}"><span>📝</span><span>Проверить обращение</span></a></div>
+        </section>`;
+    }
+
     global.FixariVanClientsCrm = {
         CRM_MARKER,
         TIERS,
@@ -464,5 +507,7 @@
         listStatus,
         deviceIcon,
         estimateFromLines,
+        buildAiLeadSummary,
+        renderAiLeadSummaryHtml,
     };
 })(typeof window !== 'undefined' ? window : globalThis);
