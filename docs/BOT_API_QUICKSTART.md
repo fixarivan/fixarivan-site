@@ -12,7 +12,7 @@ X-FixariVan-Api-Key: <ваш_ключ>
 X-Idempotency-Key: <uuid>
 ```
 
-Ключ: `storage/security_settings.json` → `"bot_api_key"` или env `FIXARIVAN_BOT_API_KEY`.
+Ключ: **Админ → Настройки → «Сгенерировать ключ»** (`admin/settings.php`), либо env `FIXARIVAN_BOT_API_KEY`.
 
 ## Pipeline (до Track)
 

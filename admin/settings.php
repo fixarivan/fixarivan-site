@@ -21,10 +21,25 @@ require_once dirname(__DIR__) . '/api/lib/order_problem_templates.php';
 $adminNavActive = 'settings';
 $message = '';
 $messageType = '';
+$newBotApiKey = isset($_SESSION['bot_api_key_flash']) ? (string)$_SESSION['bot_api_key_flash'] : '';
+unset($_SESSION['bot_api_key_flash']);
+$botApiConfigured = fixarivan_bot_api_key_configured();
+$botApiMasked = fixarivan_mask_bot_api_key(fixarivan_bot_api_key_value());
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formType = (string)($_POST['form_type'] ?? 'auth');
-    if ($formType === 'company') {
+    if ($formType === 'bot_api') {
+        try {
+            $key = fixarivan_generate_bot_api_key();
+            fixarivan_set_bot_api_key($key);
+            $_SESSION['bot_api_key_flash'] = $key;
+            header('Location: settings.php#bot-api');
+            exit();
+        } catch (Throwable $e) {
+            $message = 'Ошибка сохранения Bot API key: ' . $e->getMessage();
+            $messageType = 'err';
+        }
+    } elseif ($formType === 'company') {
         try {
             $currentLogo = trim((string)(fixarivan_company_profile_load()['company_logo'] ?? ''));
             $logoPath = $currentLogo;
@@ -247,6 +262,27 @@ $problemTemplates = fixarivan_order_problem_templates_load();
             background: linear-gradient(45deg, #667eea, #764ba2); color: #fff; border: none;
         }
         .tpl-del { color: #b91c1c; background: #fef2f2; border-color: #fecaca; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+        .bot-key-box {
+            margin: 12px 0 16px;
+            padding: 14px;
+            border-radius: 12px;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+        .bot-key-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .bot-key-actions button, .bot-key-actions a.btn-link {
+            padding: 10px 14px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; text-decoration: none;
+        }
+        .bot-key-actions .copy-btn { background: #334155; color: #fff; }
+        .bot-key-actions .gen-btn { background: linear-gradient(45deg, #667eea, #764ba2); color: #fff; }
+        .status-pill {
+            display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; margin-bottom: 10px;
+        }
+        .status-pill.ok { background: #ecfdf5; color: #065f46; }
+        .status-pill.warn { background: #fff7ed; color: #9a3412; }
     </style>
 </head>
 <body>
@@ -292,6 +328,33 @@ $problemTemplates = fixarivan_order_problem_templates_load();
                 <input type="password" id="delete_password_confirm" name="delete_password_confirm" minlength="4" required autocomplete="new-password">
                 <button type="submit">Сохранить пароль удаления</button>
             </form>
+        </div>
+
+        <div class="card" id="bot-api" style="margin-top: 20px;">
+            <p style="font-weight: 600; margin-bottom: 8px;">🤖 Bot API key (для n8n / WhatsApp-бота)</p>
+            <?php if ($newBotApiKey !== ''): ?>
+                <div class="msg ok">Ключ создан. Скопируйте его сейчас — повторно он не показывается.</div>
+                <div class="bot-key-box" id="botApiKeyValue"><?= htmlspecialchars($newBotApiKey) ?></div>
+                <div class="bot-key-actions">
+                    <button type="button" class="copy-btn" id="copyBotApiKey">Скопировать ключ</button>
+                </div>
+                <p class="hint" style="margin-top:12px;">В n8n добавьте заголовок <code>X-FixariVan-Api-Key</code> с этим значением. URL: <code>https://fixarivan.space/api/bot/lead.php</code></p>
+            <?php else: ?>
+                <?php if ($botApiConfigured): ?>
+                    <span class="status-pill ok">Ключ настроен</span>
+                    <p class="hint">Текущий ключ: <code><?= htmlspecialchars($botApiMasked) ?></code></p>
+                <?php else: ?>
+                    <span class="status-pill warn">Ключ ещё не создан</span>
+                    <p class="hint">Без ключа бот не сможет отправлять лиды в CRM.</p>
+                <?php endif; ?>
+                <form method="post" onsubmit="return confirm('<?= $botApiConfigured ? 'Старый ключ перестанет работать. Сгенерировать новый?' : 'Сгенерировать Bot API key?' ?>');">
+                    <input type="hidden" name="form_type" value="bot_api">
+                    <div class="bot-key-actions">
+                        <button type="submit" class="gen-btn"><?= $botApiConfigured ? 'Сгенерировать новый ключ' : 'Сгенерировать ключ' ?></button>
+                    </div>
+                </form>
+                <p class="hint" style="margin-top:12px;">Один клик — ключ сохранится на сервере. Его нужно один раз вставить в n8n.</p>
+            <?php endif; ?>
         </div>
 
         <div class="card" style="margin-top: 20px;">
@@ -473,6 +536,26 @@ $problemTemplates = fixarivan_order_problem_templates_load();
 
         form.addEventListener('submit', function () {
             hidden.value = JSON.stringify(collectRows());
+        });
+    })();
+    </script>
+    <script>
+    (function () {
+        var btn = document.getElementById('copyBotApiKey');
+        var box = document.getElementById('botApiKeyValue');
+        if (!btn || !box) return;
+        btn.addEventListener('click', function () {
+            var text = box.textContent || '';
+            if (!text) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function () {
+                    btn.textContent = 'Скопировано';
+                }).catch(function () {
+                    alert('Не удалось скопировать автоматически. Выделите ключ вручную.');
+                });
+            } else {
+                alert('Скопируйте ключ вручную из поля выше.');
+            }
         });
     })();
     </script>

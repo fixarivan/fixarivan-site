@@ -74,3 +74,57 @@ function fixarivan_verify_delete_password(string $plainPassword): bool
     }
     return password_verify($plainPassword, $hash);
 }
+
+function fixarivan_bot_api_key_configured(): bool
+{
+    $settings = fixarivan_security_settings_load();
+    $env = getenv('FIXARIVAN_BOT_API_KEY');
+    if (is_string($env) && trim($env) !== '') {
+        return true;
+    }
+
+    return trim((string) ($settings['bot_api_key'] ?? '')) !== '';
+}
+
+function fixarivan_bot_api_key_value(): string
+{
+    $env = getenv('FIXARIVAN_BOT_API_KEY');
+    if (is_string($env) && trim($env) !== '') {
+        return trim($env);
+    }
+    $settings = fixarivan_security_settings_load();
+
+    return trim((string) ($settings['bot_api_key'] ?? ''));
+}
+
+function fixarivan_generate_bot_api_key(): string
+{
+    return rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+}
+
+function fixarivan_set_bot_api_key(string $plainKey): void
+{
+    $plainKey = trim($plainKey);
+    if ($plainKey === '') {
+        throw new InvalidArgumentException('Bot API key cannot be empty');
+    }
+    if (strlen($plainKey) < 16) {
+        throw new InvalidArgumentException('Bot API key must be at least 16 characters');
+    }
+    fixarivan_security_settings_save([
+        'bot_api_key' => $plainKey,
+    ]);
+}
+
+function fixarivan_mask_bot_api_key(string $key): string
+{
+    $key = trim($key);
+    if ($key === '') {
+        return '';
+    }
+    if (strlen($key) <= 8) {
+        return str_repeat('•', strlen($key));
+    }
+
+    return substr($key, 0, 4) . str_repeat('•', max(8, strlen($key) - 8)) . substr($key, -4);
+}
