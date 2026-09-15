@@ -202,6 +202,46 @@
         return { overlay, closeModal };
     }
 
+    function requestDeletePassword() {
+        return new Promise((resolve) => {
+            const content = `
+                <div class="fixarivan-modal" role="dialog" aria-modal="true" aria-labelledby="delete-password-title">
+                    <div class="modal-header">
+                        <h2 id="delete-password-title">Подтвердите удаление</h2>
+                        <button type="button" class="modal-close" data-cancel>&times;</button>
+                    </div>
+                    <form id="fixarivan-delete-password-form">
+                        <div class="modal-section">
+                            <label class="modal-label" for="fixarivan-delete-password">Пароль удаления</label>
+                            <input id="fixarivan-delete-password" name="delete_password" type="password" minlength="4" required autocomplete="off">
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="btn" data-cancel>Отмена</button>
+                            <button type="submit" class="btn primary">Удалить</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            const { overlay, closeModal } = createOverlay(content);
+            let settled = false;
+            const finish = (value) => {
+                if (settled) return;
+                settled = true;
+                closeModal();
+                resolve(value);
+            };
+            overlay.querySelectorAll('[data-cancel]').forEach((button) => {
+                button.addEventListener('click', () => finish(null));
+            });
+            overlay.querySelector('#fixarivan-delete-password-form').addEventListener('submit', (event) => {
+                event.preventDefault();
+                const input = overlay.querySelector('#fixarivan-delete-password');
+                finish(input && input.value ? input.value : null);
+            });
+            requestAnimationFrame(() => overlay.querySelector('#fixarivan-delete-password')?.focus());
+        });
+    }
+
     const FixariVanDocuments = {
         async fetchDocument(documentId, documentType) {
             const result = await fetchJson(`./api/get_document.php?id=${encodeURIComponent(documentId)}&type=${documentType}`);
@@ -375,10 +415,8 @@
         },
 
         async deleteDocument(documentId, documentType) {
-            const pass = typeof prompt === 'function'
-                ? prompt('Введите пароль удаления:')
-                : '';
-            if (pass === null || pass === '') {
+            const pass = await requestDeletePassword();
+            if (!pass) {
                 return { success: false, cancelled: true };
             }
             const result = await fetchJson('./api/delete_document_safe_fixed.php', {
