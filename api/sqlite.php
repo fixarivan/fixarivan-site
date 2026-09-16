@@ -414,6 +414,37 @@ function ensureSqliteSchema(PDO $pdo): void {
         . "AND order_status IN ('lead_collecting', 'pending_review')"
     );
 
+    $orderColsArchive = $pdo->query("PRAGMA table_info('orders')")->fetchAll(PDO::FETCH_ASSOC);
+    $orderColNamesArchive = array_map(static function ($c) {
+        return $c['name'] ?? '';
+    }, $orderColsArchive);
+    foreach ([
+        'deleted_at' => 'TEXT',
+        'deleted_by' => 'TEXT',
+        'archive_reason' => 'TEXT',
+    ] as $col => $type) {
+        if (!in_array($col, $orderColNamesArchive, true)) {
+            $pdo->exec('ALTER TABLE orders ADD COLUMN ' . $col . ' ' . $type);
+        }
+    }
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_orders_deleted_at ON orders(deleted_at)');
+
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS crm_audit_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            request_id TEXT UNIQUE,
+            action TEXT NOT NULL,
+            actor TEXT,
+            entity_type TEXT,
+            entity_id TEXT,
+            payload_json TEXT,
+            result_json TEXT,
+            created_at TEXT NOT NULL
+        )'
+    );
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_crm_audit_created ON crm_audit_log(created_at DESC)');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_crm_audit_entity ON crm_audit_log(entity_type, entity_id)');
+
     $cols = $pdo->query("PRAGMA table_info('mobile_reports')")->fetchAll(PDO::FETCH_ASSOC);
     $mobileColNames = array_map(static function ($c) {
         return $c['name'] ?? '';

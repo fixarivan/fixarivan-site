@@ -95,6 +95,7 @@ function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): a
                     lead_source, lead_service_type, lead_parts_required, lead_completion_score, lead_summary, lead_notes, lead_next_action, lead_chat_id, lead_external_ref, lead_pipeline_status, priority,
                     COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS sort_date
              FROM orders
+             WHERE (deleted_at IS NULL OR TRIM(deleted_at) = '')
              ORDER BY sort_date DESC
              LIMIT ' . (int)$limit
         );

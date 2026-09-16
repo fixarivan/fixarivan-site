@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     parts_status, order_lines_json,
                     COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS updated_at
              FROM orders
-             WHERE client_id = :id
+             WHERE client_id = :id AND (deleted_at IS NULL OR TRIM(deleted_at) = '')
              ORDER BY updated_at DESC
              LIMIT 50'
         );

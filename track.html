@@ -42,6 +42,30 @@
         .track-lead-panel-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
         .track-lead-score { font-weight:700; color:#c4b5fd; }
         .track-lead-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+        .track-bulk-bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:10px 0; padding:10px 12px; border-radius:10px; background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.35); }
+        .track-bulk-bar.is-hidden, .is-hidden { display:none !important; }
+        .track-bulk-list { display:flex; flex-direction:column; gap:8px; }
+        .track-bulk-row { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); cursor:pointer; }
+        .track-bulk-row.is-selected { border-color:rgba(59,130,246,0.55); background:rgba(59,130,246,0.10); }
+        .track-bulk-row input { margin-top:4px; }
+        .track-quick-actions { position:relative; }
+        .track-qa-toggle { font-size:.82rem; padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.06); color:inherit; cursor:pointer; }
+        .track-qa-menu { display:none; position:absolute; right:0; top:100%; z-index:30; min-width:220px; margin-top:4px; padding:6px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:#1e293b; box-shadow:0 8px 24px rgba(0,0,0,0.35); }
+        .track-quick-actions.is-open .track-qa-menu { display:flex; flex-direction:column; gap:4px; }
+        .track-qa-item { text-align:left; padding:8px 10px; border:none; border-radius:8px; background:transparent; color:inherit; cursor:pointer; font-size:.85rem; }
+        .track-qa-item:hover { background:rgba(255,255,255,0.08); }
+        .track-qa-danger { color:#fecaca; }
+        .track-invoice-complete-bar { margin:10px 0; padding:10px 12px; border-radius:10px; border:1px solid rgba(34,197,94,0.4); background:rgba(34,197,94,0.10); display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+        .track-ops-modal-backdrop { position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.55); display:flex; align-items:center; justify-content:center; padding:16px; }
+        .track-ops-modal-backdrop[hidden] { display:none !important; }
+        .track-ops-modal { width:min(480px,100%); background:#1e293b; border-radius:14px; border:1px solid rgba(255,255,255,0.12); padding:16px; color:#e2e8f0; }
+        .track-ops-modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+        .track-ops-modal-title { margin:0; font-size:1.05rem; }
+        .track-ops-modal-x { border:none; background:transparent; color:inherit; font-size:1.4rem; cursor:pointer; }
+        .track-ops-modal-foot { display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
+        .track-ops-danger { background:#b91c1c; color:#fff; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600; }
+        .track-ops-label { display:block; margin-top:10px; font-size:.88rem; }
+        .track-ops-input { width:100%; margin-top:6px; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.25); color:inherit; }
         .track-select { max-width: 240px; font-size: .86rem; background: rgba(0,0,0,0.35); color: inherit; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 8px 10px; }
         .track-expected-date { max-width: 200px; font-size: .86rem; background: rgba(0,0,0,0.35); color: inherit; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 8px 10px; }
         .track-internal { width: 100%; min-height: 56px; font-size: .86rem; margin-top: 8px; }
@@ -122,6 +146,7 @@
     <script src="js/track_ui.js?v=20250625polish"></script>
     <script src="js/order_lines_mobile_ui.js?v=20250706lines"></script>
     <script src="js/track_mobile_app.js?v=20250706receipt"></script>
+    <script src="js/track_order_ops.js?v=20250716ops"></script>
 </head>
 <body class="fv-page track-page">
     <div class="top">
@@ -165,6 +190,13 @@
                 <span id="sOrders">Заказов: 0</span>
                 <span id="sDocs">Документов: 0</span>
             </div>
+            <div id="trackBulkBar" class="track-bulk-bar is-hidden">
+                <label class="checkbox-row" style="margin:0;"><input type="checkbox" id="trackBulkSelectAll"> <span>Выбрать всё (фильтр)</span></label>
+                <span id="trackBulkCount" class="muted">0 выбрано</span>
+                <button type="button" id="trackBulkDeleteBtn" class="track-ops-danger" disabled>Удалить выбранные</button>
+                <button type="button" id="trackBulkModeOff" class="btn-secondary">Готово</button>
+            </div>
+            <div style="margin:0 0 8px;"><button type="button" id="trackBulkModeOn" class="btn-secondary" style="width:100%;">☑ Массовый выбор</button></div>
             <div id="clientsList" class="list"><div class="muted">Загрузка…</div></div>
         </aside>
 
@@ -203,7 +235,7 @@
 
     <script>
         const TRACK_PREF_KEY = 'fixarivan_track_filters_v3';
-        const state = { docs: [], groups: [], activeKey: '', activeOrderDocId: '', mode: 'all' };
+        const state = { docs: [], groups: [], activeKey: '', activeOrderDocId: '', mode: 'all', bulkMode: false, selectedOrderDocIds: new Set() };
         let trackCompanyProfile = {};
         const orderDocDetailFetch = new Map();
         const internalCommentTimers = new Map();
@@ -1079,6 +1111,65 @@
             return groups;
         }
 
+        function flattenFilteredOrders() {
+            const out = [];
+            filterGroups().forEach((g) => {
+                g.orders.forEach((o) => {
+                    const docId = orderDocIdFromOrder(o);
+                    if (docId) out.push({ g, o, docId });
+                });
+            });
+            return out;
+        }
+
+        function updateBulkBar() {
+            const bar = document.getElementById('trackBulkBar');
+            const cnt = document.getElementById('trackBulkCount');
+            const delBtn = document.getElementById('trackBulkDeleteBtn');
+            const selAll = document.getElementById('trackBulkSelectAll');
+            const flat = flattenFilteredOrders();
+            const n = state.selectedOrderDocIds.size;
+            if (bar) bar.classList.toggle('is-hidden', !state.bulkMode);
+            if (cnt) cnt.textContent = n + ' выбрано';
+            if (delBtn) delBtn.disabled = n === 0;
+            if (selAll) {
+                const allIds = flat.map((x) => x.docId);
+                selAll.checked = allIds.length > 0 && allIds.every((id) => state.selectedOrderDocIds.has(id));
+                selAll.indeterminate = n > 0 && !selAll.checked;
+            }
+            document.getElementById('trackBulkModeOn')?.classList.toggle('is-hidden', state.bulkMode);
+        }
+
+        function renderBulkList() {
+            const tree = document.getElementById('ordersTree');
+            const flat = flattenFilteredOrders();
+            if (!flat.length) {
+                tree.innerHTML = '<div class="muted">Ничего не найдено</div>';
+                updateBulkBar();
+                return;
+            }
+            tree.innerHTML = '<div class="track-bulk-list">' + flat.map(({ g, o, docId }) => {
+                const sel = state.selectedOrderDocIds.has(docId);
+                return `<label class="track-bulk-row${sel ? ' is-selected' : ''}">
+                    <input type="checkbox" class="track-bulk-check" data-doc="${esc(docId)}"${sel ? ' checked' : ''}>
+                    <span>
+                        <strong>${esc(o.order_id || docId)}</strong> · ${esc(g.client_name || '—')}<br>
+                        <span class="muted">${esc(g.client_phone || '—')} · ${esc(o.problem_description || o.device_model || '—')}</span>
+                    </span>
+                </label>`;
+            }).join('') + '</div>';
+            tree.querySelectorAll('.track-bulk-check').forEach((cb) => {
+                cb.addEventListener('change', () => {
+                    const id = cb.getAttribute('data-doc') || '';
+                    if (cb.checked) state.selectedOrderDocIds.add(id);
+                    else state.selectedOrderDocIds.delete(id);
+                    cb.closest('.track-bulk-row')?.classList.toggle('is-selected', cb.checked);
+                    updateBulkBar();
+                });
+            });
+            updateBulkBar();
+        }
+
         function trackHelpPanelHtml(text) {
             return `<div class="track-help"><button type="button" class="track-help-toggle" aria-expanded="false">ⓘ Справка</button><div class="track-help-panel">${esc(text)}</div></div>`;
         }
@@ -1397,6 +1488,7 @@
                 renderDetails();
             }));
             if (!state.activeKey && groups.length){ state.activeKey = groups[0].key; renderSidebar(); renderDetails(); }
+            updateBulkBar();
         }
 
         function trackLeadReviewPanelHtml(o, orderDocId) {
@@ -1426,6 +1518,7 @@
                 <div class="track-lead-actions">
                     <a class="btn-secondary" href="${esc(reviewUrl)}">Проверить и дополнить</a>
                     <button type="button" class="primary track-lead-confirm" data-doc="${esc(orderDocId)}">Подтвердить в работу</button>
+                    <button type="button" class="btn-secondary track-ops-delete-lead track-qa-danger" data-doc="${esc(orderDocId)}">Удалить предварительную заявку</button>
                 </div>
             </div>`;
         }
@@ -1494,8 +1587,20 @@
                     : `<span class="track-wa is-disabled" title="${escAttr(T.waNoPhoneHint)}">${esc(T.waOrder)}</span>`;
                 const docCardsHtml = (window.TrackUi ? TrackUi.buildTimelineItems(o.documents, T) : o.documents).map((d) => trackDocCardHtml(d, T)).join('');
                 const techName = trackTechnicianName();
+                const invDocs = (o.documents || []).filter((d) => String(d.type || '').toLowerCase() === 'invoice');
+                const hasInvoice = invDocs.length > 0;
+                const invPaid = hasInvoice && invDocs.every((d) => String(d.status || '').toLowerCase() === 'paid');
+                const isClosedOrder = isTrackClosed(o) || pub === 'delivered' || pub === 'done';
+                const invoiceCompleteBar = (hasInvoice && !isClosedOrder && window.TrackOrderOps) ? (
+                    `<div class="track-invoice-complete-bar">
+                        <span>${invPaid ? 'Счёт оплачен' : 'Есть счёт — можно завершить заказ'}</span>
+                        <button type="button" class="primary track-ops-complete-paid" data-doc="${esc(orderDocId)}">✅ Завершить заказ</button>
+                    </div>`
+                ) : '';
+                const quickActions = (window.TrackOrderOps && orderDocId) ? TrackOrderOps.quickActionsHtml(orderDocId, o) : '';
                 const orderBody = orderDocId ? (
                     trackLeadReviewPanelHtml(o, orderDocId) +
+                    invoiceCompleteBar +
                     trackSectionHtml('info', '📋', 'Информация о заказе', 'Статус и сроки', `
                         <div class="track-info-grid">
                             <div class="track-field-cell track-field-cell--status-pub">
@@ -1595,7 +1700,8 @@
                                     <span><strong>Мастер</strong> ${esc(techName)}</span>
                                 </div>
                             </div>
-                            <div class="track-order-badges">
+                            <div class="track-order-badges" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;">
+                                ${quickActions}
                                 ${isOrderIssue(o) ? '<span class="track-order-alert" title="Ожидание запчасти, срок истёк">⚠️</span>' : ''}
                                 ${trackOrderBadgeHtml(o).replace(/class="badge/g, 'class="badge badge-lg')}
                                 ${isPartsWait(o) ? '<span class="badge wait badge-lg">' + esc(T.waitBadge) + '</span>' : ''}
@@ -1619,6 +1725,15 @@
 
         async function renderDetails(){
             const T = trackT();
+            if (state.bulkMode) {
+                renderBulkList();
+                document.getElementById('clientTitle').textContent = 'Массовый выбор';
+                document.getElementById('clientMetaShort').textContent = 'Отметьте заявки для удаления';
+                document.getElementById('clientMeta').textContent = '';
+                const qb = document.getElementById('clientQuickActions');
+                if (qb) { qb.style.display = 'none'; qb.innerHTML = ''; }
+                return;
+            }
             const groups = filterGroups();
             const g = groups.find((x) => x.key === state.activeKey);
             const tree = document.getElementById('ordersTree');
@@ -1709,6 +1824,9 @@
         }
 
         function bindTrackOrderControls(root) {
+            if (window.TrackOrderOps) {
+                TrackOrderOps.bindQuickActions(root, () => loadAll());
+            }
             root.querySelectorAll('.track-lead-confirm').forEach((btn) => {
                 btn.addEventListener('click', async () => {
                     const docId = btn.getAttribute('data-doc') || '';
@@ -2651,6 +2769,32 @@
         document.getElementById('fAll').addEventListener('click', () => setMode('all'));
         document.getElementById('fActive').addEventListener('click', () => setMode('active'));
         document.getElementById('fReview').addEventListener('click', () => setMode('review'));
+        document.getElementById('trackBulkModeOn')?.addEventListener('click', () => {
+            state.bulkMode = true;
+            state.selectedOrderDocIds.clear();
+            updateBulkBar();
+            renderDetails();
+        });
+        document.getElementById('trackBulkModeOff')?.addEventListener('click', () => {
+            state.bulkMode = false;
+            state.selectedOrderDocIds.clear();
+            updateBulkBar();
+            renderDetails();
+        });
+        document.getElementById('trackBulkSelectAll')?.addEventListener('change', (e) => {
+            const flat = flattenFilteredOrders();
+            if (e.target.checked) flat.forEach(({ docId }) => state.selectedOrderDocIds.add(docId));
+            else state.selectedOrderDocIds.clear();
+            renderBulkList();
+        });
+        document.getElementById('trackBulkDeleteBtn')?.addEventListener('click', () => {
+            const ids = Array.from(state.selectedOrderDocIds);
+            if (!ids.length || !window.TrackOrderOps) return;
+            TrackOrderOps.bulkDelete(ids, async () => {
+                state.selectedOrderDocIds.clear();
+                await loadAll();
+            });
+        });
         document.getElementById('fWait').addEventListener('click', () => setMode('wait'));
         document.getElementById('fReady').addEventListener('click', () => setMode('ready'));
         document.getElementById('fTransit').addEventListener('click', () => setMode('transit'));
