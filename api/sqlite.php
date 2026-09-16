@@ -414,6 +414,9 @@ function ensureSqliteSchema(PDO $pdo): void {
         . "AND order_status IN ('lead_collecting', 'pending_review')"
     );
 
+    require_once __DIR__ . '/lib/schema_archive.php';
+    fixarivan_schema_ensure_archive($pdo);
+
     $cols = $pdo->query("PRAGMA table_info('mobile_reports')")->fetchAll(PDO::FETCH_ASSOC);
     $mobileColNames = array_map(static function ($c) {
         return $c['name'] ?? '';

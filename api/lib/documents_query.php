@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/site_url.php';
 require_once __DIR__ . '/order_center.php';
 require_once __DIR__ . '/bot_lead.php';
+require_once __DIR__ . '/schema_archive.php';
 
 function order_status_label_ru(?string $status): string {
     $s = trim((string)$status);
@@ -90,15 +91,31 @@ function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): a
     $out = [];
 
     if ($typeFilter === 'all' || $typeFilter === 'order') {
-        $stmt = $pdo->query(
-            'SELECT document_id, order_id, client_id, client_name, client_phone, client_email, device_model, device_type, device_serial, problem_description, status, public_status, order_status, parts_status, public_expected_date, public_comment, public_estimated_cost, internal_comment, client_token, language, order_type, unique_code, order_lines_json, parts_sale_total, parts_prepayment_status, parts_prepayment_amount,
+        $archiveWhere = fixarivan_orders_archive_sql_filter($pdo);
+        $orderSql = 'SELECT document_id, order_id, client_id, client_name, client_phone, client_email, device_model, device_type, device_serial, problem_description, status, public_status, order_status, parts_status, public_expected_date, public_comment, public_estimated_cost, internal_comment, client_token, language, order_type, unique_code, order_lines_json, parts_sale_total, parts_prepayment_status, parts_prepayment_amount,
+                    lead_source, lead_service_type, lead_parts_required, lead_completion_score, lead_summary, lead_notes, lead_next_action, lead_chat_id, lead_external_ref, lead_pipeline_status, priority,
+                    COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS sort_date
+             FROM orders'
+            . $archiveWhere
+            . ' ORDER BY sort_date DESC
+             LIMIT ' . (int)$limit;
+        try {
+            $stmt = $pdo->query($orderSql);
+        } catch (Throwable $e) {
+            error_log('documents_list orders query failed, retry without archive filter: ' . $e->getMessage());
+            $stmt = $pdo->query(
+                'SELECT document_id, order_id, client_id, client_name, client_phone, client_email, device_model, device_type, device_serial, problem_description, status, public_status, order_status, parts_status, public_expected_date, public_comment, public_estimated_cost, internal_comment, client_token, language, order_type, unique_code, order_lines_json, parts_sale_total, parts_prepayment_status, parts_prepayment_amount,
                     lead_source, lead_service_type, lead_parts_required, lead_completion_score, lead_summary, lead_notes, lead_next_action, lead_chat_id, lead_external_ref, lead_pipeline_status, priority,
                     COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS sort_date
              FROM orders
              ORDER BY sort_date DESC
              LIMIT ' . (int)$limit
-        );
+            );
+        }
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            if (fixarivan_order_row_is_archived($row)) {
+                continue;
+            }
             if (fixarivan_bot_order_hidden_from_track($row)) {
                 continue;
             }

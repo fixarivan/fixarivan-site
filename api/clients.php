@@ -19,6 +19,7 @@ require_once __DIR__ . '/lib/order_center.php';
 require_once __DIR__ . '/lib/client_search.php';
 require_once __DIR__ . '/lib/order_client_portal.php';
 require_once __DIR__ . '/lib/security_settings.php';
+require_once __DIR__ . '/lib/schema_archive.php';
 
 function clients_norm_phone_sql(string $col): string {
     return "REPLACE(REPLACE(REPLACE(IFNULL($col, ''), '+', ''), ' ', ''), '-', '')";
@@ -104,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $stmt = $pdo->prepare(
             'SELECT document_id, order_id, status, device_model, client_token, order_status, public_status, problem_description,
                     lead_source, lead_service_type, lead_parts_required, lead_completion_score, lead_summary, lead_notes, lead_next_action,
-                    parts_status, order_lines_json,
+                    parts_status, order_lines_json, deleted_at,
                     COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS updated_at
              FROM orders
              WHERE client_id = :id
@@ -112,7 +113,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
              LIMIT 50'
         );
         $stmt->execute([':id' => $clientRowId]);
-        $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $ordersRaw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $orders = [];
+        foreach ($ordersRaw as $o) {
+            if (fixarivan_order_row_is_archived($o)) {
+                continue;
+            }
+            $orders[] = $o;
+        }
 
         $activeOrders = [];
         $waitingParts = [];

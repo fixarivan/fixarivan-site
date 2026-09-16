@@ -31,6 +31,7 @@ function fixarivan_normalize_public_status(?string $s): string {
     $legacy = [
         'lead_collecting' => 'lead_collecting',
         'сбор информации' => 'lead_collecting',
+        'archived' => 'archived',
         'pending_review' => 'pending_review',
         'требует проверки' => 'pending_review',
         'ожидает инженера' => 'pending_review',
