@@ -224,23 +224,31 @@
         }
     }
 
-    function quickActionsHtml(orderDocId, o) {
-        if (!orderDocId) return '';
+    function quickActionsHtml(docId, o) {
+        if (!docId) return '';
         const pub = String(o.order_status || o.public_status || '').toLowerCase();
         const hasInv = (o.documents || []).some((d) => String(d.type || '').toLowerCase() === 'invoice');
+        const hasOrderAct = (o.documents || []).some((d) => d.type === 'order');
         const isReview = pub === 'pending_review';
         const isClosed = pub === 'delivered' || pub === 'cancelled' || pub === 'done';
+        const invoiceOnlyDone = !hasOrderAct && hasInv && (o.documents || [])
+            .filter((d) => String(d.type || '').toLowerCase() === 'invoice')
+            .every((d) => {
+                const s = String(d.status || '').toLowerCase();
+                return s === 'paid' || s === 'cancelled';
+            });
+        const closed = isClosed || invoiceOnlyDone;
         let extra = '';
-        if (hasInv && !isClosed) {
-            extra += `<button type="button" class="track-qa-item track-ops-complete-paid" data-doc="${esc(orderDocId)}">✅ Счёт оплачен / Завершить</button>`;
+        if (hasInv && !closed) {
+            extra += `<button type="button" class="track-qa-item track-ops-complete-paid" data-doc="${esc(docId)}">✅ Счёт оплачен / Завершить</button>`;
         }
-        if (isClosed) {
-            extra += `<button type="button" class="track-qa-item track-ops-reopen" data-doc="${esc(orderDocId)}">↩ Вернуть в работу</button>`;
+        if (isClosed && hasOrderAct) {
+            extra += `<button type="button" class="track-qa-item track-ops-reopen" data-doc="${esc(docId)}">↩ Вернуть в работу</button>`;
         }
-        if (isReview) {
-            extra += `<button type="button" class="track-qa-item track-ops-delete-lead" data-doc="${esc(orderDocId)}">🗑 Удалить предварительную заявку</button>`;
-        } else if (!hasInv) {
-            extra += `<button type="button" class="track-qa-item track-ops-delete-lead track-qa-danger" data-doc="${esc(orderDocId)}">🗑 Архивировать тестовую заявку</button>`;
+        if (isReview && hasOrderAct) {
+            extra += `<button type="button" class="track-qa-item track-ops-delete-lead" data-doc="${esc(docId)}">🗑 Удалить предварительную заявку</button>`;
+        } else if (!hasInv && hasOrderAct) {
+            extra += `<button type="button" class="track-qa-item track-ops-delete-lead track-qa-danger" data-doc="${esc(docId)}">🗑 Архивировать тестовую заявку</button>`;
         }
         return `<div class="track-quick-actions">
             <button type="button" class="track-qa-toggle" aria-haspopup="true">⚡ Действия</button>

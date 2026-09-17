@@ -213,6 +213,50 @@
         return p;
     }
 
+    function calcPricingFromInvoices(invoices) {
+        let total = 0;
+        (invoices || []).forEach((inv) => {
+            const st = String(inv.status || '').toLowerCase();
+            if (st === 'cancelled') return;
+            total += parseDecimal(inv.total_amount);
+        });
+        return {
+            labour: total,
+            partsSale: 0,
+            discount: 0,
+            total,
+            profit: total,
+            margin: total > 0 ? 100 : 0,
+            partsCost: 0,
+            fromInvoice: true,
+        };
+    }
+
+    function setOrderPricingFromInvoices(pricingKey, documents) {
+        const key = String(pricingKey || '').trim();
+        if (!key) return null;
+        const invs = (documents || []).filter((d) => String(d.type || '').toLowerCase() === 'invoice');
+        if (!invs.length) return null;
+        const p = calcPricingFromInvoices(invs);
+        cacheOrderPricing(key, p);
+        return p;
+    }
+
+    function applyPricingForKey(pricingKey, root, clientDocIds) {
+        const key = String(pricingKey || '').trim();
+        if (!key) return;
+        const scope = root || document;
+        const p = orderPricingCache.get(key);
+        if (!p) return;
+        const card = scope.querySelector('.order-card');
+        if (card) applyPricingToContainer(card, p);
+        const paymentWidget = document.querySelector('.track-payment-widget');
+        if (paymentWidget) applyPricingToContainer(paymentWidget, p);
+        if (clientDocIds && clientDocIds.length) {
+            updateClientRailFinance(clientDocIds);
+        }
+    }
+
     function updateClientRailFinance(orderDocIds) {
         const merged = { labour: 0, partsSale: 0, discount: 0, total: 0, profit: 0, margin: 0 };
         (orderDocIds || []).forEach((id) => {
@@ -274,11 +318,17 @@
                 p.total = p.labour;
                 p.profit = p.labour;
                 p.margin = p.total > 0 ? 100 : 0;
+                applyPricingToContainer(workInp.closest('.order-card'), p);
             } else if (orderPricingCache.has(String(orderDocId))) {
                 p = { ...orderPricingCache.get(String(orderDocId)) };
+                applyPricingToContainer(scope.querySelector('.order-card'), p);
             }
         }
         cacheOrderPricing(orderDocId, p);
+        const paymentWidget = document.querySelector('.track-payment-widget');
+        if (paymentWidget && paymentWidget.querySelector('[data-pricing-field="total"]')) {
+            applyPricingToContainer(paymentWidget, p);
+        }
         if (clientDocIds && clientDocIds.length) {
             updateClientRailFinance(clientDocIds);
         }
@@ -331,9 +381,12 @@
         updatePricingSummary,
         updateClientRailFinance,
         setOrderPricingFromDoc,
+        setOrderPricingFromInvoices,
+        applyPricingForKey,
         cacheOrderPricing,
         clearPricingCache,
         calcPricingFromLines,
+        calcPricingFromInvoices,
         clientInitials,
         clientAvatarHue,
         formatDateShort,

@@ -23,6 +23,55 @@ function fixarivan_order_ops_fetch(PDO $pdo, string $documentId): ?array
     return is_array($row) ? $row : null;
 }
 
+/** @return array<string,mixed>|null */
+function fixarivan_order_ops_fetch_invoice(PDO $pdo, string $documentId): ?array
+{
+    $documentId = trim($documentId);
+    if ($documentId === '') {
+        return null;
+    }
+    $stmt = $pdo->prepare('SELECT * FROM invoices WHERE document_id = :d LIMIT 1');
+    $stmt->execute([':d' => $documentId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return is_array($row) ? $row : null;
+}
+
+/** @return list<string> */
+function fixarivan_order_ops_invoice_order_variants(array $invRow): array
+{
+    $documentId = trim((string) ($invRow['document_id'] ?? ''));
+    $orderId = trim((string) ($invRow['order_id'] ?? ''));
+    $out = array_values(array_unique(array_filter([$orderId, $documentId])));
+    if ($documentId !== '') {
+        $noPrefixed = 'NO-' . $documentId;
+        if (!in_array($noPrefixed, $out, true)) {
+            $out[] = $noPrefixed;
+        }
+    }
+
+    return $out;
+}
+
+/** @return array<string,mixed>|null */
+function fixarivan_order_ops_find_order_by_variants(PDO $pdo, array $variants): ?array
+{
+    foreach ($variants as $variant) {
+        $variant = trim((string) $variant);
+        if ($variant === '') {
+            continue;
+        }
+        $stmt = $pdo->prepare('SELECT * FROM orders WHERE document_id = :d OR order_id = :d LIMIT 1');
+        $stmt->execute([':d' => $variant]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (is_array($row) && !fixarivan_order_ops_is_archived($row)) {
+            return $row;
+        }
+    }
+
+    return null;
+}
+
 function fixarivan_order_ops_is_archived(?array $row): bool
 {
     return fixarivan_order_row_is_archived($row);
@@ -318,11 +367,20 @@ function fixarivan_order_ops_complete_paid(PDO $pdo, string $documentId, bool $c
     }
 
     $row = fixarivan_order_ops_fetch($pdo, $documentId);
+    $invAnchor = null;
+    $invoiceOnly = false;
     if ($row === null || fixarivan_order_ops_is_archived($row)) {
-        return ['success' => false, 'code' => 'not_found', 'message' => 'Заказ не найден'];
+        $invAnchor = fixarivan_order_ops_fetch_invoice($pdo, $documentId);
+        if ($invAnchor === null) {
+            return ['success' => false, 'code' => 'not_found', 'message' => 'Заказ или счёт не найден'];
+        }
+        $row = fixarivan_order_ops_find_order_by_variants($pdo, fixarivan_order_ops_invoice_order_variants($invAnchor));
+        $invoiceOnly = $row === null;
     }
 
-    $variants = fixarivan_order_ops_id_variants($pdo, $row);
+    $variants = $row !== null
+        ? fixarivan_order_ops_id_variants($pdo, $row)
+        : fixarivan_order_ops_invoice_order_variants($invAnchor ?? []);
     $placeholders = implode(',', array_fill(0, count($variants), '?'));
     if ($placeholders === '') {
         return ['success' => false, 'code' => 'no_order', 'message' => 'Нет идентификатора заказа'];
@@ -331,6 +389,9 @@ function fixarivan_order_ops_complete_paid(PDO $pdo, string $documentId, bool $c
     $invStmt = $pdo->prepare("SELECT * FROM invoices WHERE order_id IN ($placeholders) AND status != 'cancelled' ORDER BY id DESC");
     $invStmt->execute($variants);
     $invoices = $invStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    if ($invoices === [] && $invAnchor !== null) {
+        $invoices = [$invAnchor];
+    }
     if ($invoices === []) {
         return ['success' => false, 'code' => 'no_invoice', 'message' => 'Нет связанного счёта для завершения'];
     }
@@ -356,6 +417,7 @@ function fixarivan_order_ops_complete_paid(PDO $pdo, string $documentId, bool $c
         $pdo->beginTransaction();
         $now = date('c');
         $today = date('Y-m-d');
+        $invoicesUpdated = 0;
         foreach ($invoices as $inv) {
             $st = strtolower(trim((string) ($inv['status'] ?? '')));
             if ($st === 'paid') {
@@ -373,33 +435,42 @@ function fixarivan_order_ops_complete_paid(PDO $pdo, string $documentId, bool $c
                 ':u' => $now,
                 ':d' => (string) ($inv['document_id'] ?? ''),
             ]);
+            $invoicesUpdated++;
         }
 
-        $updOrder = $pdo->prepare(
-            "UPDATE orders SET
-                order_status = 'delivered',
-                public_status = 'delivered',
-                status = 'completed',
-                public_completed_at = COALESCE(NULLIF(TRIM(public_completed_at), ''), :today),
-                date_updated = :u
-             WHERE document_id = :d"
-        );
-        $updOrder->execute([':today' => $today, ':u' => $now, ':d' => $documentId]);
+        $orderDocId = $row !== null ? trim((string) ($row['document_id'] ?? '')) : '';
+        if ($orderDocId !== '') {
+            $updOrder = $pdo->prepare(
+                "UPDATE orders SET
+                    order_status = 'delivered',
+                    public_status = 'delivered',
+                    status = 'completed',
+                    public_completed_at = COALESCE(NULLIF(TRIM(public_completed_at), ''), :today),
+                    date_updated = :u
+                 WHERE document_id = :d"
+            );
+            $updOrder->execute([':today' => $today, ':u' => $now, ':d' => $orderDocId]);
+        }
 
         $pdo->commit();
 
+        $auditDocId = $orderDocId !== '' ? $orderDocId : $documentId;
+        $auditEntity = $invoiceOnly ? 'invoice' : 'order';
         $result = [
             'success' => true,
             'code' => 'completed',
-            'message' => 'Заказ завершён, счёт отмечен оплаченным',
+            'message' => $invoiceOnly
+                ? 'Счёт отмечен оплаченным, заявка завершена'
+                : 'Заказ завершён, счёт отмечен оплаченным',
             'data' => [
-                'document_id' => $documentId,
-                'order_id' => (string) ($row['order_id'] ?? ''),
-                'public_status' => 'delivered',
-                'invoices_updated' => count($invoices),
+                'document_id' => $auditDocId,
+                'order_id' => (string) ($row['order_id'] ?? ($invAnchor['order_id'] ?? '')),
+                'public_status' => $invoiceOnly ? 'paid' : 'delivered',
+                'invoices_updated' => $invoicesUpdated,
+                'invoice_only' => $invoiceOnly,
             ],
         ];
-        fixarivan_audit_log($pdo, 'order_complete_paid', 'order', $documentId, ['confirm_unpaid' => $confirmUnpaid], $result, $requestId);
+        fixarivan_audit_log($pdo, 'order_complete_paid', $auditEntity, $auditDocId, ['confirm_unpaid' => $confirmUnpaid], $result, $requestId);
 
         return $result;
     } catch (Throwable $e) {

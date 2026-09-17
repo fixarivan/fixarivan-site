@@ -77,6 +77,20 @@
         .track-qa-item:hover { background:rgba(255,255,255,0.08); }
         .track-qa-danger { color:#fecaca; }
         .track-invoice-complete-bar { margin:10px 0; padding:10px 12px; border-radius:10px; border:1px solid rgba(34,197,94,0.4); background:rgba(34,197,94,0.10); display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+        .track-payment-widget { border:1px solid rgba(59,130,246,0.35); background:rgba(59,130,246,0.08); border-radius:12px; padding:12px; }
+        .track-payment-widget.is-paid { border-color:rgba(34,197,94,0.45); background:rgba(34,197,94,0.10); }
+        .track-payment-amount-row { display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin:8px 0 10px; font-size:1rem; }
+        .track-payment-amount-row strong { font-size:1.15rem; color:#bbf7d0; }
+        .track-payment-status { margin:6px 0 10px; }
+        .track-payment-status-label { display:inline-block; padding:4px 10px; border-radius:999px; font-size:.82rem; border:1px solid rgba(255,255,255,0.18); background:rgba(0,0,0,0.2); }
+        .track-payment-status-label.is-paid { border-color:rgba(74,222,128,0.5); background:rgba(34,197,94,0.18); color:#dcfce7; }
+        .track-payment-status-label.is-unpaid { border-color:rgba(251,191,36,0.45); background:rgba(245,158,11,0.15); color:#fef3c7; }
+        .track-payment-actions { display:flex; flex-direction:column; gap:8px; }
+        .track-payment-actions .primary, .track-payment-actions .btn-secondary { width:100%; text-align:center; justify-content:center; }
+        .track-primary-action-bar { margin:0 0 12px; padding:12px 14px; border-radius:12px; border:1px solid rgba(59,130,246,0.35); background:rgba(59,130,246,0.10); display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+        .track-primary-action-bar.is-paid { border-color:rgba(34,197,94,0.4); background:rgba(34,197,94,0.10); }
+        .track-primary-action-text { flex:1; min-width:160px; font-size:.92rem; }
+        .track-status-stepper--invoice .track-step-label { font-size:.68rem; }
         .track-ops-modal-backdrop { position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.55); display:flex; align-items:center; justify-content:center; padding:16px; }
         .track-ops-modal-backdrop[hidden] { display:none !important; }
         .track-ops-modal { width:min(480px,100%); background:#1e293b; border-radius:14px; border:1px solid rgba(255,255,255,0.12); padding:16px; color:#e2e8f0; }
@@ -902,6 +916,184 @@
             </div>`;
         }
 
+        function orderPricingKeyFromOrder(o) {
+            const act = orderDocIdFromOrder(o);
+            if (act) return act;
+            const inv = (o && o.documents) ? o.documents.find((d) => String(d.type || '').toLowerCase() === 'invoice') : null;
+            return inv ? String(inv.document_id || '') : '';
+        }
+
+        function trackParseMoney(raw) {
+            const n = parseFloat(String(raw ?? '').replace(/\s/g, '').replace(',', '.'));
+            return Number.isFinite(n) ? n : 0;
+        }
+
+        function trackFormatEuroAmount(n) {
+            return window.TrackUi ? TrackUi.formatEuro(n) : (trackParseMoney(n).toFixed(2).replace('.', ',') + ' €');
+        }
+
+        function trackInvoiceStatusLabelRu(status) {
+            const map = {
+                draft: 'Черновик',
+                issued: 'Выставлен',
+                paid: 'Оплачен',
+                overdue: 'Просрочен',
+                partially_paid: 'Частично оплачен',
+                cancelled: 'Отменён',
+            };
+            const s = String(status || '').toLowerCase();
+            return map[s] || (String(status || '').trim() || '—');
+        }
+
+        function trackInvoicePaymentState(o) {
+            const invs = (o && o.documents) ? o.documents.filter((d) => String(d.type || '').toLowerCase() === 'invoice') : [];
+            if (!invs.length) return { hasInvoice: false, invs: [], total: 0, allPaid: false, primary: null };
+            let total = 0;
+            invs.forEach((d) => {
+                if (String(d.status || '').toLowerCase() === 'cancelled') return;
+                total += trackParseMoney(d.total_amount);
+            });
+            const statuses = invs.map((d) => String(d.status || '').toLowerCase());
+            const allPaid = statuses.every((s) => s === 'paid' || s === 'cancelled');
+            const primary = invs[0];
+            return { hasInvoice: true, invs, total, allPaid, primary };
+        }
+
+        async function patchInvoiceStatus(docId, status) {
+            const res = await fetch('./api/invoice_patch_status.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ document_id: docId, status }),
+            });
+            const json = await res.json();
+            if (!json || json.success !== true) throw new Error(json?.message || 'Ошибка сохранения');
+            return json;
+        }
+
+        function trackInvoiceStepperHtml(o) {
+            const pay = trackInvoicePaymentState(o);
+            if (!pay.hasInvoice) return '';
+            const st = String(pay.primary.status || '').toLowerCase();
+            const steps = [
+                { id: 'created', label: 'Созд', title: 'Создан', icon: '📝' },
+                { id: 'issued', label: 'Счёт', title: 'Выставлен', icon: '📄' },
+                { id: 'paid', label: 'Опл', title: 'Оплачен', icon: '✓' },
+            ];
+            let activeIdx = 0;
+            if (st === 'paid' || st === 'partially_paid' || isInvoiceOnlyTrackDone(o)) activeIdx = 2;
+            else if (st === 'issued' || st === 'overdue') activeIdx = 1;
+            else if (st === 'cancelled') activeIdx = -1;
+            else if (st !== 'draft') activeIdx = 1;
+            const stepperCls = 'track-status-stepper track-status-stepper--compact track-status-stepper--invoice';
+            return `<div class="${stepperCls}">${steps.map((s, i) => {
+                const cls = activeIdx < 0 ? 'is-muted' : (i < activeIdx ? 'is-done' : (i === activeIdx ? 'is-active' : ''));
+                const t = esc(s.title || s.label);
+                return `<div class="track-step ${cls}" title="${t}"><span class="track-step-icon" aria-hidden="true">${s.icon}</span><span class="track-step-label">${esc(s.label)}</span></div>`;
+            }).join('')}</div>`;
+        }
+
+        function trackPaymentRailHtml(g, o, T) {
+            const orderDoc = o.documents.find((d) => d.type === 'order');
+            const orderDocId = orderDoc ? String(orderDoc.document_id || '') : '';
+            const pay = trackInvoicePaymentState(o);
+            const completeDocId = orderDocId || (pay.primary ? String(pay.primary.document_id || '') : '');
+            const isClosed = isTrackClosed(o);
+            const invDocId = pay.primary ? String(pay.primary.document_id || '') : '';
+            const invSt = pay.primary ? String(pay.primary.status || '').toLowerCase() : '';
+            const isPaid = invSt === 'paid';
+            const widgetCls = 'track-rail-widget track-payment-widget' + (isPaid || pay.allPaid ? ' is-paid' : '');
+
+            let amountText = '—';
+            if (pay.hasInvoice && pay.total > 0) {
+                amountText = trackFormatEuroAmount(pay.total);
+            } else if (orderDocId) {
+                amountText = '<span data-pricing-field="total">—</span>';
+            }
+
+            let statusHtml = '';
+            if (pay.hasInvoice) {
+                const label = pay.allPaid ? 'Оплачен' : trackInvoiceStatusLabelRu(pay.primary.status);
+                const cls = (isPaid || pay.allPaid) ? 'is-paid' : 'is-unpaid';
+                statusHtml = `<div class="track-payment-status"><span class="track-payment-status-label ${cls}">${esc(label)}</span></div>`;
+            } else if (orderDocId) {
+                statusHtml = '<div class="track-rail-muted" style="margin:6px 0 10px;">Счёт ещё не создан</div>';
+            }
+
+            let actionsHtml = '';
+            if (!isClosed) {
+                if (pay.hasInvoice && invDocId) {
+                    actionsHtml = '<div class="track-payment-actions">';
+                    if (!isPaid) {
+                        actionsHtml += `<button type="button" class="primary track-payment-mark-paid" data-doc="${esc(invDocId)}">✅ Отметить оплаченным</button>`;
+                    } else {
+                        actionsHtml += `<button type="button" class="btn-secondary track-payment-mark-unpaid" data-doc="${esc(invDocId)}">↩ Не оплачен</button>`;
+                    }
+                    if (!isPaid && completeDocId && window.TrackOrderOps) {
+                        actionsHtml += `<button type="button" class="btn-secondary track-ops-complete-paid" data-doc="${esc(completeDocId)}">Завершить заявку</button>`;
+                    }
+                    actionsHtml += '</div>';
+                } else if (orderDocId) {
+                    const invUrl = 'invoice.html?' + buildTrackDocQuery(g, o);
+                    actionsHtml = `<div class="track-payment-actions"><a href="${esc(invUrl)}" class="primary">+ Выставить счёт</a></div>`;
+                }
+            }
+
+            const hint = !orderDocId && pay.hasInvoice
+                ? '<div class="track-rail-muted" style="margin-top:8px;font-size:.8rem;">Заявка только по счёту — оплата управляется здесь.</div>'
+                : '';
+
+            return `<div class="${widgetCls}">
+                <div class="track-rail-label">💳 Оплата</div>
+                <div class="track-payment-amount-row"><span>К оплате</span><strong>${amountText}</strong></div>
+                ${statusHtml}
+                ${pay.hasInvoice && invDocId ? invoiceStatusSelectHtml(invDocId, pay.primary.status) : ''}
+                ${actionsHtml}
+                ${hint}
+            </div>`;
+        }
+
+        function trackPrimaryActionHtml(g, o, T) {
+            const orderDoc = o.documents.find((d) => d.type === 'order');
+            const orderDocId = orderDoc ? String(orderDoc.document_id || '') : '';
+            const pay = trackInvoicePaymentState(o);
+            const completeDocId = orderDocId || (pay.primary ? String(pay.primary.document_id || '') : '');
+            const isClosed = isTrackClosed(o);
+            if (isClosed) return '';
+
+            if (pay.hasInvoice && pay.primary) {
+                const invDocId = String(pay.primary.document_id || '');
+                const st = String(pay.primary.status || '').toLowerCase();
+                const isPaid = st === 'paid';
+                const barCls = 'track-primary-action-bar' + (isPaid ? ' is-paid' : '');
+                let btn = '';
+                if (!isPaid) {
+                    btn = `<button type="button" class="primary track-payment-mark-paid" data-doc="${esc(invDocId)}">✅ Отметить оплаченным</button>`;
+                } else {
+                    btn = `<button type="button" class="btn-secondary track-payment-mark-unpaid" data-doc="${esc(invDocId)}">↩ Вернуть «не оплачен»</button>`;
+                }
+                const text = isPaid
+                    ? `Счёт оплачен${pay.total > 0 ? ' · ' + trackFormatEuroAmount(pay.total) : ''}`
+                    : (pay.total > 0
+                        ? `Ожидает оплаты · ${trackFormatEuroAmount(pay.total)}`
+                        : 'Счёт выставлен — отметьте оплату');
+                return `<div class="${barCls}"><div class="track-primary-action-text">${esc(text)}</div>${btn}</div>`;
+            }
+
+            if (orderDocId && !pay.hasInvoice) {
+                const invUrl = 'invoice.html?' + buildTrackDocQuery(g, o);
+                return `<div class="track-primary-action-bar">
+                    <div class="track-primary-action-text">Работа выполнена — выставьте счёт клиенту</div>
+                    <a href="${esc(invUrl)}" class="primary">+ Выставить счёт</a>
+                </div>`;
+            }
+
+            if (!orderDocId && !pay.hasInvoice) {
+                return '';
+            }
+            return '';
+        }
+
         async function patchOrderTrack(docId, payload) {
             const body = { documentId: docId, ...payload };
             const res = await fetch('./api/order_track_patch.php', {
@@ -1463,11 +1655,12 @@
                         </div>
                     </div>
                     <div class="track-rail-widget">
-                        <div class="track-rail-label">Статус заказа</div>
+                        <div class="track-rail-label">${orderDocId ? 'Статус заказа' : 'Статус'}</div>
                         <div class="track-rail-badges">${trackOrderBadgeHtml(o)}${isPartsWait(o) ? ' <span class="badge wait badge-lg">' + esc(T.waitBadge) + '</span>' : ''}</div>
-                        ${trackStatusStepperHtml(o, { compact: true })}
-                        <div class="track-rail-muted track-rail-date" title="${esc(T.expectedDateLbl)}">Дата: ${esc(expDateRu || '—')}</div>
+                        ${orderDocId ? trackStatusStepperHtml(o, { compact: true }) : trackInvoiceStepperHtml(o)}
+                        ${orderDocId ? `<div class="track-rail-muted track-rail-date" title="${esc(T.expectedDateLbl)}">Дата: ${esc(expDateRu || '—')}</div>` : ''}
                     </div>
+                    ${trackPaymentRailHtml(g, o, T)}
                     <div class="track-rail-widget">
                         <div class="track-rail-label">Финансы · все заказы</div>
                         <div class="track-rail-finance" data-client-scope="all">
@@ -1588,7 +1781,7 @@
         }
 
         function clientOrderDocIds(g) {
-            return (g.orders || []).map((o) => orderDocIdFromOrder(o)).filter(Boolean);
+            return (g.orders || []).map((o) => orderPricingKeyFromOrder(o)).filter(Boolean);
         }
 
         function buildOtherOrdersHtml(others, T) {
@@ -1638,20 +1831,14 @@
                     : `<span class="track-wa is-disabled" title="${escAttr(T.waNoPhoneHint)}">${esc(T.waOrder)}</span>`;
                 const docCardsHtml = (window.TrackUi ? TrackUi.buildTimelineItems(o.documents, T) : o.documents).map((d) => trackDocCardHtml(d, T)).join('');
                 const techName = trackTechnicianName();
-                const invDocs = (o.documents || []).filter((d) => String(d.type || '').toLowerCase() === 'invoice');
-                const hasInvoice = invDocs.length > 0;
-                const invPaid = hasInvoice && invDocs.every((d) => String(d.status || '').toLowerCase() === 'paid');
-                const isClosedOrder = isTrackClosed(o) || pub === 'delivered' || pub === 'done';
-                const invoiceCompleteBar = (hasInvoice && !isClosedOrder && window.TrackOrderOps) ? (
-                    `<div class="track-invoice-complete-bar">
-                        <span>${invPaid ? 'Счёт оплачен' : 'Есть счёт — можно завершить заказ'}</span>
-                        <button type="button" class="primary track-ops-complete-paid" data-doc="${esc(orderDocId)}">✅ Завершить заказ</button>
-                    </div>`
-                ) : '';
-                const quickActions = (window.TrackOrderOps && orderDocId) ? TrackOrderOps.quickActionsHtml(orderDocId, o) : '';
+                const hasInvoice = !!(invDoc || (o.documents || []).some((d) => String(d.type || '').toLowerCase() === 'invoice'));
+                const primaryInvDocId = invDoc ? String(invDoc.document_id || '') : '';
+                const completeDocId = orderDocId || primaryInvDocId;
+                const primaryActionBar = trackPrimaryActionHtml(g, o, T);
+                const quickActions = (window.TrackOrderOps && completeDocId) ? TrackOrderOps.quickActionsHtml(completeDocId, o) : '';
                 const orderBody = orderDocId ? (
                     trackLeadReviewPanelHtml(o, orderDocId) +
-                    invoiceCompleteBar +
+                    primaryActionBar +
                     trackSectionHtml('info', '📋', 'Информация о заказе', 'Статус и сроки', `
                         <div class="track-info-grid">
                             <div class="track-field-cell track-field-cell--status-pub">
@@ -1735,7 +1922,13 @@
                         <div class="track-doc-list">${docCardsHtml || '<div class="track-rail-muted">—</div>'}</div>
                     `) +
                     trackSectionHtml('history', '🕒', 'История', 'События заказа', trackMobileHistoryHtml(o, T))
-                ) : `<div class="muted" style="margin:8px 0;">${esc(T.noOrderDoc)}</div>`;
+                ) : (hasInvoice ? (
+                    primaryActionBar +
+                    trackSectionHtml('documents', '📄', 'Документы', 'Статус оплаты по счёту', `
+                        <div class="muted" style="margin:0 0 10px;">${esc(T.noOrderDoc)} Статус оплаты — в блоке «Оплата» справа или кнопкой выше.</div>
+                        <div class="track-doc-list">${docCardsHtml || '<div class="track-rail-muted">—</div>'}</div>
+                    `)
+                ) : `<div class="muted" style="margin:8px 0;">${esc(T.noOrderDoc)}</div>`);
                 return `
                 <div class="order-card ${orderClass(o)}" data-order-doc-id="${esc(orderDocId)}">
                     <div class="track-order-body">
@@ -1843,12 +2036,21 @@
             bindOrderSwitch(tree);
             bindPortalButtons(tree);
             bindTrackOrderControls(tree);
+            const railEl = document.getElementById('trackWorkspaceRail');
+            if (railEl) bindTrackOrderControls(railEl);
             bindOrderLinesControls(tree);
             const rail = document.getElementById('trackWorkspaceRail');
             if (window.TrackUi) {
                 TrackUi.init(tree);
                 if (rail) TrackUi.init(rail);
                 docIds.forEach((id) => TrackUi.updatePricingSummary(document, id, docIds));
+                (g.orders || []).forEach((ord) => {
+                    if (orderDocIdFromOrder(ord)) return;
+                    const pk = orderPricingKeyFromOrder(ord);
+                    if (!pk) return;
+                    TrackUi.setOrderPricingFromInvoices(pk, ord.documents);
+                    TrackUi.applyPricingForKey(pk, tree, docIds);
+                });
                 TrackUi.updateClientRailFinance(docIds);
             }
             window.__trackMobileMeta = {
@@ -2065,20 +2267,44 @@
                     partsPrepaymentAmountTimers.set(docId, tid);
                 });
             });
+            root.querySelectorAll('.track-payment-mark-paid').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const docId = btn.getAttribute('data-doc') || '';
+                    if (!docId) return;
+                    btn.disabled = true;
+                    try {
+                        await patchInvoiceStatus(docId, 'paid');
+                        await loadAll();
+                    } catch (e) {
+                        alert(fvErr(e) || 'Ошибка');
+                    } finally {
+                        btn.disabled = false;
+                    }
+                });
+            });
+            root.querySelectorAll('.track-payment-mark-unpaid').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const docId = btn.getAttribute('data-doc') || '';
+                    if (!docId) return;
+                    if (!confirm('Вернуть счёт в статус «Выставлен» (не оплачен)?')) return;
+                    btn.disabled = true;
+                    try {
+                        await patchInvoiceStatus(docId, 'issued');
+                        await loadAll();
+                    } catch (e) {
+                        alert(fvErr(e) || 'Ошибка');
+                    } finally {
+                        btn.disabled = false;
+                    }
+                });
+            });
             root.querySelectorAll('.track-invoice-status').forEach((sel) => {
                 sel.addEventListener('change', async () => {
                     const docId = sel.getAttribute('data-doc') || '';
                     if (!docId) return;
                     sel.disabled = true;
                     try {
-                        const res = await fetch('./api/invoice_patch_status.php', {
-                            method: 'POST',
-                            credentials: 'same-origin',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ document_id: docId, status: sel.value }),
-                        });
-                        const json = await res.json();
-                        if (!json || json.success !== true) throw new Error(json?.message || 'Ошибка сохранения');
+                        await patchInvoiceStatus(docId, sel.value);
                         await loadAll();
                     } catch (e) {
                         alert(fvErr(e) || 'Ошибка');
@@ -2669,7 +2895,14 @@
             if (group && Array.isArray(group.orders)) {
                 group.orders.forEach((o) => {
                     const id = orderDocIdFromOrder(o);
-                    if (id) docIds.add(id);
+                    if (id) {
+                        docIds.add(id);
+                        return;
+                    }
+                    const pk = orderPricingKeyFromOrder(o);
+                    if (pk && window.TrackUi) {
+                        TrackUi.setOrderPricingFromInvoices(pk, o.documents);
+                    }
                 });
             }
             root.querySelectorAll('.order-lines-box[data-order-doc-id]').forEach((el) => {

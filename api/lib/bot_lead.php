@@ -243,6 +243,19 @@ function fixarivan_bot_lead_source_label_ru(string $source): string
     return $map[$source] ?? $source;
 }
 
+function fixarivan_bot_text_looks_like_template(string $text): bool
+{
+    $text = trim($text);
+    if ($text === '') {
+        return false;
+    }
+    if (str_contains($text, '{{') || str_contains($text, '}}')) {
+        return true;
+    }
+
+    return (bool) preg_match('/\$\(\s*[\'"]/u', $text);
+}
+
 /**
  * @param array<string,mixed> $payload
  * @return array{0: bool, 1: ?array<string,mixed>, 2: ?string, 3: int}
@@ -251,6 +264,9 @@ function fixarivan_bot_validate_lead_payload(array $payload): array
 {
     $phone = trim((string) ($payload['phone'] ?? $payload['client_phone'] ?? ''));
     $problem = trim((string) ($payload['problem_description'] ?? $payload['problem'] ?? ''));
+    $summary = trim((string) ($payload['summary'] ?? ''));
+    $notes = trim((string) ($payload['notes'] ?? ''));
+    $nextAction = trim((string) ($payload['next_action'] ?? $payload['nextAction'] ?? ''));
     $leadState = fixarivan_bot_normalize_lead_state($payload['lead_state'] ?? $payload['leadState'] ?? null);
 
     if ($phone === '') {
@@ -258,6 +274,17 @@ function fixarivan_bot_validate_lead_payload(array $payload): array
     }
     if (fixarivan_normalize_phone($phone) === '') {
         return [false, null, 'phone is invalid', 400];
+    }
+
+    foreach ([
+        'problem_description' => $problem,
+        'summary' => $summary,
+        'notes' => $notes,
+        'next_action' => $nextAction,
+    ] as $field => $value) {
+        if ($value !== '' && fixarivan_bot_text_looks_like_template($value)) {
+            return [false, null, $field . ' contains unresolved template placeholders', 400];
+        }
     }
 
     if ($leadState === 'ready_for_review') {
