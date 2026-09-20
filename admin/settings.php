@@ -24,7 +24,8 @@ $messageType = '';
 $newBotApiKey = isset($_SESSION['bot_api_key_flash']) ? (string)$_SESSION['bot_api_key_flash'] : '';
 unset($_SESSION['bot_api_key_flash']);
 $botApiConfigured = fixarivan_bot_api_key_configured();
-$botApiMasked = fixarivan_mask_bot_api_key(fixarivan_bot_api_key_value());
+$botApiKeyFull = fixarivan_bot_api_key_value();
+$botApiMasked = fixarivan_mask_bot_api_key($botApiKeyFull);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formType = (string)($_POST['form_type'] ?? 'auth');
@@ -342,7 +343,13 @@ $problemTemplates = fixarivan_order_problem_templates_load();
             <?php else: ?>
                 <?php if ($botApiConfigured): ?>
                     <span class="status-pill ok">Ключ настроен</span>
-                    <p class="hint">Текущий ключ: <code><?= htmlspecialchars($botApiMasked) ?></code></p>
+                    <p class="hint" style="margin: 10px 0 6px;">Текущий ключ (маскированный):</p>
+                    <div class="bot-key-box" id="botApiKeyValueExisting"><?= htmlspecialchars($botApiMasked) ?></div>
+                    <input type="hidden" id="botApiKeyFull" value="<?= htmlspecialchars($botApiKeyFull, ENT_QUOTES, 'UTF-8') ?>">
+                    <div class="bot-key-actions" style="margin-top: 10px;">
+                        <button type="button" class="copy-btn" id="copyBotApiKeyExisting">Скопировать ключ</button>
+                    </div>
+                    <p class="hint" style="margin-top: 10px;">В n8n: Header Auth → <code>X-FixariVan-Api-Key</code>. URL: <code>https://fixarivan.space/api/bot/lead.php</code></p>
                 <?php else: ?>
                     <span class="status-pill warn">Ключ ещё не создан</span>
                     <p class="hint">Без ключа бот не сможет отправлять лиды в CRM.</p>
@@ -541,21 +548,31 @@ $problemTemplates = fixarivan_order_problem_templates_load();
     </script>
     <script>
     (function () {
-        var btn = document.getElementById('copyBotApiKey');
-        var box = document.getElementById('botApiKeyValue');
-        if (!btn || !box) return;
-        btn.addEventListener('click', function () {
-            var text = box.textContent || '';
-            if (!text) return;
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).then(function () {
-                    btn.textContent = 'Скопировано';
-                }).catch(function () {
-                    alert('Не удалось скопировать автоматически. Выделите ключ вручную.');
-                });
-            } else {
-                alert('Скопируйте ключ вручную из поля выше.');
-            }
+        function bindCopyKey(btn, getText) {
+            if (!btn) return;
+            var defaultLabel = btn.textContent || 'Скопировать ключ';
+            btn.addEventListener('click', function () {
+                var text = getText();
+                if (!text) return;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(function () {
+                        btn.textContent = 'Скопировано';
+                        setTimeout(function () { btn.textContent = defaultLabel; }, 2000);
+                    }).catch(function () {
+                        alert('Не удалось скопировать автоматически. Выделите ключ вручную.');
+                    });
+                } else {
+                    alert('Скопируйте ключ вручную из поля выше.');
+                }
+            });
+        }
+        bindCopyKey(document.getElementById('copyBotApiKey'), function () {
+            var box = document.getElementById('botApiKeyValue');
+            return box ? (box.textContent || '').trim() : '';
+        });
+        bindCopyKey(document.getElementById('copyBotApiKeyExisting'), function () {
+            var hidden = document.getElementById('botApiKeyFull');
+            return hidden ? (hidden.value || '').trim() : '';
         });
     })();
     </script>
