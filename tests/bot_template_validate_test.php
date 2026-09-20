@@ -19,8 +19,9 @@ $ok = fixarivan_bot_validate_lead_payload([
     'problem_description' => 'Нужен ремонт экрана',
 ]);
 if ($ok[0] !== true) {
-    fwrite(STDERR, "expected valid payload\n");
+    fwrite(STDERR, "expected valid non-whatsapp payload\n");
     exit(1);
 }
 
 echo "bot_template_validate_test: OK\n";
+echo "Run also: php tests/bot_lead_contract_test.php && php tests/bot_lead_integration_test.php\n";

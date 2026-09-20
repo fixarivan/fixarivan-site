@@ -9,10 +9,73 @@
 ```http
 Content-Type: application/json
 X-FixariVan-Api-Key: <ваш_ключ>
-X-Idempotency-Key: <uuid>
+X-Idempotency-Key: <uuid>   # опционально; для WhatsApp достаточно trigger_message_id
 ```
 
 Ключ: **Админ → Настройки → «Сгенерировать ключ»** (`admin/settings.php`), либо env `FIXARIVAN_BOT_API_KEY`.
+
+**n8n:** создайте credential типа **Header Auth**:
+- Header name: `X-FixariVan-Api-Key`
+- Header value: ключ из настроек CRM (не коммитить, не логировать)
+
+## WhatsApp (n8n AI Worker → CRM)
+
+**Endpoint (prod):** `POST https://fixarivan.space/api/bot/lead.php`
+
+Обязательно для WhatsApp-лида:
+
+| Поле | Правило |
+|------|---------|
+| `lead_source` | `whatsapp` |
+| `chat_id` | JID вида `358401234567@s.whatsapp.net` **или** `phone` с тем же номером |
+| `trigger_message_id` | Непустой ID исходного сообщения (Evolution message id) |
+| `language` | `ru` / `fi` / `en` |
+| `summary` или `problem_description` | Непустое описание (мин. 3 символа) |
+
+**Не принимается:** `@lid` без достоверного номера телефона — CRM вернёт `400`, `success: false`.
+
+**Идемпотентность:** повтор того же `trigger_message_id` не создаёт вторую заявку. CRM автоматически строит ключ `wa:msg:{trigger_message_id}`.
+
+### Пример безопасного payload (WhatsApp, received)
+
+```json
+{
+  "lead_source": "whatsapp",
+  "chat_id": "358401234567@s.whatsapp.net",
+  "trigger_message_id": "3EB0C767F26DEECBB830",
+  "language": "fi",
+  "client_name": "Mika",
+  "lead_state": "received",
+  "summary": "Asiakas pyytää apua kannettavan kanssa",
+  "priority": "normal",
+  "completion_score": 15
+}
+```
+
+### Пример ответа (успех)
+
+```json
+{
+  "success": true,
+  "created": true,
+  "idempotent_replay": false,
+  "visible_in_track": false,
+  "lead_state": "received",
+  "document_id": "ORD-20260920120000-abc123",
+  "trigger_message_id": "3EB0C767F26DEECBB830",
+  "idempotency_key": "wa:msg:3EB0C767F26DEECBB830"
+}
+```
+
+### Пример ответа (ошибка — без ложного success)
+
+```json
+{
+  "success": false,
+  "error": "lead_rejected",
+  "message": "trigger_message_id is required for WhatsApp leads"
+}
+```
 
 ## Pipeline (до Track)
 

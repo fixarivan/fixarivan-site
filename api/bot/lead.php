@@ -23,15 +23,21 @@ require_once __DIR__ . '/../lib/api_response.php';
 require_once __DIR__ . '/../lib/bot_lead.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    api_json_send(false, null, 'Method not allowed', [], ['error' => 'method_not_allowed']);
+    http_response_code(405);
+    api_json_send(false, null, 'Method not allowed', [], ['error' => 'method_not_allowed', 'success' => false]);
     exit;
 }
 
 if (!fixarivan_bot_verify_api_key(fixarivan_bot_read_api_key_from_request())) {
-    http_response_code(fixarivan_bot_api_key() === '' ? 503 : 401);
-    api_json_send(false, null, fixarivan_bot_api_key() === ''
-        ? 'Bot API key is not configured on CRM server'
-        : 'Invalid or missing API key', [], ['error' => 'unauthorized']);
+    $configured = fixarivan_bot_api_key() !== '';
+    http_response_code($configured ? 401 : 503);
+    fixarivan_bot_log_event('auth_failed', ['configured' => $configured]);
+    api_json_send(false, null, $configured
+        ? 'Invalid or missing API key'
+        : 'Bot API key is not configured on CRM server', [], [
+        'error' => $configured ? 'unauthorized' : 'not_configured',
+        'success' => false,
+    ]);
     exit;
 }
 
@@ -39,15 +45,21 @@ $raw = file_get_contents('php://input');
 $payload = json_decode($raw ?: '{}', true);
 if (!is_array($payload)) {
     http_response_code(400);
-    api_json_send(false, null, 'Invalid JSON body', [], ['error' => 'invalid_json']);
+    fixarivan_bot_log_event('invalid_json', []);
+    api_json_send(false, null, 'Invalid JSON body', [], ['error' => 'invalid_json', 'success' => false]);
     exit;
 }
 
+$payload = fixarivan_bot_expand_payload($payload);
 if (trim((string) ($payload['idempotency_key'] ?? '')) === '') {
     $hdrKey = trim((string) ($_SERVER['HTTP_X_IDEMPOTENCY_KEY'] ?? ''));
     if ($hdrKey !== '') {
         $payload['idempotency_key'] = $hdrKey;
     }
+}
+$derivedKey = fixarivan_bot_derive_idempotency_key($payload);
+if ($derivedKey !== '' && trim((string) ($payload['idempotency_key'] ?? '')) === '') {
+    $payload['idempotency_key'] = $derivedKey;
 }
 
 try {
@@ -55,12 +67,16 @@ try {
     [$ok, $data, $err, $code] = fixarivan_bot_upsert_lead($pdo, $payload);
     if (!$ok) {
         http_response_code($code);
-        api_json_send(false, null, $err, [], ['error' => 'lead_rejected', 'success' => false]);
+        api_json_send(false, null, $err, [], [
+            'error' => 'lead_rejected',
+            'success' => false,
+        ]);
         exit;
     }
     http_response_code($code === 201 ? 201 : 200);
     api_json_send(true, $data, $data['message'] ?? null, [], $data);
 } catch (Throwable $e) {
     http_response_code(500);
+    fixarivan_bot_log_event('internal_error', ['type' => get_class($e)]);
     api_json_send(false, null, 'Server error', [], ['error' => 'internal_error', 'success' => false]);
 }

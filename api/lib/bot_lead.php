@@ -256,24 +256,261 @@ function fixarivan_bot_text_looks_like_template(string $text): bool
     return (bool) preg_match('/\$\(\s*[\'"]/u', $text);
 }
 
+function fixarivan_bot_is_whatsapp_lid_jid(string $jid): bool
+{
+    return str_ends_with(strtolower(trim($jid)), '@lid');
+}
+
+function fixarivan_bot_is_whatsapp_phone_jid(string $jid): bool
+{
+    $jid = strtolower(trim($jid));
+    if ($jid === '' || fixarivan_bot_is_whatsapp_lid_jid($jid)) {
+        return false;
+    }
+    if (!str_contains($jid, '@')) {
+        return false;
+    }
+    [$user, $host] = explode('@', $jid, 2);
+    if (!preg_match('/^\d{7,15}$/', $user)) {
+        return false;
+    }
+
+    return in_array($host, ['s.whatsapp.net', 'c.us'], true);
+}
+
+function fixarivan_bot_extract_phone_from_whatsapp_jid(string $jid): string
+{
+    if (!fixarivan_bot_is_whatsapp_phone_jid($jid)) {
+        return '';
+    }
+    [$user] = explode('@', strtolower(trim($jid)), 2);
+
+    return fixarivan_normalize_phone($user);
+}
+
+function fixarivan_bot_canonical_whatsapp_jid(string $rawJid, string $phoneNorm): string
+{
+    if (fixarivan_bot_is_whatsapp_phone_jid($rawJid)) {
+        return strtolower(trim($rawJid));
+    }
+    if ($phoneNorm !== '') {
+        return $phoneNorm . '@s.whatsapp.net';
+    }
+
+    return trim($rawJid);
+}
+
+/** @return array{0:string,1:string,2:?string} phone_norm, chat_jid, error_code */
+function fixarivan_bot_resolve_phone_from_payload(array $payload): array
+{
+    $explicit = trim((string) ($payload['phone'] ?? $payload['client_phone'] ?? ''));
+    $chatId = trim((string) ($payload['chat_id'] ?? $payload['chatId'] ?? ''));
+    $waChat = trim((string) ($payload['whatsapp_chat_id'] ?? $payload['whatsappChatId'] ?? ''));
+    $candidates = array_values(array_unique(array_filter([$chatId, $waChat, $explicit])));
+
+    $sawLid = false;
+    foreach ($candidates as $candidate) {
+        if (fixarivan_bot_is_whatsapp_lid_jid($candidate)) {
+            $sawLid = true;
+            continue;
+        }
+        $fromJid = fixarivan_bot_extract_phone_from_whatsapp_jid($candidate);
+        if ($fromJid !== '') {
+            return [$fromJid, fixarivan_bot_canonical_whatsapp_jid($candidate, $fromJid), null];
+        }
+    }
+
+    $norm = fixarivan_normalize_phone($explicit);
+    if ($norm !== '') {
+        $jid = fixarivan_bot_canonical_whatsapp_jid($chatId !== '' ? $chatId : $waChat, $norm);
+
+        return [$norm, $jid, null];
+    }
+
+    if ($sawLid) {
+        return ['', '', 'lid_without_phone'];
+    }
+
+    return ['', '', 'phone_required'];
+}
+
+function fixarivan_bot_payload_is_whatsapp(array $payload): bool
+{
+    $source = fixarivan_bot_normalize_lead_source($payload['lead_source'] ?? $payload['leadSource'] ?? $payload['source'] ?? null);
+    if ($source === 'whatsapp') {
+        return true;
+    }
+    foreach (['chat_id', 'chatId', 'whatsapp_chat_id', 'whatsappChatId', 'phone', 'client_phone'] as $key) {
+        $raw = strtolower(trim((string) ($payload[$key] ?? '')));
+        if ($raw === '') {
+            continue;
+        }
+        if (str_contains($raw, '@s.whatsapp.net') || str_contains($raw, '@c.us') || fixarivan_bot_is_whatsapp_lid_jid($raw)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /**
  * @param array<string,mixed> $payload
- * @return array{0: bool, 1: ?array<string,mixed>, 2: ?string, 3: int}
+ * @return array<string,mixed>
+ */
+function fixarivan_bot_expand_payload(array $payload): array
+{
+    if (isset($payload['source']) && is_array($payload['source'])) {
+        $source = $payload['source'];
+        if (trim((string) ($payload['lead_source'] ?? '')) === '') {
+            $payload['lead_source'] = $source['channel'] ?? $source['lead_source'] ?? '';
+        }
+        if (trim((string) ($payload['chat_id'] ?? '')) === '') {
+            $payload['chat_id'] = $source['whatsapp_chat_id'] ?? $source['chat_id'] ?? '';
+        }
+        if (trim((string) ($payload['trigger_message_id'] ?? '')) === '') {
+            $payload['trigger_message_id'] = $source['trigger_message_id']
+                ?? $source['evolution_message_id']
+                ?? $source['message_id']
+                ?? '';
+        }
+    }
+    if (isset($payload['client']) && is_array($payload['client'])) {
+        $client = $payload['client'];
+        foreach ([
+            'client_name' => 'name',
+            'client_phone' => 'phone',
+            'client_email' => 'email',
+            'language' => 'language',
+        ] as $flat => $nested) {
+            if (trim((string) ($payload[$flat] ?? '')) === '' && isset($client[$nested])) {
+                $payload[$flat] = $client[$nested];
+            }
+        }
+        if (trim((string) ($payload['phone'] ?? '')) === '' && isset($client['phone'])) {
+            $payload['phone'] = $client['phone'];
+        }
+    }
+    if (isset($payload['request']) && is_array($payload['request'])) {
+        $request = $payload['request'];
+        foreach ([
+            'problem_description' => 'problem_description',
+            'summary' => 'summary',
+            'service_type' => 'service_type',
+        ] as $flat => $nested) {
+            if (trim((string) ($payload[$flat] ?? '')) === '' && isset($request[$nested])) {
+                $payload[$flat] = $request[$nested];
+            }
+        }
+        if (trim((string) ($payload['problem'] ?? '')) === '' && isset($request['problem'])) {
+            $payload['problem'] = $request['problem'];
+        }
+    }
+    if (isset($payload['device']) && is_array($payload['device'])) {
+        $device = $payload['device'];
+        if (trim((string) ($payload['device_type'] ?? '')) === '' && isset($device['type'])) {
+            $payload['device_type'] = $device['type'];
+        }
+        if (trim((string) ($payload['device_model'] ?? '')) === '' && isset($device['model'])) {
+            $payload['device_model'] = $device['model'];
+        }
+    }
+
+    return $payload;
+}
+
+function fixarivan_bot_derive_idempotency_key(array $payload): string
+{
+    $explicit = trim((string) ($payload['idempotency_key'] ?? $payload['idempotencyKey'] ?? ''));
+    if ($explicit !== '') {
+        return $explicit;
+    }
+    $trigger = trim((string) ($payload['trigger_message_id'] ?? $payload['triggerMessageId'] ?? ''));
+    if ($trigger !== '') {
+        return 'wa:msg:' . $trigger;
+    }
+    $external = trim((string) ($payload['external_ref'] ?? $payload['externalRef'] ?? ''));
+
+    return $external;
+}
+
+function fixarivan_bot_text_min_length(string $text): int
+{
+    if (function_exists('mb_strlen')) {
+        return mb_strlen($text, 'UTF-8');
+    }
+
+    return strlen($text);
+}
+
+function fixarivan_bot_is_unique_violation(PDOException $e): bool
+{
+    $msg = $e->getMessage();
+
+    return str_contains($msg, 'UNIQUE constraint failed') || $e->getCode() === '23000';
+}
+
+/** @param array<string,mixed> $context */
+function fixarivan_bot_log_event(string $event, array $context = []): void
+{
+    $safe = ['event' => $event];
+    foreach ($context as $key => $value) {
+        $k = strtolower((string) $key);
+        if (in_array($k, ['api_key', 'key', 'token', 'authorization', 'password', 'secret'], true)) {
+            continue;
+        }
+        if (in_array($k, ['phone', 'client_phone', 'client_name', 'client_email', 'summary', 'problem_description'], true)) {
+            $safe[$key] = '[redacted]';
+            continue;
+        }
+        if (is_scalar($value)) {
+            $text = (string) $value;
+            $safe[$key] = strlen($text) > 120 ? substr($text, 0, 80) . '…' : $text;
+        } else {
+            $safe[$key] = '[complex]';
+        }
+    }
+    error_log('fixarivan_bot ' . json_encode($safe, JSON_UNESCAPED_UNICODE));
+}
+
+/**
+ * @param array<string,mixed> $payload
+ * @return array{0: bool, 1: ?array<string,mixed>, 2: ?string, 3: int, 4: ?string}
  */
 function fixarivan_bot_validate_lead_payload(array $payload): array
 {
-    $phone = trim((string) ($payload['phone'] ?? $payload['client_phone'] ?? ''));
+    $payload = fixarivan_bot_expand_payload($payload);
+    [$phoneNorm, $chatJid, $phoneErr] = fixarivan_bot_resolve_phone_from_payload($payload);
     $problem = trim((string) ($payload['problem_description'] ?? $payload['problem'] ?? ''));
     $summary = trim((string) ($payload['summary'] ?? ''));
     $notes = trim((string) ($payload['notes'] ?? ''));
     $nextAction = trim((string) ($payload['next_action'] ?? $payload['nextAction'] ?? ''));
     $leadState = fixarivan_bot_normalize_lead_state($payload['lead_state'] ?? $payload['leadState'] ?? null);
+    $isWhatsApp = fixarivan_bot_payload_is_whatsapp($payload);
+    $triggerMessageId = trim((string) ($payload['trigger_message_id'] ?? $payload['triggerMessageId'] ?? ''));
+    $language = fixarivan_client_order_normalize_lang($payload['language'] ?? $payload['lang'] ?? '');
 
-    if ($phone === '') {
-        return [false, null, 'phone is required', 400];
+    if ($phoneErr === 'lid_without_phone') {
+        return [false, null, 'WhatsApp @lid without a reliable phone number is not accepted', 400, 'lid_without_phone'];
     }
-    if (fixarivan_normalize_phone($phone) === '') {
-        return [false, null, 'phone is invalid', 400];
+    if ($phoneNorm === '') {
+        return [false, null, 'phone or valid WhatsApp JID @s.whatsapp.net is required', 400, 'phone_required'];
+    }
+
+    if ($isWhatsApp) {
+        if ($triggerMessageId === '') {
+            return [false, null, 'trigger_message_id is required for WhatsApp leads', 400, 'trigger_message_id_required'];
+        }
+        if (!in_array($language, ['ru', 'fi', 'en'], true)) {
+            return [false, null, 'language is required for WhatsApp leads (ru, fi, en)', 400, 'language_required'];
+        }
+        $description = $problem !== '' ? $problem : $summary;
+        if ($description === '' || fixarivan_bot_text_min_length($description) < 3) {
+            return [false, null, 'summary or problem_description is required for WhatsApp leads', 400, 'description_required'];
+        }
+        $rawChatId = trim((string) ($payload['chat_id'] ?? $payload['chatId'] ?? ''));
+        if ($rawChatId !== '' && !fixarivan_bot_is_whatsapp_phone_jid($rawChatId) && !fixarivan_bot_is_whatsapp_lid_jid($rawChatId)) {
+            return [false, null, 'chat_id must be a WhatsApp phone JID @s.whatsapp.net when provided', 400, 'invalid_whatsapp_jid'];
+        }
     }
 
     foreach ([
@@ -283,24 +520,20 @@ function fixarivan_bot_validate_lead_payload(array $payload): array
         'next_action' => $nextAction,
     ] as $field => $value) {
         if ($value !== '' && fixarivan_bot_text_looks_like_template($value)) {
-            return [false, null, $field . ' contains unresolved template placeholders', 400];
+            return [false, null, $field . ' contains unresolved template placeholders', 400, 'template_placeholder'];
         }
     }
 
     if ($leadState === 'ready_for_review') {
         if ($problem === '') {
-            return [false, null, 'problem_description is required when lead_state is ready_for_review', 400];
+            return [false, null, 'problem_description is required when lead_state is ready_for_review', 400, 'problem_required'];
         }
-        if (function_exists('mb_strlen')) {
-            if (mb_strlen($problem, 'UTF-8') < 3) {
-                return [false, null, 'problem_description is too short', 400];
-            }
-        } elseif (strlen($problem) < 3) {
-            return [false, null, 'problem_description is too short', 400];
+        if (fixarivan_bot_text_min_length($problem) < 3) {
+            return [false, null, 'problem_description is too short', 400, 'problem_too_short'];
         }
     }
 
-    return [true, null, null, 200];
+    return [true, null, null, 200, null];
 }
 
 /**
@@ -309,7 +542,9 @@ function fixarivan_bot_validate_lead_payload(array $payload): array
  */
 function fixarivan_bot_normalize_lead_payload(array $payload): array
 {
-    $phone = trim((string) ($payload['phone'] ?? $payload['client_phone'] ?? ''));
+    $payload = fixarivan_bot_expand_payload($payload);
+    [$phoneNorm, $chatJid] = fixarivan_bot_resolve_phone_from_payload($payload);
+    $phone = $phoneNorm !== '' ? $phoneNorm : trim((string) ($payload['phone'] ?? $payload['client_phone'] ?? ''));
     $name = trim((string) ($payload['client_name'] ?? $payload['name'] ?? ''));
     $email = trim((string) ($payload['client_email'] ?? $payload['email'] ?? ''));
     $lang = fixarivan_client_order_normalize_lang($payload['language'] ?? $payload['lang'] ?? 'ru');
@@ -319,10 +554,19 @@ function fixarivan_bot_normalize_lead_payload(array $payload): array
     $priority = fixarivan_bot_normalize_priority($payload['priority'] ?? $payload['computed_priority'] ?? null);
     $source = fixarivan_bot_normalize_lead_source($payload['lead_source'] ?? $payload['leadSource'] ?? $payload['source'] ?? null);
     $leadState = fixarivan_bot_normalize_lead_state($payload['lead_state'] ?? $payload['leadState'] ?? null);
+    $triggerMessageId = trim((string) ($payload['trigger_message_id'] ?? $payload['triggerMessageId'] ?? ''));
+    $idempotencyKey = fixarivan_bot_derive_idempotency_key($payload);
+    $externalRef = trim((string) ($payload['external_ref'] ?? $payload['externalRef'] ?? ''));
+    if ($externalRef === '' && $triggerMessageId !== '') {
+        $externalRef = 'wa:msg:' . $triggerMessageId;
+    }
+    if ($name === '' && $triggerMessageId !== '' && str_starts_with($triggerMessageId, 'BOT-TEST-')) {
+        $name = '[BOT-TEST] WhatsApp lead';
+    }
 
     return [
         'phone' => $phone,
-        'phone_norm' => fixarivan_normalize_phone($phone),
+        'phone_norm' => $phoneNorm !== '' ? $phoneNorm : fixarivan_normalize_phone($phone),
         'client_name' => fixarivan_bot_display_name($name, $phone),
         'client_email' => $email,
         'language' => $lang,
@@ -339,9 +583,11 @@ function fixarivan_bot_normalize_lead_payload(array $payload): array
         'next_action' => trim((string) ($payload['next_action'] ?? $payload['nextAction'] ?? '')),
         'priority' => $priority,
         'lead_state' => $leadState,
-        'chat_id' => trim((string) ($payload['chat_id'] ?? $payload['chatId'] ?? '')),
-        'external_ref' => trim((string) ($payload['external_ref'] ?? $payload['externalRef'] ?? '')),
-        'idempotency_key' => trim((string) ($payload['idempotency_key'] ?? $payload['idempotencyKey'] ?? '')),
+        'chat_id' => $chatJid !== '' ? $chatJid : trim((string) ($payload['chat_id'] ?? $payload['chatId'] ?? '')),
+        'external_ref' => $externalRef,
+        'idempotency_key' => $idempotencyKey,
+        'trigger_message_id' => $triggerMessageId,
+        'is_test' => str_contains($name, '[BOT-TEST]') || str_starts_with($triggerMessageId, 'BOT-TEST-'),
     ];
 }
 
@@ -452,6 +698,13 @@ function fixarivan_bot_upsert_lead(PDO $pdo, array $payload): array
 {
     [$ok, , $err, $code] = fixarivan_bot_validate_lead_payload($payload);
     if (!$ok) {
+        fixarivan_bot_log_event('lead_rejected', [
+            'code' => $code,
+            'http' => $code,
+            'reason' => $err,
+            'lead_source' => $payload['lead_source'] ?? null,
+        ]);
+
         return [false, [], $err, $code];
     }
 
@@ -460,16 +713,28 @@ function fixarivan_bot_upsert_lead(PDO $pdo, array $payload): array
     if ($norm['idempotency_key'] !== '') {
         $byKey = fixarivan_bot_find_lead_by_idempotency($pdo, $norm['idempotency_key']);
         if ($byKey !== null) {
-            return fixarivan_bot_update_lead_row($pdo, $byKey, $norm);
+            return fixarivan_bot_update_lead_row($pdo, $byKey, $norm, true);
         }
     }
 
     $existing = fixarivan_bot_find_open_lead($pdo, $norm['chat_id'], $norm['external_ref']);
     if ($existing !== null) {
-        return fixarivan_bot_update_lead_row($pdo, $existing, $norm);
+        return fixarivan_bot_update_lead_row($pdo, $existing, $norm, false);
     }
 
     return fixarivan_bot_insert_lead_row($pdo, $norm);
+}
+
+function fixarivan_bot_recover_existing_lead(PDO $pdo, array $norm): ?array
+{
+    if ($norm['idempotency_key'] !== '') {
+        $byKey = fixarivan_bot_find_lead_by_idempotency($pdo, $norm['idempotency_key']);
+        if ($byKey !== null) {
+            return $byKey;
+        }
+    }
+
+    return fixarivan_bot_find_open_lead($pdo, $norm['chat_id'], $norm['external_ref']);
 }
 
 /**
@@ -485,6 +750,8 @@ function fixarivan_bot_insert_lead_row(PDO $pdo, array $norm): array
         $norm['client_email'] ?? ''
     );
     if ($clientId === null) {
+        fixarivan_bot_log_event('client_create_failed', ['lead_source' => $norm['lead_source'] ?? null]);
+
         return [false, [], 'cannot create client', 500];
     }
 
@@ -493,9 +760,10 @@ function fixarivan_bot_insert_lead_row(PDO $pdo, array $norm): array
     $orderId = $documentId;
     $token = fixarivan_generate_client_token();
     $now = date('c');
+    $internalPrefix = !empty($norm['is_test']) ? '[BOT-TEST] ' : '';
     $internal = $fields['lead_summary'] !== ''
-        ? '[Lead] ' . $fields['lead_summary']
-        : '[Lead] Предварительное обращение';
+        ? $internalPrefix . '[Lead] ' . $fields['lead_summary']
+        : $internalPrefix . '[Lead] Предварительное обращение';
 
     $stmt = $pdo->prepare(
         'INSERT INTO orders (
@@ -528,43 +796,65 @@ function fixarivan_bot_insert_lead_row(PDO $pdo, array $norm): array
             :lead_pipeline_status
         )'
     );
-    $stmt->execute([
-        ':document_id' => $documentId,
-        ':date_created' => $now,
-        ':date_updated' => $now,
-        ':unique_code' => $orderId,
-        ':language' => $fields['language'],
-        ':client_name' => $fields['client_name'],
-        ':client_phone' => $fields['client_phone'],
-        ':client_email' => $fields['client_email'],
-        ':device_model' => $fields['device_model'],
-        ':device_type' => $fields['device_type'],
-        ':problem_description' => $fields['problem_description'],
-        ':priority' => $fields['priority'],
-        ':status' => $fields['legacy_status'],
-        ':client_token' => $token,
-        ':order_id' => $orderId,
-        ':client_id' => $clientId,
-        ':order_type' => $fields['order_type'],
-        ':public_status' => $fields['public_status'],
-        ':internal_comment' => $internal,
-        ':order_status' => $fields['order_status'],
-        ':lead_external_ref' => $fields['lead_external_ref'],
-        ':lead_chat_id' => $fields['lead_chat_id'],
-        ':lead_idempotency_key' => $fields['lead_idempotency_key'],
-        ':lead_source' => $fields['lead_source'],
-        ':lead_service_type' => $fields['lead_service_type'],
-        ':lead_parts_required' => $fields['lead_parts_required'],
-        ':lead_completion_score' => $fields['lead_completion_score'],
-        ':lead_summary' => $fields['lead_summary'],
-        ':lead_notes' => $fields['lead_notes'],
-        ':lead_next_action' => $fields['lead_next_action'],
-        ':lead_pipeline_status' => $fields['lead_pipeline_status'],
-    ]);
+    try {
+        $stmt->execute([
+            ':document_id' => $documentId,
+            ':date_created' => $now,
+            ':date_updated' => $now,
+            ':unique_code' => $orderId,
+            ':language' => $fields['language'],
+            ':client_name' => $fields['client_name'],
+            ':client_phone' => $fields['client_phone'],
+            ':client_email' => $fields['client_email'],
+            ':device_model' => $fields['device_model'],
+            ':device_type' => $fields['device_type'],
+            ':problem_description' => $fields['problem_description'],
+            ':priority' => $fields['priority'],
+            ':status' => $fields['legacy_status'],
+            ':client_token' => $token,
+            ':order_id' => $orderId,
+            ':client_id' => $clientId,
+            ':order_type' => $fields['order_type'],
+            ':public_status' => $fields['public_status'],
+            ':internal_comment' => $internal,
+            ':order_status' => $fields['order_status'],
+            ':lead_external_ref' => $fields['lead_external_ref'],
+            ':lead_chat_id' => $fields['lead_chat_id'],
+            ':lead_idempotency_key' => $fields['lead_idempotency_key'],
+            ':lead_source' => $fields['lead_source'],
+            ':lead_service_type' => $fields['lead_service_type'],
+            ':lead_parts_required' => $fields['lead_parts_required'],
+            ':lead_completion_score' => $fields['lead_completion_score'],
+            ':lead_summary' => $fields['lead_summary'],
+            ':lead_notes' => $fields['lead_notes'],
+            ':lead_next_action' => $fields['lead_next_action'],
+            ':lead_pipeline_status' => $fields['lead_pipeline_status'],
+        ]);
+    } catch (PDOException $e) {
+        if (fixarivan_bot_is_unique_violation($e)) {
+            $existing = fixarivan_bot_recover_existing_lead($pdo, $norm);
+            if ($existing !== null) {
+                fixarivan_bot_log_event('insert_conflict_recovered', [
+                    'document_id' => $existing['document_id'] ?? null,
+                    'lead_source' => $norm['lead_source'] ?? null,
+                ]);
+
+                return fixarivan_bot_update_lead_row($pdo, $existing, $norm, true);
+            }
+        }
+        fixarivan_bot_log_event('insert_failed', ['type' => get_class($e)]);
+
+        return [false, [], 'cannot create lead', 500];
+    }
 
     $rowId = (int) $pdo->lastInsertId();
+    fixarivan_bot_log_event('lead_created', [
+        'document_id' => $documentId,
+        'lead_source' => $fields['lead_source'],
+        'is_test' => !empty($norm['is_test']),
+    ]);
 
-    return [true, fixarivan_bot_format_lead_response($pdo, $rowId, true), null, 201];
+    return [true, fixarivan_bot_format_lead_response($pdo, $rowId, true, false), null, 201];
 }
 
 /**
@@ -572,7 +862,7 @@ function fixarivan_bot_insert_lead_row(PDO $pdo, array $norm): array
  * @param array<string,mixed> $norm
  * @return array{0: bool, 1: array<string,mixed>, 2: ?string, 3: int}
  */
-function fixarivan_bot_update_lead_row(PDO $pdo, array $existing, array $norm): array
+function fixarivan_bot_update_lead_row(PDO $pdo, array $existing, array $norm, bool $idempotentReplay = false): array
 {
     $currentStatus = strtolower(trim((string) ($existing['order_status'] ?? $existing['public_status'] ?? '')));
     if (!in_array($currentStatus, ['lead_collecting', 'pending_review'], true)) {
@@ -655,8 +945,14 @@ function fixarivan_bot_update_lead_row(PDO $pdo, array $existing, array $norm): 
     ]);
 
     $rowId = (int) ($existing['id'] ?? 0);
+    if ($idempotentReplay) {
+        fixarivan_bot_log_event('lead_idempotent_replay', [
+            'document_id' => $existing['document_id'] ?? null,
+            'lead_source' => $norm['lead_source'] ?? null,
+        ]);
+    }
 
-    return [true, fixarivan_bot_format_lead_response($pdo, $rowId, false), null, 200];
+    return [true, fixarivan_bot_format_lead_response($pdo, $rowId, false, $idempotentReplay), null, 200];
 }
 
 /**
@@ -698,7 +994,7 @@ function fixarivan_bot_confirm_lead(PDO $pdo, string $orderDocumentId): array
 }
 
 /** @return array<string,mixed> */
-function fixarivan_bot_format_lead_response(PDO $pdo, int $rowId, bool $created): array
+function fixarivan_bot_format_lead_response(PDO $pdo, int $rowId, bool $created, bool $idempotentReplay = false): array
 {
     $stmt = $pdo->prepare('SELECT o.*, c.client_id AS client_public_id FROM orders o LEFT JOIN clients c ON c.id = o.client_id WHERE o.id = :id LIMIT 1');
     $stmt->execute([':id' => $rowId]);
@@ -720,10 +1016,17 @@ function fixarivan_bot_format_lead_response(PDO $pdo, int $rowId, bool $created)
     $visible = fixarivan_bot_order_visible_in_track($row);
     $priority = fixarivan_bot_normalize_priority((string) ($row['priority'] ?? 'normal'));
 
+    $externalRef = trim((string) ($row['lead_external_ref'] ?? ''));
+    $triggerMessageId = '';
+    if (str_starts_with($externalRef, 'wa:msg:')) {
+        $triggerMessageId = substr($externalRef, 7);
+    }
+
     return [
         'success' => true,
         'api_version' => 1,
         'created' => $created,
+        'idempotent_replay' => $idempotentReplay,
         'pending_review' => fixarivan_normalize_public_status($row['order_status'] ?? null) === 'pending_review',
         'visible_in_track' => $visible,
         'lead_state' => $pipe,
@@ -745,6 +1048,8 @@ function fixarivan_bot_format_lead_response(PDO $pdo, int $rowId, bool $created)
         'order_status' => (string) ($row['order_status'] ?? ''),
         'completion_score' => isset($row['lead_completion_score']) ? (int) $row['lead_completion_score'] : null,
         'lead_source' => (string) ($row['lead_source'] ?? ''),
+        'trigger_message_id' => $triggerMessageId !== '' ? $triggerMessageId : null,
+        'idempotency_key' => trim((string) ($row['lead_idempotency_key'] ?? '')) ?: null,
         'message' => $visible
             ? ($created ? 'Lead ready for review' : 'Lead updated — ready for review')
             : ($created ? 'Lead received — hidden until ready_for_review' : 'Lead updated — still collecting'),
