@@ -84,6 +84,8 @@ try {
             'lead_summary' => (string)($row['lead_summary'] ?? ''),
             'lead_notes' => (string)($row['lead_notes'] ?? ''),
             'lead_next_action' => (string)($row['lead_next_action'] ?? ''),
+            'lead_external_ref' => (string)($row['lead_external_ref'] ?? ''),
+            'place_of_acceptance' => (string)($row['place_of_acceptance'] ?? ''),
             'pending_review' => !empty($row['pending_review']),
             'total_amount' => $row['total_amount'] ?? null,
             'payment_method' => (string)($row['payment_method'] ?? ''),

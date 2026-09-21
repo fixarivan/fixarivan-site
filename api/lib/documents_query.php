@@ -92,7 +92,7 @@ function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): a
 
     if ($typeFilter === 'all' || $typeFilter === 'order') {
         $archiveWhere = fixarivan_orders_archive_sql_filter($pdo);
-        $orderSql = 'SELECT document_id, order_id, client_id, client_name, client_phone, client_email, device_model, device_type, device_serial, problem_description, status, public_status, order_status, parts_status, public_expected_date, public_comment, public_estimated_cost, internal_comment, client_token, language, order_type, unique_code, order_lines_json, parts_sale_total, parts_prepayment_status, parts_prepayment_amount,
+        $orderSql = 'SELECT document_id, order_id, client_id, client_name, client_phone, client_email, device_model, device_type, device_serial, problem_description, status, public_status, order_status, parts_status, public_expected_date, public_comment, public_estimated_cost, internal_comment, client_token, language, order_type, unique_code, order_lines_json, parts_sale_total, parts_prepayment_status, parts_prepayment_amount, place_of_acceptance,
                     lead_source, lead_service_type, lead_parts_required, lead_completion_score, lead_summary, lead_notes, lead_next_action, lead_chat_id, lead_external_ref, lead_pipeline_status, priority,
                     COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS sort_date
              FROM orders'
@@ -104,7 +104,7 @@ function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): a
         } catch (Throwable $e) {
             error_log('documents_list orders query failed, retry without archive filter: ' . $e->getMessage());
             $stmt = $pdo->query(
-                'SELECT document_id, order_id, client_id, client_name, client_phone, client_email, device_model, device_type, device_serial, problem_description, status, public_status, order_status, parts_status, public_expected_date, public_comment, public_estimated_cost, internal_comment, client_token, language, order_type, unique_code, order_lines_json, parts_sale_total, parts_prepayment_status, parts_prepayment_amount,
+                'SELECT document_id, order_id, client_id, client_name, client_phone, client_email, device_model, device_type, device_serial, problem_description, status, public_status, order_status, parts_status, public_expected_date, public_comment, public_estimated_cost, internal_comment, client_token, language, order_type, unique_code, order_lines_json, parts_sale_total, parts_prepayment_status, parts_prepayment_amount, place_of_acceptance,
                     lead_source, lead_service_type, lead_parts_required, lead_completion_score, lead_summary, lead_notes, lead_next_action, lead_chat_id, lead_external_ref, lead_pipeline_status, priority,
                     COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS sort_date
              FROM orders
@@ -179,6 +179,7 @@ function documents_list_from_sqlite(PDO $pdo, string $typeFilter, int $limit): a
                 'lead_next_action' => trim((string)($row['lead_next_action'] ?? '')),
                 'lead_chat_id' => trim((string)($row['lead_chat_id'] ?? '')),
                 'lead_external_ref' => trim((string)($row['lead_external_ref'] ?? '')),
+                'place_of_acceptance' => trim((string)($row['place_of_acceptance'] ?? '')),
                 'lead_pipeline_status' => trim((string)($row['lead_pipeline_status'] ?? '')),
                 'priority' => fixarivan_bot_normalize_priority((string)($row['priority'] ?? 'normal')),
                 'pending_review' => $pubNorm === 'pending_review',

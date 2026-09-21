@@ -60,11 +60,13 @@ try {
                 COALESCE(NULLIF(TRIM(date_updated), \'\'), NULLIF(TRIM(date_created), \'\'), \'\') AS date_created
             FROM orders
             WHERE client_name LIKE :q OR client_phone LIKE :q OR client_email LIKE :q OR document_id LIKE :q
-               OR IFNULL(order_id, '') LIKE :q
+               OR IFNULL(order_id, \'\') LIKE :q
                OR device_model LIKE :q OR device_serial LIKE :q OR problem_description LIKE :q
                OR unique_code LIKE :q
-               OR IFNULL(internal_comment, '') LIKE :q
-               OR IFNULL(order_lines_json, '') LIKE :q
+               OR IFNULL(internal_comment, \'\') LIKE :q
+               OR IFNULL(order_lines_json, \'\') LIKE :q
+               OR IFNULL(lead_external_ref, \'\') LIKE :q
+               OR IFNULL(place_of_acceptance, \'\') LIKE :q
             ORDER BY date_created DESC
             LIMIT 30';
         $stmt = $pdo->prepare($sql);

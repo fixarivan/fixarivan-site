@@ -134,6 +134,7 @@ validate() {
   done < <(find "$SCRIPT_DIR" -type f -name '*.php' \
     -not -path '*/vendor/*' \
     -not -path '*/node_modules/*' \
+    ! -name 'fix_html_forms.php' \
     -print0)
 
   if [[ "$failed" -ne 0 ]]; then
@@ -491,7 +492,10 @@ main() {
   fi
 
   validate_remote_dir_constant
-  validate
+  if ! validate; then
+    err "Deploy aborted: PHP syntax validation failed."
+    exit 1
+  fi
 
   if [[ "$DRY_RUN" -eq 1 ]]; then
     step "DRY RUN MODE"

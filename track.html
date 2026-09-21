@@ -199,7 +199,7 @@
     <div class="layout">
         <aside class="card track-sidebar">
             <div class="track-sidebar-search">
-                <input id="qGlobal" type="search" enterkeyhint="search" placeholder="Поиск клиента, телефон, заказ…" autocomplete="off">
+                <input id="qGlobal" type="search" enterkeyhint="search" placeholder="Поиск: FV-…, тел., имя, район…" autocomplete="off">
                 <button id="btnSearch" class="primary" type="button">Найти</button>
             </div>
             <details class="track-sidebar-filters" id="trackSidebarFilters">
@@ -1208,6 +1208,8 @@
                         client_token:'',
                         portal_url:'',
                         language: 'ru',
+                        place_of_acceptance: '',
+                        lead_external_ref: '',
                         documents:[]
                     });
                 }
@@ -1252,6 +1254,12 @@
                     if (r.lead_next_action != null) o.lead_next_action = String(r.lead_next_action || '');
                     if (r.priority != null && String(r.priority).trim() !== '') o.priority = String(r.priority).toLowerCase();
                     if (r.lead_pipeline_status != null) o.lead_pipeline_status = String(r.lead_pipeline_status || '');
+                    if (r.place_of_acceptance != null && String(r.place_of_acceptance).trim() !== '') {
+                        o.place_of_acceptance = String(r.place_of_acceptance).trim();
+                    }
+                    if (r.lead_external_ref != null && String(r.lead_external_ref).trim() !== '') {
+                        o.lead_external_ref = String(r.lead_external_ref).trim();
+                    }
                 }
                 if (r.type === 'invoice') {
                     o.client_token = r.client_token || o.client_token || '';
@@ -1306,8 +1314,11 @@
                             || trackStrIncludesLoose(o.public_comment, qg)
                             || trackStrIncludesLoose(o.internal_comment, qg)
                             || trackStrIncludesLoose(o.public_estimated_cost, qg)
-                            || trackStrIncludesLoose(o.lines_search, qg);
+                            || trackStrIncludesLoose(o.lines_search, qg)
+                            || trackStrIncludesLoose(o.lead_external_ref, qg)
+                            || trackStrIncludesLoose(o.place_of_acceptance, qg);
                         const hitDocs = Array.isArray(o.documents) && o.documents.some((d) => {
+                            if (trackStrIncludesLoose(d.lead_external_ref, qg) || trackStrIncludesLoose(d.place_of_acceptance, qg)) return true;
                             const t = String(d.type || '');
                             if (trackStrIncludesLoose(d.document_id, qg) || trackStrIncludesLoose(d.display_id, qg)) return true;
                             if (trackStrIncludesLoose(d.payment_note, qg) || trackStrIncludesLoose(d.payment_status, qg) || trackStrIncludesLoose(d.payment_method, qg)) return true;
@@ -1396,7 +1407,7 @@
                     <input type="checkbox" class="track-bulk-check" data-doc="${esc(docId)}"${sel ? ' checked' : ''}>
                     <span class="track-bulk-row-body">
                         <div class="track-bulk-row-title">${esc(g.client_name || '—')} · ${esc(o.order_id || docId)}</div>
-                        <div class="track-bulk-row-meta">${esc(g.client_phone || '—')} · ${esc(trackBulkRowSummary(o))}</div>
+                        <div class="track-bulk-row-meta">${esc(g.client_phone || '—')}${o.place_of_acceptance ? ' · ' + esc(o.place_of_acceptance) : ''}${o.lead_external_ref ? ' · ' + esc(o.lead_external_ref) : ''} · ${esc(trackBulkRowSummary(o))}</div>
                         <div class="track-bulk-row-badges">${badge}</div>
                     </span>
                 </label>`;
@@ -1754,6 +1765,9 @@
                     ${o.lead_summary ? esc(o.lead_summary) : esc(o.problem_description || '—')}
                 </div>
                 <div class="track-order-kv" style="margin-top:8px;">
+                    ${o.lead_external_ref ? `<span><strong>Сайт</strong> <code>${esc(o.lead_external_ref)}</code></span>` : ''}
+                    ${o.place_of_acceptance ? `<span><strong>Район</strong> ${esc(o.place_of_acceptance)}</span>` : ''}
+                    <span><strong>CRM</strong> <code>${esc(orderDocId)}</code></span>
                     <span><strong>Источник</strong> ${esc(trackLeadSourceLabel(o.lead_source))}</span>
                     <span><strong>Тип</strong> ${esc(o.lead_service_type || o.order_type || '—')}</span>
                     <span><strong>Запчасти</strong> ${esc(partsLbl)}</span>
@@ -2003,8 +2017,15 @@
             const primary = pickPrimaryOrder(g);
             const others = g.orders.filter((o) => orderDocIdFromOrder(o) !== orderDocIdFromOrder(primary));
             const phoneShort = String(g.client_phone || '').trim() || '—';
+            const leadArea = String(primary.place_of_acceptance || '').trim();
+            const leadSiteRef = String(primary.lead_external_ref || '').trim();
             document.getElementById('clientTitle').textContent = g.client_name;
-            document.getElementById('clientMetaShort').textContent = `${phoneShort} · ${T.ordersLbl}: ${g.orders.length}`;
+            document.getElementById('clientMetaShort').textContent = [
+                phoneShort,
+                leadArea || '',
+                leadSiteRef || '',
+                `${T.ordersLbl}: ${g.orders.length}`,
+            ].filter(Boolean).join(' · ');
             document.getElementById('clientMeta').textContent = `${g.client_phone || '—'} · ${g.client_email || '—'} · ${T.sDocs}: ${g.orders.reduce((a, o) => a + o.documents.length, 0)}`;
             if (window.matchMedia('(max-width: 768px)').matches) {
                 document.getElementById('trackClientCard')?.removeAttribute('open');
