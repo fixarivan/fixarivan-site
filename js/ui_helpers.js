@@ -115,6 +115,66 @@
     /**
      * Понятное сообщение для toast/alert по TypeError сети, 401/403 и типичным ответам API.
      */
+    ui.digitsOnly = function digitsOnly(s) {
+        return String(s ?? '').replace(/\D/g, '');
+    };
+
+    /**
+     * Отображение телефона с международным префиксом (+358, +380, +7 …).
+     * Поиск и wa.me по-прежнему используют только цифры.
+     */
+    ui.formatPhoneDisplay = function formatPhoneDisplay(phoneRaw) {
+        const raw = String(phoneRaw ?? '').trim();
+        if (!raw) return '—';
+        let d = ui.digitsOnly(raw);
+        if (!d) return raw;
+
+        if (/^0[45]\d/.test(d) && d.length >= 9 && d.length <= 11) {
+            d = '358' + d.slice(1);
+        }
+        if (d.startsWith('8') && d.length === 11 && !raw.startsWith('+')) {
+            d = '7' + d.slice(1);
+        }
+
+        if (d.startsWith('358') && d.length >= 11) {
+            const rest = d.slice(3);
+            const groups = rest.match(/.{1,3}/g) || [rest];
+            return '+358 ' + groups.join(' ');
+        }
+        if (d.startsWith('380') && d.length >= 11) {
+            const r = d.slice(3);
+            return '+380 ' + (r.length > 7 ? r.slice(0, 2) + ' ' + r.slice(2, 5) + ' ' + r.slice(5, 7) + ' ' + r.slice(7) : r);
+        }
+        if (d.startsWith('375') && d.length >= 11) {
+            const r = d.slice(3);
+            return '+375 ' + (r.length > 7 ? r.slice(0, 2) + ' ' + r.slice(2, 5) + ' ' + r.slice(5, 7) + ' ' + r.slice(7) : r);
+        }
+        if (d.startsWith('7') && d.length === 11) {
+            return '+7 ' + d.slice(1, 4) + ' ' + d.slice(4, 7) + ' ' + d.slice(7, 9) + ' ' + d.slice(9);
+        }
+
+        if (raw.startsWith('+') || d.length >= 10) {
+            return '+' + d;
+        }
+        return raw;
+    };
+
+    /** E.164 для полей ввода: + и цифры без пробелов. */
+    ui.formatPhoneInput = function formatPhoneInput(phoneRaw) {
+        const raw = String(phoneRaw ?? '').trim();
+        if (!raw) return '';
+        let d = ui.digitsOnly(raw);
+        if (!d) return raw;
+        if (/^0[45]\d/.test(d) && d.length >= 9 && d.length <= 11) {
+            d = '358' + d.slice(1);
+        }
+        if (d.startsWith('8') && d.length === 11 && !raw.startsWith('+')) {
+            d = '7' + d.slice(1);
+        }
+        if (d.length >= 8) return '+' + d;
+        return raw;
+    };
+
     ui.humanizeApiError = function humanizeApiError(err) {
         const raw = String((err && err.message) != null ? err.message : err || 'Ошибка');
         const low = raw.toLowerCase();

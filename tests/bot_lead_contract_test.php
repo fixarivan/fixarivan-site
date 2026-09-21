@@ -94,4 +94,33 @@ $norm = fixarivan_bot_normalize_lead_payload($expanded);
 assert_true($norm['client_name'] === 'Mika', 'website client_name in CRM');
 assert_true($norm['place_of_acceptance'] === 'Turku', 'website place_of_acceptance in CRM');
 
+// Полный website payload (как Jonn Deer / fixarivan.fi)
+$webFull = fixarivan_bot_expand_payload([
+    'lead_source' => 'website',
+    'client_name' => 'Jonn Deer',
+    'name' => 'Jonn Deer',
+    'phone' => '+358567045286',
+    'place_of_acceptance' => 'Turku',
+    'area' => 'Turku',
+    'problem_description' => 'Sound is bad iPhone 13 Pro',
+    'device_type' => 'phone',
+    'device_model' => 'Apple iPhone 13 Pro',
+    'external_ref' => 'FV-MUBK0XR9',
+    'lead_state' => 'ready_for_review',
+    'language' => 'en',
+]);
+[$okWeb] = fixarivan_bot_validate_lead_payload($webFull);
+assert_true($okWeb === true, 'accept full website payload');
+
+$normWeb = fixarivan_bot_normalize_lead_payload($webFull);
+assert_true($normWeb['client_name'] === 'Jonn Deer', 'full website client_name');
+assert_true($normWeb['place_of_acceptance'] === 'Turku', 'full website place_of_acceptance');
+assert_true($normWeb['external_ref'] === 'FV-MUBK0XR9', 'full website external_ref');
+assert_true($normWeb['device_model'] === 'Apple iPhone 13 Pro', 'full website device_model');
+assert_true($normWeb['device_type'] === 'phone', 'full website device_type');
+assert_true(
+    fixarivan_bot_derive_idempotency_key($webFull) === 'FV-MUBK0XR9',
+    'website idempotency from external_ref'
+);
+
 echo "bot_lead_contract_test: OK\n";

@@ -24,5 +24,19 @@ function api_json_send(
     if ($legacy !== []) {
         $payload = array_merge($payload, $legacy);
     }
-    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+    $flags = JSON_UNESCAPED_UNICODE;
+    if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+        $flags |= JSON_INVALID_UTF8_SUBSTITUTE;
+    }
+    $json = json_encode($payload, $flags);
+    if ($json === false) {
+        error_log('api_json_send: json_encode failed — ' . json_last_error_msg());
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+        }
+        echo '{"success":false,"message":"JSON encode error","data":null,"errors":[]}';
+        return;
+    }
+    echo $json;
 }

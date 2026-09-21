@@ -55,5 +55,21 @@ if ($data['extensions']['pdo_sqlite'] && $data['storage']['writable']) {
     $ok = false;
 }
 
+$data['bot_lead'] = ['loadable' => false, 'error' => null];
+$data['bot_api'] = ['configured' => false];
+try {
+    require_once __DIR__ . '/lib/bot_lead.php';
+    $data['bot_lead']['loadable'] = function_exists('fixarivan_bot_expand_payload');
+} catch (Throwable $e) {
+    $data['bot_lead']['error'] = $e->getMessage();
+    $ok = false;
+}
+try {
+    require_once __DIR__ . '/lib/security_settings.php';
+    $data['bot_api']['configured'] = fixarivan_bot_api_key_configured();
+} catch (Throwable $e) {
+    $data['bot_api']['error'] = $e->getMessage();
+}
+
 http_response_code($ok ? 200 : 503);
 api_json_send($ok, $data, $ok ? null : 'Health check failed (see data.extensions / sqlite_file)', []);

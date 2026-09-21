@@ -375,6 +375,19 @@
             if (!t) return 'https://wa.me/' + d;
             return 'https://wa.me/' + d + '?text=' + encodeURIComponent(t);
         }
+        /** Отображение (+358 / +380 / +7 …); поиск и wa.me — только цифры. */
+        function trackFormatPhoneDisplay(phoneRaw) {
+            if (window.FixariVan?.ui?.formatPhoneDisplay) {
+                return window.FixariVan.ui.formatPhoneDisplay(phoneRaw);
+            }
+            const s = String(phoneRaw || '').trim();
+            return s || '—';
+        }
+        function trackTelHref(phoneRaw) {
+            const d = trackDigitsOnly(phoneRaw);
+            if (d.length < 8) return '';
+            return 'tel:+' + d;
+        }
         /** Дата для текста клиенту (дд.мм.гггг) */
         function trackFormatDateRuFromOrder(raw) {
             const v = toDateInputValue(raw);
@@ -1407,7 +1420,7 @@
                     <input type="checkbox" class="track-bulk-check" data-doc="${esc(docId)}"${sel ? ' checked' : ''}>
                     <span class="track-bulk-row-body">
                         <div class="track-bulk-row-title">${esc(g.client_name || '—')} · ${esc(o.order_id || docId)}</div>
-                        <div class="track-bulk-row-meta">${esc(g.client_phone || '—')}${o.place_of_acceptance ? ' · ' + esc(o.place_of_acceptance) : ''}${o.lead_external_ref ? ' · ' + esc(o.lead_external_ref) : ''} · ${esc(trackBulkRowSummary(o))}</div>
+                        <div class="track-bulk-row-meta">${esc(trackFormatPhoneDisplay(g.client_phone))}${o.place_of_acceptance ? ' · ' + esc(o.place_of_acceptance) : ''}${o.lead_external_ref ? ' · ' + esc(o.lead_external_ref) : ''} · ${esc(trackBulkRowSummary(o))}</div>
                         <div class="track-bulk-row-badges">${badge}</div>
                     </span>
                 </label>`;
@@ -1634,7 +1647,8 @@
             const expDateRu = window.TrackUi ? TrackUi.formatDateShort(o.public_expected_date) : String(o.public_expected_date || '—');
             const phone = String(g.client_phone || '').trim();
             const email = String(g.client_email || '').trim();
-            const callHtml = phone ? `<a href="tel:${escAttr(phone)}" class="track-icon-btn" title="Звонок">📞</a>` : '';
+            const phoneDisplay = trackFormatPhoneDisplay(phone);
+            const callHtml = phone ? `<a href="${escAttr(trackTelHref(phone))}" class="track-icon-btn" title="Звонок">📞</a>` : '';
             const waRailHtml = trackWhatsappPhoneOk(phone)
                 ? `<a href="${escAttr(trackWhatsappUrl(phone, trackBuildWhatsappOrderMessage(g, o)))}" class="track-icon-btn track-icon-wa" target="_blank" rel="noopener noreferrer" title="${escAttr(T.waOrder)}">💬</a>`
                 : `<span class="track-icon-btn is-disabled" title="${escAttr(T.waNoPhoneHint)}">💬</span>`;
@@ -1648,7 +1662,7 @@
                     <div class="track-rail-widget">
                         <div class="track-rail-label">Карточка клиента</div>
                         <div class="track-rail-client-name">${esc(g.client_name)}</div>
-                        <div class="track-rail-muted">${esc(phone || '—')}</div>
+                        <div class="track-rail-muted">${esc(phoneDisplay)}</div>
                         <div class="track-rail-stats">${esc(T.ordersLbl)}: ${esc(String(allO.length))} · ${esc(T.sDocs)}: ${esc(String(nDocs))}</div>
                         <div class="track-rail-stats">${esc(T.fActive)}: ${esc(String(nAct))}</div>
                     </div>
@@ -1729,7 +1743,7 @@
                                 <strong>${esc(g.client_name)}</strong>
                                 ${statusLine ? `<span class="track-chip">${esc(statusLine)}</span>` : ''}
                             </div>
-                            <div class="track-client-sub">${esc(g.client_phone || '—')}</div>
+                            <div class="track-client-sub">${esc(trackFormatPhoneDisplay(g.client_phone))}</div>
                             <div class="track-client-meta">${esc(statsLine)}${lastLabel ? ` · ${esc(lastLabel)}` : ''}</div>
                         </div>
                     </div>
@@ -2016,7 +2030,7 @@
             window.__trackClientDocIds = docIds;
             const primary = pickPrimaryOrder(g);
             const others = g.orders.filter((o) => orderDocIdFromOrder(o) !== orderDocIdFromOrder(primary));
-            const phoneShort = String(g.client_phone || '').trim() || '—';
+            const phoneShort = trackFormatPhoneDisplay(g.client_phone);
             const leadArea = String(primary.place_of_acceptance || '').trim();
             const leadSiteRef = String(primary.lead_external_ref || '').trim();
             document.getElementById('clientTitle').textContent = g.client_name;
@@ -2026,7 +2040,7 @@
                 leadSiteRef || '',
                 `${T.ordersLbl}: ${g.orders.length}`,
             ].filter(Boolean).join(' · ');
-            document.getElementById('clientMeta').textContent = `${g.client_phone || '—'} · ${g.client_email || '—'} · ${T.sDocs}: ${g.orders.reduce((a, o) => a + o.documents.length, 0)}`;
+            document.getElementById('clientMeta').textContent = `${trackFormatPhoneDisplay(g.client_phone)} · ${g.client_email || '—'} · ${T.sDocs}: ${g.orders.reduce((a, o) => a + o.documents.length, 0)}`;
             if (window.matchMedia('(max-width: 768px)').matches) {
                 document.getElementById('trackClientCard')?.removeAttribute('open');
             }
