@@ -414,6 +414,24 @@ function fixarivan_bot_expand_payload(array $payload): array
             $payload['device_model'] = $device['model'];
         }
     }
+    if (trim((string) ($payload['client_name'] ?? '')) === '' && trim((string) ($payload['name'] ?? '')) !== '') {
+        $payload['client_name'] = trim((string) $payload['name']);
+    }
+    if (trim((string) ($payload['client_name'] ?? '')) === '') {
+        $displayName = trim((string) ($payload['display_name'] ?? $payload['displayName'] ?? ''));
+        if ($displayName !== '') {
+            $payload['client_name'] = $displayName;
+        }
+    }
+    if (trim((string) ($payload['place_of_acceptance'] ?? '')) === '') {
+        foreach (['area', 'location', 'municipality'] as $alt) {
+            $altVal = trim((string) ($payload[$alt] ?? ''));
+            if ($altVal !== '') {
+                $payload['place_of_acceptance'] = $altVal;
+                break;
+            }
+        }
+    }
 
     return $payload;
 }
@@ -587,6 +605,7 @@ function fixarivan_bot_normalize_lead_payload(array $payload): array
         'external_ref' => $externalRef,
         'idempotency_key' => $idempotencyKey,
         'trigger_message_id' => $triggerMessageId,
+        'place_of_acceptance' => trim((string) ($payload['place_of_acceptance'] ?? '')),
         'is_test' => str_contains($name, '[BOT-TEST]') || str_starts_with($triggerMessageId, 'BOT-TEST-'),
     ];
 }
@@ -687,6 +706,7 @@ function fixarivan_bot_merge_lead_fields(array $norm, ?array $existing = null): 
         'lead_chat_id' => $norm['chat_id'] !== '' ? $norm['chat_id'] : ($existing['lead_chat_id'] ?? null),
         'lead_external_ref' => $norm['external_ref'] !== '' ? $norm['external_ref'] : ($existing['lead_external_ref'] ?? null),
         'lead_idempotency_key' => $norm['idempotency_key'] !== '' ? $norm['idempotency_key'] : ($existing['lead_idempotency_key'] ?? null),
+        'place_of_acceptance' => $merge('place_of_acceptance'),
     ];
 }
 
@@ -781,7 +801,7 @@ function fixarivan_bot_insert_lead_row(PDO $pdo, array $norm): array
             lead_parts_required, lead_completion_score, lead_summary, lead_notes, lead_next_action,
             lead_pipeline_status
         ) VALUES (
-            :document_id, :date_created, :date_updated, NULL, NULL, :unique_code, :language,
+            :document_id, :date_created, :date_updated, :place_of_acceptance, NULL, :unique_code, :language,
             :client_name, :client_phone, :client_email,
             :device_model, NULL, :device_type, NULL, NULL, NULL,
             :problem_description, :priority, :status,
@@ -801,6 +821,7 @@ function fixarivan_bot_insert_lead_row(PDO $pdo, array $norm): array
             ':document_id' => $documentId,
             ':date_created' => $now,
             ':date_updated' => $now,
+            ':place_of_acceptance' => $fields['place_of_acceptance'] !== '' ? $fields['place_of_acceptance'] : null,
             ':unique_code' => $orderId,
             ':language' => $fields['language'],
             ':client_name' => $fields['client_name'],
@@ -911,11 +932,13 @@ function fixarivan_bot_update_lead_row(PDO $pdo, array $existing, array $norm, b
             lead_summary = :lead_summary,
             lead_notes = :lead_notes,
             lead_next_action = :lead_next_action,
-            lead_pipeline_status = :lead_pipeline_status
+            lead_pipeline_status = :lead_pipeline_status,
+            place_of_acceptance = COALESCE(NULLIF(:place_of_acceptance, ''), place_of_acceptance)
          WHERE document_id = :document_id'
     );
     $stmt->execute([
         ':u' => $now,
+        ':place_of_acceptance' => $fields['place_of_acceptance'],
         ':client_name' => $fields['client_name'],
         ':client_phone' => $fields['client_phone'],
         ':client_email' => $fields['client_email'],
@@ -1036,6 +1059,9 @@ function fixarivan_bot_format_lead_response(PDO $pdo, int $rowId, bool $created,
         'order_id' => (string) ($row['order_id'] ?? $row['document_id'] ?? ''),
         'order_row_id' => (int) ($row['id'] ?? 0),
         'document_id' => (string) ($row['document_id'] ?? ''),
+        'client_name' => (string) ($row['client_name'] ?? ''),
+        'client_phone' => (string) ($row['client_phone'] ?? ''),
+        'place_of_acceptance' => trim((string) ($row['place_of_acceptance'] ?? '')) ?: null,
         'client_id' => (int) ($row['client_id'] ?? 0),
         'client_public_id' => (string) ($row['client_public_id'] ?? ''),
         'portal_token' => $token !== '' ? $token : null,
