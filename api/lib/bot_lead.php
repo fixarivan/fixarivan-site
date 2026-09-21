@@ -933,7 +933,7 @@ function fixarivan_bot_update_lead_row(PDO $pdo, array $existing, array $norm, b
             lead_notes = :lead_notes,
             lead_next_action = :lead_next_action,
             lead_pipeline_status = :lead_pipeline_status,
-            place_of_acceptance = COALESCE(NULLIF(:place_of_acceptance, ''), place_of_acceptance)
+            place_of_acceptance = COALESCE(NULLIF(:place_of_acceptance, \'\'), place_of_acceptance)
          WHERE document_id = :document_id'
     );
     $stmt->execute([
