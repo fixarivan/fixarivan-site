@@ -11,7 +11,7 @@
     <script src="js/document_manager.js"></script>
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; padding: 14px; }
+        body { margin: 0; padding: 14px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
         .top { max-width: 1300px; margin: 0 auto 12px auto; display:flex; justify-content:space-between; align-items:center; gap:10px; }
         /* Сетка .layout — в css/track-modern.css */
         .track-page .layout { max-width: 100%; margin: 0 auto; min-width: 0; }
@@ -175,12 +175,13 @@
     </style>
     <link rel="stylesheet" href="css/fixarivan-theme.css">
     <link rel="stylesheet" href="mobile_fixes.css?v=20250625mobile">
-    <link rel="stylesheet" href="css/track-modern.css?v=20250625trackcompact">
-    <link rel="stylesheet" href="css/track-mobile-app.css?v=20250706receipt">
+    <link rel="stylesheet" href="css/track-modern.css?v=20260921apple">
+    <link rel="stylesheet" href="css/track-mobile-app.css?v=20260921short">
+    <link rel="stylesheet" href="css/track-apple.css?v=20260921apple">
     <link rel="stylesheet" href="css/order-lines-mobile.css?v=20250706lines">
     <script src="js/track_ui.js?v=20250625polish"></script>
     <script src="js/order_lines_mobile_ui.js?v=20250706lines"></script>
-    <script src="js/track_mobile_app.js?v=20250706receipt"></script>
+    <script src="js/track_mobile_app.js?v=20260921short"></script>
     <script src="js/track_order_ops.js?v=20250716ops3"></script>
 </head>
 <body class="fv-page track-page">
@@ -270,7 +271,7 @@
 
     <script>
         const TRACK_PREF_KEY = 'fixarivan_track_filters_v3';
-        const state = { docs: [], groups: [], activeKey: '', activeOrderDocId: '', mode: 'all', bulkMode: false, selectedOrderDocIds: new Set() };
+        const state = { docs: [], groups: [], activeKey: '', activeOrderDocId: '', mode: 'all', bulkMode: false, selectedOrderDocIds: new Set(), mobileOrderFocus: false };
         let trackCompanyProfile = {};
         const orderDocDetailFetch = new Map();
         const internalCommentTimers = new Map();
@@ -349,6 +350,21 @@
             typeOrder: 'Акт', typeReceipt: 'Квитанция', typeInvoice: 'Счёт', typeReport: 'Отчёт', typeDoc: 'Документ',
         };
         function trackT() { return TRACK_LANG; }
+
+        function trackIsMobileUi() {
+            return window.matchMedia('(max-width: 768px)').matches;
+        }
+
+        function trackMobileChipLabel(text) {
+            if (!trackIsMobileUi()) return text;
+            const map = {
+                'запчасти в ожидании': 'ждут',
+                'к выдаче': 'выдача',
+                'в работе': 'работа',
+                'Требует проверки': 'проверка',
+            };
+            return map[String(text || '').trim()] || text;
+        }
 
         const esc = (v) => { const d = document.createElement('div'); d.textContent = String(v ?? ''); return d.innerHTML; };
         const escAttr = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/\r?\n/g, ' ');
@@ -748,16 +764,20 @@
 
         function applyTrackStaticI18n() {
             const T = trackT();
+            const m = trackIsMobileUi();
             const h1 = document.getElementById('trackH1');
-            if (h1) h1.textContent = T.h1;
+            if (h1) h1.textContent = m ? '🔍 Track' : T.h1;
             const ni = document.getElementById('trackNavInventory');
-            if (ni) ni.textContent = T.navInventory;
+            if (ni) ni.textContent = m ? 'Склад' : T.navInventory;
             const nd = document.getElementById('trackNavDash');
-            if (nd) nd.textContent = T.navDash;
+            if (nd) nd.textContent = m ? 'Стол' : T.navDash;
             const q = document.getElementById('qGlobal');
-            if (q) q.placeholder = T.searchPh;
+            if (q) q.placeholder = m ? 'Поиск: имя, тел., FV-…' : T.searchPh;
             const bs = document.getElementById('btnSearch');
-            if (bs) bs.textContent = T.find;
+            if (bs) {
+                bs.textContent = m ? '🔍' : T.find;
+                bs.setAttribute('aria-label', T.find);
+            }
             const fa = document.getElementById('fAll');
             const fac = document.getElementById('fActive');
             const frev = document.getElementById('fReview');
@@ -766,19 +786,30 @@
             const ft = document.getElementById('fTransit');
             const fd = document.getElementById('fDone');
             if (fa) fa.textContent = T.fAll;
-            if (fac) fac.textContent = T.fActive;
-            if (frev) frev.textContent = T.fReview;
-            if (fw) fw.textContent = T.fWait;
-            if (fr) fr.textContent = T.fReady;
-            if (ft) ft.textContent = T.fTransit;
-            if (fd) fd.textContent = T.fDone;
+            if (fac) fac.textContent = m ? 'Актив' : T.fActive;
+            if (frev) frev.textContent = m ? '🤖 Проверка' : T.fReview;
+            if (fw) fw.textContent = m ? 'Ждут' : T.fWait;
+            if (fr) fr.textContent = m ? 'Выдача' : T.fReady;
+            if (ft) ft.textContent = m ? 'Путь' : T.fTransit;
+            if (fd) fd.textContent = m ? 'Архив' : T.fDone;
+            const bulkOn = document.getElementById('trackBulkModeOn');
+            if (bulkOn) bulkOn.textContent = m ? '☑ Выбор' : '☑ Массовый выбор';
             const fl = document.getElementById('trackFilterLegend');
             if (fl) fl.textContent = T.filterLegend;
+            updateTrackFilterLabel();
         }
 
         function trackFilterLabel(mode) {
             const T = trackT();
-            const map = {
+            const map = trackIsMobileUi() ? {
+                all: T.fAll,
+                active: 'Актив',
+                review: '🤖 Проверка',
+                wait: 'Ждут',
+                ready: 'Выдача',
+                transit: 'Путь',
+                done: 'Архив',
+            } : {
                 all: T.fAll,
                 active: T.fActive,
                 review: T.fReview,
@@ -1708,9 +1739,12 @@
             const T = trackT();
             const box = document.getElementById('clientsList');
             const groups = filterGroups();
-            document.getElementById('sClients').textContent = T.sClients + ': ' + groups.length;
-            document.getElementById('sOrders').textContent = T.sOrders + ': ' + groups.reduce((a,g)=>a+g.orders.length,0);
-            document.getElementById('sDocs').textContent = T.sDocs + ': ' + groups.reduce((a,g)=>a+g.orders.reduce((x,o)=>x+o.documents.length,0),0);
+            const m = trackIsMobileUi();
+            const nOrders = groups.reduce((a, g) => a + g.orders.length, 0);
+            const nDocs = groups.reduce((a, g) => a + g.orders.reduce((x, o) => x + o.documents.length, 0), 0);
+            document.getElementById('sClients').textContent = (m ? 'Кл.' : T.sClients) + ': ' + groups.length;
+            document.getElementById('sOrders').textContent = (m ? 'Зак.' : T.sOrders) + ': ' + nOrders;
+            document.getElementById('sDocs').textContent = (m ? 'Док.' : T.sDocs) + ': ' + nDocs;
             if (!groups.length){ box.innerHTML = '<div class="muted">' + esc(T.noneFound) + '</div>'; return; }
             box.innerHTML = groups.map((g) => {
                 const base = state.groups.find((x) => x.key === g.key);
@@ -1720,9 +1754,11 @@
                 const nReady = allO.filter((o) => isPublicActive(o) && pubStatusNorm(o) === 'done').length;
                 const nTransit = allO.filter((o) => isPublicActive(o) && pubStatusNorm(o) === 'in_transit').length;
                 const tip = `${T.sidebarClientTipLead} ${T.ordersLbl}: ${allO.length} · ${T.fActive}: ${nAct} · ${T.fWait}: ${nWait} · ${T.fReady}: ${nReady} · ${T.fTransit}: ${nTransit}`;
-                const statsLine = g.orders.length === allO.length
-                    ? T.sidebarClientTotal.replace('{n}', String(allO.length))
-                    : T.sidebarClientSubset.replace('{a}', String(g.orders.length)).replace('{b}', String(allO.length));
+                const statsLine = m
+                    ? ('×' + g.orders.length + (g.orders.length !== allO.length ? '/' + allO.length : ''))
+                    : (g.orders.length === allO.length
+                        ? T.sidebarClientTotal.replace('{n}', String(allO.length))
+                        : T.sidebarClientSubset.replace('{a}', String(g.orders.length)).replace('{b}', String(allO.length)));
                 const initials = window.TrackUi ? TrackUi.clientInitials(g.client_name) : '?';
                 const avatarHue = window.TrackUi ? TrackUi.clientAvatarHue(g.key || g.client_name) : 0;
                 const lastAct = window.TrackUi ? TrackUi.lastActivityFromGroup(base || g) : '';
@@ -1741,7 +1777,7 @@
                         <div class="track-client-body">
                             <div class="track-client-head">
                                 <strong>${esc(g.client_name)}</strong>
-                                ${statusLine ? `<span class="track-chip">${esc(statusLine)}</span>` : ''}
+                                ${statusLine ? `<span class="track-chip">${esc(trackMobileChipLabel(statusLine))}</span>` : ''}
                             </div>
                             <div class="track-client-sub">${esc(trackFormatPhoneDisplay(g.client_phone))}</div>
                             <div class="track-client-meta">${esc(statsLine)}${lastLabel ? ` · ${esc(lastLabel)}` : ''}</div>
@@ -1753,10 +1789,17 @@
                 const key = el.getAttribute('data-key') || '';
                 if (key !== state.activeKey) state.activeOrderDocId = '';
                 state.activeKey = key;
+                if (window.matchMedia('(max-width: 768px)').matches) state.mobileOrderFocus = true;
+                trackSyncMobileFocus();
                 renderSidebar();
                 renderDetails();
             }));
-            if (!state.activeKey && groups.length){ state.activeKey = groups[0].key; renderSidebar(); renderDetails(); }
+            const autoPickFirst = !window.matchMedia('(max-width: 768px)').matches;
+            if (!state.activeKey && groups.length && autoPickFirst) {
+                state.activeKey = groups[0].key;
+                renderSidebar();
+                renderDetails();
+            }
             updateBulkBar();
         }
 
@@ -1998,6 +2041,8 @@
         async function renderDetails(){
             const T = trackT();
             if (state.bulkMode) {
+                state.mobileOrderFocus = false;
+                trackSyncMobileFocus();
                 renderBulkList();
                 document.getElementById('clientTitle').textContent = 'Массовый выбор';
                 document.getElementById('clientMetaShort').textContent = 'Отметьте заявки и нажмите «Удалить»';
@@ -2013,6 +2058,8 @@
             const tree = document.getElementById('ordersTree');
             const quickBar = document.getElementById('clientQuickActions');
             if (!g){
+                state.mobileOrderFocus = false;
+                trackSyncMobileFocus();
                 window.__trackClientDocIds = [];
                 window.__trackMobileMeta = {};
                 if (window.TrackUi) TrackUi.clearPricingCache();
@@ -2020,7 +2067,9 @@
                 document.getElementById('clientMetaShort').textContent = T.clientPick;
                 document.getElementById('clientMeta').textContent = '';
                 if (quickBar) { quickBar.style.display = 'none'; quickBar.innerHTML = ''; }
-                tree.innerHTML = '<div class="muted">—</div>';
+                tree.innerHTML = window.matchMedia('(max-width: 768px)').matches
+                    ? '<div class="track-m-list-empty">Выберите клиента из списка</div>'
+                    : '<div class="muted">—</div>';
                 renderWorkspaceRail(null, null, T);
                 if (window.TrackMobileApp) TrackMobileApp.refresh(tree, {});
                 return;
@@ -2030,6 +2079,7 @@
             window.__trackClientDocIds = docIds;
             const primary = pickPrimaryOrder(g);
             const others = g.orders.filter((o) => orderDocIdFromOrder(o) !== orderDocIdFromOrder(primary));
+            const isMobileView = trackIsMobileUi();
             const phoneShort = trackFormatPhoneDisplay(g.client_phone);
             const leadArea = String(primary.place_of_acceptance || '').trim();
             const leadSiteRef = String(primary.lead_external_ref || '').trim();
@@ -2038,12 +2088,15 @@
                 phoneShort,
                 leadArea || '',
                 leadSiteRef || '',
-                `${T.ordersLbl}: ${g.orders.length}`,
+                isMobileView ? ('×' + g.orders.length) : (`${T.ordersLbl}: ${g.orders.length}`),
             ].filter(Boolean).join(' · ');
-            document.getElementById('clientMeta').textContent = `${trackFormatPhoneDisplay(g.client_phone)} · ${g.client_email || '—'} · ${T.sDocs}: ${g.orders.reduce((a, o) => a + o.documents.length, 0)}`;
-            if (window.matchMedia('(max-width: 768px)').matches) {
+            if (isMobileView) {
+                document.getElementById('clientMeta').textContent = '';
                 document.getElementById('trackClientCard')?.removeAttribute('open');
+            } else {
+                document.getElementById('clientMeta').textContent = `${trackFormatPhoneDisplay(g.client_phone)} · ${g.client_email || '—'} · ${T.sDocs}: ${g.orders.reduce((a, o) => a + o.documents.length, 0)}`;
             }
+            trackSyncMobileFocus();
             if (quickBar) {
                 const qs = new URLSearchParams();
                 if (g.client_name) qs.set('client_name', g.client_name);
@@ -2055,12 +2108,17 @@
                 const waClientHtml = trackWhatsappPhoneOk(waPhone)
                     ? `<a href="${escAttr(waClientUrl)}" class="track-wa" target="_blank" rel="noopener noreferrer" title="${escAttr(T.waClientHint)}">${esc(T.waClient)}</a>`
                     : `<span class="track-wa is-disabled" title="${escAttr(T.waNoPhoneHint)}">${esc(T.waClient)}</span>`;
-                quickBar.style.display = 'flex';
-                quickBar.innerHTML = `<div class="track-action-row track-quick-bar">
-                        <a href="order_new.html${qstr ? '?' + qstr : ''}" class="primary">${esc(T.clientQuickNewOrder)}</a>
-                        <a href="inventory.html" class="btn-secondary">${esc(T.clientQuickStock)}</a>
-                        ${waClientHtml}
-                    </div>`;
+                if (isMobileView) {
+                    quickBar.style.display = 'none';
+                    quickBar.innerHTML = '';
+                } else {
+                    quickBar.style.display = 'flex';
+                    quickBar.innerHTML = `<div class="track-action-row track-quick-bar">
+                            <a href="order_new.html${qstr ? '?' + qstr : ''}" class="primary">${esc(T.clientQuickNewOrder)}</a>
+                            <a href="inventory.html" class="btn-secondary">${esc(T.clientQuickStock)}</a>
+                            ${waClientHtml}
+                        </div>`;
+                }
             }
             tree.innerHTML = '<div class="track-workspace-canvas">'
                 + buildOrderCardHtml(primary, g, T)
@@ -3119,6 +3177,18 @@
         document.getElementById('fTransit').addEventListener('click', () => setMode('transit'));
         document.getElementById('fDone').addEventListener('click', () => setMode('done'));
 
+        function trackSyncMobileFocus() {
+            const mobile = window.matchMedia('(max-width: 768px)').matches;
+            const focus = mobile && state.mobileOrderFocus && !!state.activeKey && !state.bulkMode;
+            document.body.classList.toggle('track-mobile-focus', focus);
+        }
+
+        window.trackMobileExitFocus = function trackMobileExitFocus() {
+            state.mobileOrderFocus = false;
+            trackSyncMobileFocus();
+            document.getElementById('clientsList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+
         function initTrackMobileLayout() {
             const filters = document.getElementById('trackSidebarFilters');
             const clientCard = document.getElementById('trackClientCard');
@@ -3127,10 +3197,14 @@
                 if (mq.matches) {
                     filters?.removeAttribute('open');
                     clientCard?.removeAttribute('open');
+                    if (state.activeKey && !state.bulkMode) state.mobileOrderFocus = true;
                 } else {
+                    state.mobileOrderFocus = false;
                     filters?.setAttribute('open', '');
                     clientCard?.setAttribute('open', '');
                 }
+                trackSyncMobileFocus();
+                applyTrackStaticI18n();
             };
             sync();
             if (typeof mq.addEventListener === 'function') mq.addEventListener('change', sync);
@@ -3164,10 +3238,10 @@
     </script>
 
     <nav class="track-m-nav" id="trackMobileNav" hidden aria-label="Разделы заказа">
-        <button type="button" class="track-m-nav-btn is-active" data-tab="details"><span>📋</span><span>Детали</span></button>
-        <button type="button" class="track-m-nav-btn" data-tab="parts"><span>🔧</span><span>Запчасти</span></button>
-        <button type="button" class="track-m-nav-btn" data-tab="finance"><span>💶</span><span>Финансы</span></button>
-        <button type="button" class="track-m-nav-btn" data-tab="documents"><span>📄</span><span>Документы</span></button>
+        <button type="button" class="track-m-nav-btn is-active" data-tab="details" aria-label="Детали заказа"><span>📋</span><span class="track-m-nav-lbl">Детали</span></button>
+        <button type="button" class="track-m-nav-btn" data-tab="parts" aria-label="Запчасти"><span>🔧</span><span class="track-m-nav-lbl">Запч.</span></button>
+        <button type="button" class="track-m-nav-btn" data-tab="finance" aria-label="Финансы"><span>💶</span><span class="track-m-nav-lbl">€</span></button>
+        <button type="button" class="track-m-nav-btn" data-tab="documents" aria-label="Документы"><span>📄</span><span class="track-m-nav-lbl">Док.</span></button>
     </nav>
 </body>
 </html>

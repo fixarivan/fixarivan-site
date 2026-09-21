@@ -22,6 +22,139 @@
         { id: 'delivered', label: 'Выдан' },
     ];
 
+    const STEPS_SHORT = [
+        { id: 'accepted', label: 'Принят' },
+        { id: 'diagnosis', label: 'Диагн.' },
+        { id: 'parts', label: 'Запч.' },
+        { id: 'repair', label: 'Рем.' },
+        { id: 'ready', label: 'Готов' },
+        { id: 'delivered', label: 'Выдан' },
+    ];
+
+    const MOBILE_TEXT_SHORT = {
+        'Проверить и дополнить': 'Проверить',
+        'Подтвердить в работу': 'В работу',
+        'Удалить предварительную заявку': 'Удалить',
+        'Редактировать заказ': 'Редакт.',
+        'Сохранить позиции': 'Сохранить',
+        'Добавить строку': '+ Строка',
+        'Без даты': '✕',
+        'Отметить оплаченным': '✅ Оплачен',
+        '↩ Вернуть «не оплачен»': '↩ Не оплачен',
+        '+ Выставить счёт': '+ Счёт',
+        'Со склада': 'Склад',
+        'Вручную': 'Вручн.',
+        'Создать': 'Новый',
+        '+ Квитанция': '+ Квит.',
+        '+ Счёт': '+ Сч.',
+        '+ Отчёт (mobile)': '+ Mob',
+        '+ Отчёт (PC)': '+ PC',
+        'Открыть': '→',
+        'Предварительное обращение': 'Лид',
+        'Заполнено:': '',
+        'Ожидание запчастей': 'Ждут',
+        'Частично пришло': 'Частич.',
+        'Запчасти готовы': 'Готовы',
+        'Требует проверки': 'Проверка',
+        'запчасти в ожидании': 'ждут',
+        'в работе': 'работа',
+        'к выдаче': 'выдача',
+        'ожидает запчасть': 'запчасти',
+    };
+
+    const MOBILE_LABEL_SHORT = {
+        'Статус (клиент):': 'Статус',
+        'Ожидаемая дата (клиент / портал)': 'Дата',
+        'Комментарий для клиента (портал)': 'Клиенту',
+        'Внутр. комментарий': 'Внутр.',
+        'Язык портала': 'Язык',
+        '💰 Предоплата за запчасти': '💰 Предопл.',
+        '💶 Сумма для клиента (€)': '💶 Сумма',
+        'Запчасти': 'Запч.',
+        'Стоимость работы (€)': 'Работа €',
+    };
+
+    const MOBILE_OPTION_SHORT = {
+        'Требует проверки': 'Проверка',
+        'ожидает запчасть': 'запчасти',
+        'Частично оплачен': 'Частич.',
+    };
+
+    function storeShortText(el, next) {
+        if (!el) return;
+        if (el.dataset.trackFullText == null) el.dataset.trackFullText = el.textContent;
+        el.textContent = next;
+    }
+
+    function restoreShortTexts(root) {
+        (root || document).querySelectorAll('[data-track-full-text]').forEach((el) => {
+            el.textContent = el.dataset.trackFullText;
+            delete el.dataset.trackFullText;
+        });
+    }
+
+    function applyMapToElements(root, selector, map, trim) {
+        root.querySelectorAll(selector).forEach((el) => {
+            const raw = el.textContent;
+            const key = trim ? raw.trim() : raw;
+            if (map[key] !== undefined) storeShortText(el, map[key]);
+        });
+    }
+
+    function applyMobileShortLabels(root) {
+        root = root || document;
+        if (!isMobile()) {
+            restoreShortTexts(root);
+            return;
+        }
+
+        applyMapToElements(root, '.track-field-label, label.track-field-label', MOBILE_LABEL_SHORT, true);
+
+        root.querySelectorAll('button, a.btn-secondary, a.primary, .track-m-edit-order, .track-lead-actions a, .track-lead-actions button, .track-primary-action-bar a, .track-primary-action-bar button, .track-quick a, .order-lines-actions button, .track-m-parts-btn, .track-other-order-item .track-order-switch').forEach((el) => {
+            const key = el.textContent.trim();
+            if (MOBILE_TEXT_SHORT[key] !== undefined) storeShortText(el, MOBILE_TEXT_SHORT[key]);
+        });
+
+        root.querySelectorAll('.track-lead-panel-head strong').forEach((el) => {
+            if (el.textContent.includes('Предварительное обращение')) {
+                storeShortText(el, '🤖 Лид');
+            }
+        });
+
+        root.querySelectorAll('.track-lead-score').forEach((el) => {
+            const m = el.textContent.match(/(\d+%|—)/);
+            if (m) storeShortText(el, m[1]);
+        });
+
+        root.querySelectorAll('.badge, .track-chip').forEach((el) => {
+            const key = el.textContent.trim();
+            if (MOBILE_TEXT_SHORT[key] !== undefined) storeShortText(el, MOBILE_TEXT_SHORT[key]);
+        });
+
+        root.querySelectorAll('.track-pub-status option, .track-portal-lang option').forEach((opt) => {
+            const key = opt.textContent.trim();
+            if (MOBILE_OPTION_SHORT[key] !== undefined) {
+                if (opt.dataset.trackFullText == null) opt.dataset.trackFullText = opt.textContent;
+                opt.textContent = MOBILE_OPTION_SHORT[key];
+            }
+        });
+
+        root.querySelectorAll('.track-primary-action-text').forEach((el) => {
+            let t = el.textContent.trim();
+            t = t.replace(/^Работа выполнена — выставьте счёт клиенту$/, 'Готово — выставить счёт');
+            t = t.replace(/^Ожидает оплаты · /, 'Ждёт · ');
+            t = t.replace(/^Счёт выставлен — отметьте оплату$/, 'Счёт — отметить оплату');
+            if (t !== el.textContent.trim()) storeShortText(el, t);
+        });
+
+        const costTitle = root.querySelector('.track-m-cost-title');
+        if (costTitle) storeShortText(costTitle, '€');
+
+        root.querySelectorAll('.order-lines-box > .title').forEach((el) => {
+            if (el.textContent.includes('Позиции')) storeShortText(el, '🔧 Позиции');
+        });
+    }
+
     const STORAGE_KEY = 'fixarivan_track_mobile_tab_v1';
 
     function escAttr(s) {
@@ -367,26 +500,28 @@
         const hue = global.TrackUi ? TrackUi.clientAvatarHue(clientName) : 0;
         const emoji = deviceEmoji(model, meta?.deviceType || '');
         const serial = meta?.serial ? esc(meta.serial) : '';
-        const phoneEsc = esc(phone || '—');
-        const tel = phone ? ('tel:' + String(phone).replace(/[^\d+]/g, '')) : '#';
-        const wa = phone && phone.replace(/\D/g, '').length >= 8
-            ? ('https://wa.me/' + phone.replace(/\D/g, '').replace(/^\+/, ''))
-            : '';
-        const sms = phone ? ('sms:' + String(phone).replace(/[^\d+]/g, '')) : '';
+        const phoneDisplay = global.FixariVan?.ui?.formatPhoneDisplay
+            ? global.FixariVan.ui.formatPhoneDisplay(phone)
+            : (phone || '—');
+        const phoneEsc = esc(phoneDisplay);
+        const phoneDigits = String(phone || '').replace(/\D/g, '');
+        const tel = phoneDigits.length >= 8 ? ('tel:+' + phoneDigits) : '#';
+        const wa = phoneDigits.length >= 8 ? ('https://wa.me/' + phoneDigits) : '';
         const portalLink = portalHref(portalUrl, clientToken);
-        const portalBtnHtml = portalLink
-            ? ('<a class="track-m-portal-btn" href="' + escAttr(portalLink) + '" target="_blank" rel="noopener noreferrer">' +
-                '<span class="track-m-portal-btn-icon" aria-hidden="true">🔗</span>' +
-                '<span>Открыть портал клиента</span></a>')
-            : ('<button type="button" class="track-m-portal-btn portal-open" data-doc="' + escAttr(portalDocId) + '" data-oid="' + escAttr(portalOrderId) + '" data-url="' + escAttr(portalUrl) + '" data-token="' + escAttr(clientToken) + '">' +
-                '<span class="track-m-portal-btn-icon" aria-hidden="true">🔗</span>' +
-                '<span>Открыть портал клиента</span></button>');
+        const portalQuickHtml = portalLink
+            ? ('<a class="track-m-quick-btn" href="' + escAttr(portalLink) + '" target="_blank" rel="noopener noreferrer"><span>🔗</span><span>Портал</span></a>')
+            : ('<button type="button" class="track-m-quick-btn portal-open" data-doc="' + escAttr(portalDocId) + '" data-oid="' + escAttr(portalOrderId) + '" data-url="' + escAttr(portalUrl) + '" data-token="' + escAttr(clientToken) + '"><span>🔗</span><span>Портал</span></button>');
+        const newOrderQs = new URLSearchParams();
+        if (clientName && clientName !== '—') newOrderQs.set('client_name', clientName);
+        if (phone) newOrderQs.set('client_phone', phone);
+        if (meta?.email) newOrderQs.set('client_email', meta.email);
+        const newOrderHref = 'order_new.html' + (newOrderQs.toString() ? ('?' + newOrderQs.toString()) : '');
 
         hero.innerHTML = `
             <div class="track-m-hero-top">
                 <button type="button" class="track-m-back" id="trackMobileBack" aria-label="К списку">←</button>
                 <div class="track-m-hero-order-id">${esc(orderId)}</div>
-                <button type="button" class="track-m-more" id="trackMobileMore" aria-label="Ещё">⋯</button>
+                <div class="track-m-hero-badges">${badges}</div>
             </div>
             <div class="track-m-device-row">
                 <div class="track-m-device-img" aria-hidden="true">${emoji}</div>
@@ -402,26 +537,19 @@
                     <div class="track-m-client-name">${esc(clientName)}</div>
                     <div class="track-m-client-phone">${phoneEsc}</div>
                 </div>
-                <div class="track-m-client-badges">${badges}</div>
             </div>
-            ${portalBtnHtml}
             <div class="track-m-quick">
-                <a class="track-m-quick-btn${phone ? '' : ' is-disabled'}" href="${esc(tel)}" ${phone ? '' : ' tabindex="-1"'}><span>📞</span><span>Звонок</span></a>
+                <a class="track-m-quick-btn${phoneDigits.length >= 8 ? '' : ' is-disabled'}" href="${esc(tel)}" ${phoneDigits.length >= 8 ? '' : ' tabindex="-1"'}><span>📞</span><span>Звонок</span></a>
                 <a class="track-m-quick-btn${wa ? '' : ' is-disabled'}" href="${esc(wa)}" target="_blank" rel="noopener noreferrer"><span>💬</span><span>WhatsApp</span></a>
-                <a class="track-m-quick-btn${phone ? '' : ' is-disabled'}" href="${esc(sms)}" ${phone ? '' : ' tabindex="-1"'}><span>✉</span><span>SMS</span></a>
-                <button type="button" class="track-m-quick-btn" id="trackMobileMore2"><span>⋯</span><span>Ещё</span></button>
+                ${portalQuickHtml}
+                <a class="track-m-quick-btn" href="${esc(newOrderHref)}"><span>🧾</span><span>Заказ</span></a>
             </div>
         `;
 
         hero.querySelector('#trackMobileBack')?.addEventListener('click', () => {
-            document.querySelector('.track-sidebar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (typeof global.trackMobileExitFocus === 'function') global.trackMobileExitFocus();
+            else document.querySelector('.track-sidebar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
-        const openMore = () => {
-            document.getElementById('trackClientCard')?.setAttribute('open', '');
-            document.getElementById('trackClientCard')?.scrollIntoView({ behavior: 'smooth' });
-        };
-        hero.querySelector('#trackMobileMore')?.addEventListener('click', openMore);
-        hero.querySelector('#trackMobileMore2')?.addEventListener('click', openMore);
     }
 
     function buildStepper(card) {
@@ -442,7 +570,8 @@
         const partsBadge = card.querySelector('.track-field-cell--status-parts .badge')?.textContent || '';
         const hasReport = !!card.querySelector('.track-doc-row[data-doc-type="report"], .track-doc-card--report');
         const idx = pubStatusStep(pub, partsBadge, hasReport);
-        stepper.innerHTML = '<div class="track-m-stepper-track">' + STEPS.map((step, i) => {
+        const steps = isMobile() ? STEPS_SHORT : STEPS;
+        stepper.innerHTML = '<div class="track-m-stepper-track">' + steps.map((step, i) => {
             const cls = i < idx ? ' is-done' : (i === idx ? ' is-current' : '');
             const actionCls = step.id === 'ready' ? ' track-m-step--receipt-shortcut' : '';
             return `<div class="track-m-step${cls}${actionCls}" data-step-id="${esc(step.id)}"><div class="track-m-step-dot">${i < idx ? '✓' : (i + 1)}</div><div class="track-m-step-label">${esc(step.label)}</div></div>`;
@@ -493,6 +622,7 @@
 
     function teardownMobile(root) {
         document.body.classList.remove('track-mobile-app');
+        restoreShortTexts(root || document);
         const nav = document.getElementById('trackMobileNav');
         if (nav) nav.hidden = true;
         const card = root?.querySelector('.order-card');
@@ -547,6 +677,7 @@
         if (global.FixariVanOrderLinesMobile) {
             FixariVanOrderLinesMobile.refreshTrack(root);
         }
+        applyMobileShortLabels(root);
     }
 
     function initMediaListener() {
@@ -567,6 +698,7 @@
         teardown: teardownMobile,
         initMediaListener,
         isMobile,
+        applyShortLabels: applyMobileShortLabels,
     };
 
     if (document.readyState === 'loading') {

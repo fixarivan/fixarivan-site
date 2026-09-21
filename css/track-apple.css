@@ -1,0 +1,530 @@
+/**
+ * FixariVan Track — Apple-inspired visual layer (iOS / macOS dark).
+ * Подключается после track-modern.css и track-mobile-app.css.
+ */
+
+.track-page {
+    --track-bg: #000000;
+    --track-panel: rgba(28, 28, 30, 0.94);
+    --track-panel-2: #1c1c1e;
+    --track-panel-border: rgba(255, 255, 255, 0.08);
+    --track-border-subtle: rgba(84, 84, 88, 0.36);
+    --track-muted: rgba(235, 235, 245, 0.55);
+    --track-text: rgba(255, 255, 255, 0.92);
+    --track-accent: #0a84ff;
+    --track-accent-soft: rgba(10, 132, 255, 0.14);
+    --track-accent-glow: rgba(10, 132, 255, 0.22);
+    --track-radius: 12px;
+    --track-radius-lg: 18px;
+    --track-radius-pill: 980px;
+    --track-control-h: 40px;
+    --track-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+    --track-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 32px rgba(0, 0, 0, 0.45);
+    --track-glass: saturate(180%) blur(20px);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    font-feature-settings: "kern" 1, "liga" 1, "tnum" 1;
+    letter-spacing: -0.011em;
+}
+
+body.fv-page.track-page {
+    background:
+        radial-gradient(1200px 640px at 50% -20%, rgba(10, 132, 255, 0.08), transparent 55%),
+        #000;
+    color: var(--track-text);
+}
+
+/* ── Toolbar ── */
+.track-page .top {
+    padding: 4px 0 10px;
+}
+
+.track-page .top h1 {
+    font-size: 1.125rem;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+    color: var(--track-text);
+}
+
+.track-page .top a {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--track-accent);
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: var(--track-radius-pill);
+    transition: background 0.2s var(--track-ease);
+}
+
+.track-page .top a:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Panels ── */
+.track-page .card,
+.track-page .track-sidebar,
+.track-page .track-workspace-main,
+.track-page .track-workspace-rail {
+    background: var(--track-panel);
+    border: 1px solid var(--track-panel-border);
+    border-radius: var(--track-radius-lg);
+    box-shadow: var(--track-shadow);
+    backdrop-filter: var(--track-glass);
+    -webkit-backdrop-filter: var(--track-glass);
+}
+
+/* ── Controls ── */
+.track-page button,
+.track-page .track-action-row a,
+.track-page .track-quick a {
+    border-radius: var(--track-radius);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    transition: background 0.2s var(--track-ease), border-color 0.2s var(--track-ease), transform 0.12s var(--track-ease), box-shadow 0.2s var(--track-ease);
+}
+
+.track-page button:active,
+.track-page .track-action-row a:active,
+.track-page .track-quick a:active {
+    transform: scale(0.98);
+}
+
+.track-page .primary,
+.track-page button.primary,
+.track-page a.primary {
+    background: var(--track-accent);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: none;
+}
+
+.track-page .primary:hover,
+.track-page button.primary:hover,
+.track-page a.primary:hover {
+    background: #0077ed;
+    filter: brightness(1.05);
+}
+
+.track-page .btn-secondary,
+.track-page button.btn-secondary,
+.track-page a.btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--track-text);
+}
+
+.track-page .btn-secondary:hover,
+.track-page button.btn-secondary:hover,
+.track-page a.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.track-page input,
+.track-page select,
+.track-page textarea {
+    background: rgba(44, 44, 46, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--track-text);
+    border-radius: var(--track-radius);
+    transition: border-color 0.2s var(--track-ease), box-shadow 0.2s var(--track-ease);
+}
+
+.track-page input:focus,
+.track-page select:focus,
+.track-page textarea:focus {
+    outline: none;
+    border-color: rgba(10, 132, 255, 0.55);
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.22);
+}
+
+/* ── Filter chips (segmented feel) ── */
+.track-page .quick-filters {
+    gap: 6px;
+    padding: 3px;
+    border-radius: var(--track-radius);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.track-page .quick-filters button {
+    border-radius: var(--track-radius-pill);
+    border-color: transparent;
+    background: transparent;
+    color: var(--track-muted);
+    font-weight: 550;
+    letter-spacing: -0.01em;
+}
+
+.track-page .quick-filters button.active {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.track-sidebar-filters-active {
+    color: var(--track-accent) !important;
+}
+
+/* ── Client list (grouped) ── */
+.track-page .list {
+    padding: 4px;
+    border-radius: var(--track-radius);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.track-page .client-item {
+    border: none;
+    border-radius: 11px;
+    background: transparent;
+    margin-bottom: 2px;
+}
+
+.track-page .client-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.track-page .client-item.active {
+    background: var(--track-accent-soft);
+    box-shadow: none;
+    border: none;
+}
+
+.track-client-inner {
+    padding: 10px 12px;
+}
+
+.track-client-head strong {
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+.track-client-sub,
+.track-client-meta {
+    color: var(--track-muted);
+    font-weight: 450;
+}
+
+.track-client-avatar,
+.track-m-client-avatar {
+    border-radius: 50%;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.track-avatar-h0 { background: #0a84ff; color: #fff; border: none; }
+.track-avatar-h1 { background: #bf5af2; color: #fff; border: none; }
+.track-avatar-h2 { background: #ff375f; color: #fff; border: none; }
+.track-avatar-h3 { background: #ff9f0a; color: #fff; border: none; }
+.track-avatar-h4 { background: #30d158; color: #fff; border: none; }
+.track-avatar-h5 { background: #64d2ff; color: #fff; border: none; }
+.track-avatar-h6 { background: #ffd60a; color: #1c1c1e; border: none; }
+.track-avatar-h7 { background: #636366; color: #fff; border: none; }
+
+.track-chip {
+    text-transform: none;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+    font-size: 0.625rem;
+    border-radius: var(--track-radius-pill);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--track-muted);
+    border: none;
+}
+
+/* ── Workspace header ── */
+.track-client-card-name,
+.track-order-device {
+    font-weight: 700;
+    letter-spacing: -0.03em;
+}
+
+.track-client-card-short,
+.track-client-header-meta,
+.track-order-id {
+    color: var(--track-muted);
+    font-weight: 450;
+}
+
+.track-order-header {
+    border-bottom-color: var(--track-border-subtle);
+    padding-bottom: 14px;
+}
+
+.track-order-device {
+    font-size: 1.25rem;
+    line-height: 1.15;
+}
+
+/* ── Badges ── */
+.track-page .badge {
+    text-transform: none;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+    font-size: 0.6875rem;
+    border-radius: var(--track-radius-pill);
+}
+
+.track-page .badge.active {
+    background: rgba(10, 132, 255, 0.18);
+    border-color: rgba(10, 132, 255, 0.35);
+    color: #64b5ff;
+}
+
+.track-page .badge.ready {
+    background: rgba(48, 209, 88, 0.16);
+    border-color: rgba(48, 209, 88, 0.32);
+    color: #7ae582;
+}
+
+.track-page .badge.review {
+    background: rgba(191, 90, 242, 0.16);
+    border-color: rgba(191, 90, 242, 0.32);
+    color: #d6a4ff;
+}
+
+.track-page .badge.wait {
+    background: rgba(255, 159, 10, 0.16);
+    border-color: rgba(255, 159, 10, 0.32);
+    color: #ffc470;
+}
+
+/* ── Sections ── */
+.track-section-title {
+    text-transform: none;
+    letter-spacing: -0.02em;
+    font-size: 0.8125rem;
+    font-weight: 650;
+    color: var(--track-text);
+}
+
+.track-field-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--track-muted);
+    letter-spacing: -0.01em;
+}
+
+.track-section.track-flow {
+    border-top-color: var(--track-border-subtle);
+}
+
+.track-page .track-comment-grid textarea {
+    background: rgba(44, 44, 46, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--track-radius);
+}
+
+/* ── Lead panel ── */
+.track-lead-panel {
+    border-radius: var(--track-radius-lg);
+    border-color: rgba(191, 90, 242, 0.28);
+    background: rgba(191, 90, 242, 0.08);
+}
+
+.track-primary-action-bar {
+    border-radius: var(--track-radius-lg);
+    border-color: rgba(10, 132, 255, 0.28);
+    background: rgba(10, 132, 255, 0.08);
+}
+
+/* ── Right rail ── */
+.track-rail-widget {
+    border-radius: var(--track-radius);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--track-border-subtle);
+}
+
+.track-rail-label {
+    text-transform: none;
+    letter-spacing: -0.01em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--track-muted);
+}
+
+.track-icon-btn {
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.track-icon-btn.track-icon-wa {
+    border-color: rgba(48, 209, 88, 0.28);
+    background: rgba(48, 209, 88, 0.1);
+}
+
+.track-page .track-wa {
+    border-color: rgba(48, 209, 88, 0.32);
+    background: rgba(48, 209, 88, 0.12);
+    color: #b8f5c7;
+    border-radius: var(--track-radius-pill);
+}
+
+/* ── Documents & modals ── */
+.track-doc-row,
+.track-stock-picker-dialog {
+    border-radius: var(--track-radius-lg);
+}
+
+.track-stock-picker-backdrop {
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.track-stock-picker-dialog {
+    background: rgba(28, 28, 30, 0.96);
+    backdrop-filter: var(--track-glass);
+    -webkit-backdrop-filter: var(--track-glass);
+}
+
+/* ── Mobile: hero + tab bar ── */
+@media (max-width: 768px) {
+    body.track-page.track-mobile-app {
+        padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+    }
+
+    body.track-page.track-mobile-app .track-m-hero {
+        background: rgba(28, 28, 30, 0.88);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 22px;
+        box-shadow: var(--track-shadow);
+        backdrop-filter: var(--track-glass);
+        -webkit-backdrop-filter: var(--track-glass);
+        padding: 12px 14px 14px;
+    }
+
+    body.track-page.track-mobile-app .track-m-device-img {
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    body.track-page.track-mobile-app .track-m-device-model {
+        font-size: 1.0625rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+    }
+
+    body.track-page.track-mobile-app .track-m-client-row {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 14px;
+    }
+
+    body.track-page.track-mobile-app .track-m-quick-btn {
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.08);
+        min-height: 58px;
+    }
+
+    body.track-page.track-mobile-app .track-m-quick-btn:active {
+        transform: scale(0.96);
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    body.track-page.track-mobile-app .track-m-back {
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.08);
+        border: none;
+    }
+
+    body.track-page.track-mobile-app .track-m-stepper {
+        margin-bottom: 10px;
+    }
+
+    body.track-page.track-mobile-app .track-m-step-dot {
+        border-width: 1.5px;
+        border-color: rgba(255, 255, 255, 0.18);
+        background: rgba(44, 44, 46, 0.95);
+    }
+
+    body.track-page.track-mobile-app .track-m-step.is-current .track-m-step-dot {
+        background: var(--track-accent);
+        border-color: var(--track-accent);
+        box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.2);
+    }
+
+    body.track-page.track-mobile-app .track-m-step.is-done .track-m-step-dot {
+        background: rgba(10, 132, 255, 0.2);
+        border-color: rgba(10, 132, 255, 0.45);
+        color: #7ec4ff;
+    }
+
+    body.track-page.track-mobile-app .track-m-cost-card,
+    body.track-page.track-mobile-app .track-section-body {
+        border-radius: 20px;
+        background: rgba(28, 28, 30, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    body.track-page.track-mobile-app .track-m-nav {
+        background: rgba(22, 22, 24, 0.82);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        backdrop-filter: saturate(180%) blur(24px);
+        -webkit-backdrop-filter: saturate(180%) blur(24px);
+        box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    body.track-page.track-mobile-app .track-m-nav-btn.is-active {
+        background: rgba(10, 132, 255, 0.16);
+        color: var(--track-accent);
+    }
+
+    body.track-page.track-mobile-app.track-mobile-focus .track-sidebar {
+        background: rgba(28, 28, 30, 0.92);
+        backdrop-filter: var(--track-glass);
+        -webkit-backdrop-filter: var(--track-glass);
+        border-radius: 0 0 18px 18px;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+    }
+
+    body.track-page.track-mobile-app .card,
+    body.track-page.track-mobile-app .track-sidebar,
+    body.track-page.track-mobile-app .track-workspace-main {
+        border-radius: 20px;
+        box-shadow: none;
+        border-color: rgba(255, 255, 255, 0.06);
+    }
+
+    body.track-page.track-mobile-app .layout {
+        gap: 8px;
+    }
+}
+
+@media (min-width: 769px) {
+    .track-page .layout {
+        gap: 16px;
+    }
+
+    .track-page .track-workspace-main {
+        padding: 18px 20px;
+    }
+
+    .track-page .order-card.active,
+    .track-page .order-card.ready,
+    .track-page .order-card.done,
+    .track-page .order-card.wait,
+    .track-page .order-card.issue,
+    .track-page .order-card.review {
+        border-radius: var(--track-radius-lg);
+        background: rgba(28, 28, 30, 0.55);
+        border: 1px solid var(--track-panel-border);
+        padding: 4px 2px 2px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .track-page button,
+    .track-page .track-action-row a,
+    .track-page .track-quick a,
+    body.track-page.track-mobile-app .track-m-quick-btn {
+        transition: none;
+    }
+
+    .track-page button:active,
+    body.track-page.track-mobile-app .track-m-quick-btn:active {
+        transform: none;
+    }
+}

@@ -6,8 +6,54 @@
         padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
     }
 
+    /* Карточка клиента над заказом — дублирует hero */
+    body.track-page.track-mobile-app #trackClientCard {
+        display: none !important;
+    }
+
+    /* Focus: список клиентов скрыт, заказ сразу под поиском */
+    body.track-page.track-mobile-app.track-mobile-focus .top {
+        display: none;
+    }
+
+    body.track-page.track-mobile-app.track-mobile-focus .track-sidebar .list,
+    body.track-page.track-mobile-app.track-mobile-focus .track-sidebar .stats,
+    body.track-page.track-mobile-app.track-mobile-focus .track-sidebar-filters,
+    body.track-page.track-mobile-app.track-mobile-focus #trackBulkModeOn,
+    body.track-page.track-mobile-app.track-mobile-focus #trackBulkBar {
+        display: none !important;
+    }
+
+    body.track-page.track-mobile-app.track-mobile-focus .track-sidebar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        padding-bottom: 8px;
+        margin-bottom: 0;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    body.track-page.track-mobile-app.track-mobile-focus .track-sidebar-search {
+        margin-bottom: 0;
+        padding-bottom: 8px;
+        border-bottom: none;
+    }
+
+    body.track-page.track-mobile-app.track-mobile-focus .track-workspace-main {
+        margin-top: 0;
+        padding-top: 10px;
+    }
+
     body.track-page.track-mobile-app .track-workspace-rail {
         display: none !important;
+    }
+
+    .track-m-list-empty {
+        padding: 28px 16px;
+        text-align: center;
+        font-size: 0.88rem;
+        opacity: 0.65;
+        line-height: 1.45;
     }
 
     body.track-page.track-mobile-app .track-m-header-legacy {
@@ -35,39 +81,56 @@
 
     /* ── Hero ── */
     .track-m-hero {
-        background: linear-gradient(165deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+        background: rgba(28, 28, 30, 0.92);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 20px;
-        padding: 14px 14px 16px;
-        margin-bottom: 12px;
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+        border-radius: 22px;
+        padding: 12px 14px 14px;
+        margin-bottom: 10px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
     }
 
     .track-m-hero-top {
         display: flex;
         align-items: center;
-        justify-content: space-between;
         gap: 8px;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
+        min-width: 0;
     }
 
     .track-m-hero-order-id {
-        font-size: 0.78rem;
+        font-size: 0.72rem;
         font-weight: 700;
-        opacity: 0.85;
+        opacity: 0.8;
         letter-spacing: 0.02em;
-        text-align: center;
-        flex: 1;
+        flex: 0 1 auto;
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
 
-    .track-m-back,
-    .track-m-more {
-        width: 40px;
-        height: 40px;
+    .track-m-hero-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-left: auto;
+        justify-content: flex-end;
+        min-width: 0;
+        max-width: 55%;
+    }
+
+    .track-m-hero-badges .badge {
+        font-size: 0.58rem;
+        line-height: 1.2;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .track-m-back {
+        width: 38px;
+        height: 38px;
         border-radius: 12px;
         border: 1px solid rgba(255, 255, 255, 0.12);
         background: rgba(255, 255, 255, 0.06);
@@ -79,14 +142,14 @@
 
     .track-m-device-row {
         display: flex;
-        gap: 14px;
+        gap: 12px;
         align-items: flex-start;
-        margin-bottom: 14px;
+        margin-bottom: 10px;
     }
 
     .track-m-device-img {
-        width: 72px;
-        height: 72px;
+        width: 56px;
+        height: 56px;
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.06);
         display: flex;
@@ -123,67 +186,16 @@
     .track-m-client-row {
         display: grid;
         grid-template-columns: auto 1fr;
-        gap: 10px 12px;
-        align-items: start;
-        padding: 12px;
-        border-radius: 14px;
-        background: rgba(0, 0, 0, 0.22);
-        margin-bottom: 12px;
+        gap: 8px 10px;
+        align-items: center;
+        padding: 8px 10px;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.18);
+        margin-bottom: 10px;
     }
 
     .track-m-client-info {
         min-width: 0;
-    }
-
-    .track-m-client-badges {
-        grid-column: 1 / -1;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        align-items: center;
-    }
-
-    .track-m-client-badges .badge {
-        font-size: 0.58rem;
-        line-height: 1.2;
-        white-space: nowrap;
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .track-m-portal-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        width: 100%;
-        min-height: 48px;
-        margin-bottom: 10px;
-        padding: 12px 14px;
-        border-radius: 14px;
-        border: 1px solid rgba(96, 165, 250, 0.45);
-        background: linear-gradient(135deg, rgba(37, 99, 235, 0.35), rgba(59, 130, 246, 0.2));
-        color: #dbeafe;
-        font-size: 0.82rem;
-        font-weight: 700;
-        cursor: pointer;
-        text-decoration: none;
-        box-sizing: border-box;
-        -webkit-tap-highlight-color: transparent;
-    }
-
-    a.track-m-portal-btn:visited {
-        color: #dbeafe;
-    }
-
-    .track-m-portal-btn:disabled {
-        opacity: 0.55;
-    }
-
-    .track-m-portal-btn-icon {
-        font-size: 1.1rem;
-        line-height: 1;
     }
 
     .track-m-client-avatar {
@@ -230,16 +242,50 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 4px;
-        min-height: 64px;
-        padding: 8px 4px;
-        border-radius: 14px;
+        gap: 3px;
+        min-height: 56px;
+        padding: 6px 4px;
+        border-radius: 12px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         background: rgba(255, 255, 255, 0.05);
         color: inherit;
         text-decoration: none;
-        font-size: 0.62rem;
+        font-size: 0.58rem;
         cursor: pointer;
+        font-family: inherit;
+    }
+
+    /* Компактная панель предварительного обращения */
+    body.track-page.track-mobile-app .track-lead-panel {
+        margin: 0 0 10px;
+        padding: 10px 12px;
+    }
+
+    body.track-page.track-mobile-app .track-lead-panel .track-order-kv {
+        display: none;
+    }
+
+    body.track-page.track-mobile-app .track-lead-panel .muted {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    body.track-page.track-mobile-app .track-lead-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    body.track-page.track-mobile-app .track-lead-actions .track-ops-delete-lead {
+        grid-column: 1 / -1;
+    }
+
+    body.track-page.track-mobile-app .track-primary-action-bar {
+        margin-top: 0;
+        padding: 10px 12px;
     }
 
     .track-m-quick-btn span:first-child {
@@ -271,7 +317,7 @@
 
     .track-m-step {
         flex: 0 0 auto;
-        width: 72px;
+        width: 58px;
         text-align: center;
         position: relative;
     }
@@ -321,9 +367,10 @@
     }
 
     .track-m-step-label {
-        font-size: 0.58rem;
+        font-size: 0.52rem;
         opacity: 0.65;
-        line-height: 1.2;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
     }
 
     .track-m-step.is-current .track-m-step-label {
@@ -759,11 +806,11 @@
         justify-content: space-around;
         gap: 2px;
         padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0px));
-        background: rgba(15, 23, 42, 0.96);
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
+        background: rgba(22, 22, 24, 0.82);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        backdrop-filter: saturate(180%) blur(24px);
+        -webkit-backdrop-filter: saturate(180%) blur(24px);
+        box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.05);
     }
 
     .track-m-nav[hidden] {
@@ -773,25 +820,61 @@
     .track-m-nav-btn {
         flex: 1 1 0;
         min-width: 0;
-        max-width: 80px;
+        max-width: 72px;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 3px;
-        padding: 6px 4px;
+        gap: 2px;
+        padding: 6px 2px;
         border: none;
         border-radius: 12px;
         background: transparent;
         color: rgba(255, 255, 255, 0.55);
-        font-size: 0.58rem;
+        font-size: 0.52rem;
         font-weight: 600;
         cursor: pointer;
         transition: background 0.15s, color 0.15s;
     }
 
     .track-m-nav-btn span:first-child {
-        font-size: 1.15rem;
+        font-size: 1.2rem;
         line-height: 1;
+    }
+
+    .track-m-nav-btn .track-m-nav-lbl {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        letter-spacing: -0.02em;
+    }
+
+    body.track-page.track-mobile-app .quick-filters button {
+        font-size: 0.68rem;
+        padding: 5px 8px;
+        min-height: 30px;
+    }
+
+    body.track-page.track-mobile-app .track-sidebar-search button {
+        min-width: 42px;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    body.track-page.track-mobile-app.track-mobile-focus .track-sidebar-search button {
+        font-size: 1rem;
+    }
+
+    body.track-page.track-mobile-app .track-sidebar-filters-summary {
+        font-size: 0.78rem;
+    }
+
+    body.track-page.track-mobile-app .track-sidebar-filters-active {
+        font-size: 0.72rem;
+        max-width: 42vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .track-m-nav-btn.is-active {
